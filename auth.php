@@ -1,0 +1,149 @@
+<?php
+/**
+ * 認証API - auth.php
+ * 修正版（ログイン問題対応）
+ */
+
+// エラー表示（開発用）
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
+// JSONレスポンス用ヘッダー
+header('Content-Type: application/json; charset=utf-8');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type');
+
+// OPTIONSリクエスト対応
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
+// POSTリクエストのみ受付
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode([
+        'success' => false,
+        'message' => 'POST リクエストのみサポートしています'
+    ]);
+    exit;
+}
+
+try {
+    // リクエストデータ取得
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
+
+    if (!$data) {
+        throw new Exception('無効なJSONリクエストです');
+    }
+
+    $username = $data['username'] ?? '';
+    $password = $data['password'] ?? '';
+    $action = $data['action'] ?? '';
+
+    // 入力値検証
+    if (empty($username)) {
+        throw new Exception('ユーザーIDを入力してください');
+    }
+
+    if (empty($password)) {
+        throw new Exception('パスワードを入力してください');
+    }
+
+    if ($action !== 'login') {
+        throw new Exception('無効なアクション');
+    }
+
+    // データベース接続（XAMPP設定）
+    try {
+        $dsn = "mysql:host=localhost;port=3306;dbname=sales_report;charset=utf8mb4";
+        $pdo = new PDO($dsn, 'root', '', [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false
+        ]);
+    } catch (PDOException $e) {
+        throw new Exception('データベース接続エラー。XAMPPのMySQLが起動しているか確認してください。エラー詳細: ' . $e->getMessage());
+    }
+
+    // ユーザー検索（修正版クエリ）
+    $sql = "SELECT id, pass, role, store_name, is_active FROM users WHERE id = :username AND is_active = 1 LIMIT 1";
+    $stmt = $pdo->prepare($sql);
+    $stmt->bindParam(':username', $username);
+    $stmt->execute();
+    $user = $stmt->fetch();
+
+    if (!$user) {
+        // デバッグ情報（開発用）
+        error_log("ログイン失敗: ユーザーID '$username' が見つからない");
+        
+        echo json_encode([
+            'success' => false,
+            'message' => 'ユーザーIDまたはパスワードが正しくありません'
+        ]);
+        exit;
+    }
+
+    // パスワード検証（平文とハッシュ両対応）
+    $isValid = false;
+    if ($password === $user['pass']) { 
+        // 平文パスワード（テスト用）
+        $isValid = true;
+        error_log("ログイン成功: ユーザー '$username' (平文パスワード)");
+    } elseif (password_verify($password, $user['pass'])) { 
+        // ハッシュ化パスワード
+        $isValid = true;
+        error_log("ログイン成功: ユーザー '$username' (ハッシュパスワード)");
+    } else {
+        error_log("ログイン失敗: ユーザー '$username' のパスワードが不正");
+    }
+
+    if (!$isValid) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'ユーザーIDまたはパスワードが正しくありません'
+        ]);
+        exit;
+    }
+
+    // 最終ログイン時刻更新
+    try {
+        $updateSql = "UPDATE users SET updated_at = NOW() WHERE id = :username";
+        $updateStmt = $pdo->prepare($updateSql);
+        $updateStmt->bindParam(':username', $username);
+        $updateStmt->execute();
+    } catch (Exception $e) {
+        // 更新エラーは無視
+        error_log("最終ログイン時刻の更新エラー: " . $e->getMessage());
+    }
+
+    // role正規化
+    $role = strtolower(trim($user['role']));
+    $normalizedRole = ($role === 'admin') ? 'admin' : (($role === 'manager') ? 'manager' : 'user');
+
+    // 成功レスポンス
+    echo json_encode([
+        'success' => true,
+        'message' => 'ログイン成功',
+        'user' => [
+            'user_id' => $user['id'],
+            'username' => $user['id'],
+            'displayName' => $user['id'],
+            'role' => $normalizedRole,
+            'storeName' => $user['store_name'] ?? ''
+        ]
+    ]);
+
+    error_log("ログイン完了: ユーザー '$username' (役職: $normalizedRole)");
+
+} catch (Exception $e) {
+    error_log("認証エラー: " . $e->getMessage());
+    http_response_code(400);
+    echo json_encode([
+        'success' => false,
+        'message' => $e->getMessage()
+    ]);
+}
+?>

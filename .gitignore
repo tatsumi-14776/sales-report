@@ -1,0 +1,26 @@
+# OS / Editor
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+.vscode/
+.idea/
+
+# Node / Frontend
+node_modules/
+dist/
+build/
+.cache/
+*.map
+
+# PHP / Composer
+vendor/
+composer.lock
+
+# Env / Secrets
+.env
+.env.*.local
+
+# XAMPPやアップロード一時ファイルなど
+uploads/tmp/
+*.swp

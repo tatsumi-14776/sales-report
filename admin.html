@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理者ダッシュボード - 日次売上報告書システム</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 2rem;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .admin-badge {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .user-info {
+            color: #666;
+            font-size: 0.875rem;
+        }
+
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+            transform: translateY(-1px);
+        }
+
+        .main-content {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .card-icon {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.25rem;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .card-description {
+            color: #666;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            justify-content: center;
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #2196F3, #1976D2);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+        }
+
+        .btn-warning {
+            background: linear-gradient(45deg, #FF9800, #F57C00);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+        }
+
+        .btn-purple {
+            background: linear-gradient(45deg, #9C27B0, #7B1FA2);
+            color: white;
+        }
+
+        .btn-purple:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 8px;
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: #666;
+            margin-top: 0.25rem;
+        }
+
+        .alert {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .alert-icon {
+            color: #856404;
+            margin-right: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- ヘッダー -->
+        <div class="header">
+            <div class="header-left">
+                <div class="admin-badge">👑 管理者</div>
+                <div>
+                    <h1 style="margin-bottom: 0.25rem;">管理者ダッシュボード</h1>
+                    <div class="user-info" id="userInfo">ログイン中...</div>
+                </div>
+            </div>
+            <button class="logout-btn" onclick="handleLogout()">
+                <span>🚪</span>
+                ログアウト
+            </button>
+        </div>
+
+        <!-- メインコンテンツ -->
+        <div class="main-content">
+            <!-- 日報集計確認 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon" style="background: linear-gradient(45deg, #2196F3, #1976D2);">📊</div>
+                    <div class="card-title">日報集計確認</div>
+                </div>
+                <div class="card-description">
+                    日次売上報告書の集計データを確認・分析します。期間別の売上推移やトレンド分析が可能です。
+                </div>
+                <button class="btn btn-secondary" onclick="showComingSoon('日報集計確認')">
+                    <span>📈</span>
+                    集計画面を開く
+                </button>
+                <div class="alert">
+                    <span class="alert-icon">⚠️</span>
+                    詳細機能は実装予定です
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-number" id="totalReports">-</div>
+                        <div class="stat-label">保存レポート数</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="todayReports">-</div>
+                        <div class="stat-label">今日の報告数</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ユーザー管理 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon" style="background: linear-gradient(45deg, #4CAF50, #45a049);">👥</div>
+                    <div class="card-title">ユーザー管理</div>
+                </div>
+                <div class="card-description">
+                    システムユーザーの追加、編集、削除、パスワード変更を行います。権限設定も可能です。
+                </div>
+                <a href="user-management.html" class="btn btn-primary">
+                    <span>👤</span>
+                    ユーザー管理画面を開く
+                </a>
+                
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-number" id="totalUsers">-</div>
+                        <div class="stat-label">登録ユーザー数</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="adminUsers">-</div>
+                        <div class="stat-label">管理者数</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 支払方法管理 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon" style="background: linear-gradient(45deg, #9C27B0, #7B1FA2);">💳</div>
+                    <div class="card-title">支払方法管理</div>
+                </div>
+                <div class="card-description">
+                    システム全体の支払方法マスターを管理します。新しい支払方法の追加、編集、削除を行えます。
+                </div>
+                <a href="payment-methods.html" class="btn btn-purple">
+                    <span>💳</span>
+                    支払方法管理画面を開く
+                </a>
+                
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-number" id="totalPaymentMethods">-</div>
+                        <div class="stat-label">登録支払方法</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="enabledPaymentMethods">-</div>
+                        <div class="stat-label">有効支払方法</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 店舗設定 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon" style="background: linear-gradient(45deg, #FF9800, #F57C00);">🏪</div>
+                    <div class="card-title">店舗設定</div>
+                </div>
+                <div class="card-description">
+                    店舗情報の管理、支払方法の表示項目設定、システム設定を行います。
+                </div>
+                <a href="store-settings.html" class="btn btn-warning">
+                    <span>⚙️</span>
+                    店舗設定画面を開く
+                </a>
+                
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-number" id="paymentMethods">-</div>
+                        <div class="stat-label">支払方法数</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="activeStores">-</div>
+                        <div class="stat-label">アクティブ店舗</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- システム統計 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon" style="background: linear-gradient(45deg, #9C27B0, #7B1FA2);">📋</div>
+                    <div class="card-title">システム統計</div>
+                </div>
+                <div class="card-description">
+                    システムの利用状況やデータの統計情報を表示します。パフォーマンス監視も含まれます。
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-number" id="systemUptime">99.9%</div>
+                        <div class="stat-label">システム稼働率</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="lastBackup">-</div>
+                        <div class="stat-label">最終バックアップ</div>
+                    </div>
+                </div>
+                
+                <button class="btn btn-purple" onclick="updateStats()" style="margin-top: 1rem;">
+                    <span>🔄</span>
+                    統計を更新
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 認証チェック
+        function checkAuth() {
+            const userSession = JSON.parse(sessionStorage.getItem('userSession') || 'null');
+            
+            if (!userSession || userSession.role !== 'admin') {
+                alert('管理者としてログインしてください');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // ユーザー情報を表示
+            const userInfo = document.getElementById('userInfo');
+            if (userInfo && userSession.username) {
+                userInfo.textContent = `${userSession.username} さん (${userSession.role === 'admin' ? '管理者' : 'ユーザー'})`;
+            }
+
+            // 統計情報を更新
+            updateStats();
+        }
+
+        // ログアウト処理
+        function handleLogout() {
+            if (confirm('ログアウトしますか？')) {
+                sessionStorage.removeItem('userSession');
+                localStorage.removeItem('userSession'); // fallback
+                window.location.href = 'login.html';
+            }
+        }
+
+        // 未実装機能の表示
+        function showComingSoon(featureName) {
+            alert(`${featureName}機能は現在開発中です。\n\n実装予定機能:\n• ${featureName}の詳細画面\n• データの可視化\n• レポート生成\n\n今後のアップデートをお待ちください！`);
+        }
+
+        // 統計情報の更新
+        function updateStats() {
+            try {
+                // LocalStorageから日次報告書データを取得
+                const allKeys = Object.keys(localStorage);
+                const reportKeys = allKeys.filter(key => key.startsWith('dailyReport_'));
+                const autoSaveKeys = allKeys.filter(key => key.startsWith('autoSave_'));
+                
+                // 今日の日付
+                const today = new Date().toISOString().split('T')[0];
+                const todayReports = reportKeys.filter(key => key.includes(today));
+
+                // 日報統計を更新
+                document.getElementById('totalReports').textContent = reportKeys.length;
+                document.getElementById('todayReports').textContent = todayReports.length;
+
+                // ユーザー統計を更新（仮データ）
+                updateUserStats();
+
+                // 店舗設定統計を更新
+                updateStoreStats();
+
+                // 最終バックアップ時刻
+                const lastBackup = document.getElementById('lastBackup');
+                if (lastBackup) {
+                    lastBackup.textContent = new Date().toLocaleTimeString('ja-JP', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    });
+                }
+
+                console.log('統計情報を更新しました:', {
+                    total: reportKeys.length,
+                    today: todayReports.length,
+                    autoSaves: autoSaveKeys.length
+                });
+
+            } catch (error) {
+                console.error('統計情報の更新でエラー:', error);
+                document.getElementById('totalReports').textContent = 'エラー';
+                document.getElementById('todayReports').textContent = 'エラー';
+            }
+        }
+
+        // ユーザー統計の更新
+        async function updateUserStats() {
+            try {
+                // 実際のユーザー管理APIから取得する場合
+                const response = await fetch('user-management.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'get_users' })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    const users = result.users || [];
+                    const adminCount = users.filter(u => u.role === 'admin').length;
+                    
+                    document.getElementById('totalUsers').textContent = users.length;
+                    document.getElementById('adminUsers').textContent = adminCount;
+                } else {
+                    throw new Error('ユーザー情報の取得に失敗');
+                }
+            } catch (error) {
+                console.warn('ユーザー統計の取得でエラー:', error);
+                // フォールバック値
+                document.getElementById('totalUsers').textContent = '?';
+                document.getElementById('adminUsers').textContent = '?';
+            }
+        }
+
+        // 店舗設定統計の更新
+        function updateStoreStats() {
+            try {
+                // config.jsから支払方法数を取得
+                const paymentMethodCount = typeof paymentMethodConfig !== 'undefined' 
+                    ? paymentMethodConfig.length 
+                    : 8; // デフォルト値
+
+                document.getElementById('paymentMethods').textContent = paymentMethodCount;
+                document.getElementById('activeStores').textContent = '1'; // 現在は単一店舗対応
+
+            } catch (error) {
+                console.warn('店舗統計の取得でエラー:', error);
+                document.getElementById('paymentMethods').textContent = '?';
+                document.getElementById('activeStores').textContent = '?';
+            }
+        }
+
+        // セッション期限チェック（5分ごと）
+        setInterval(() => {
+            const userSession = JSON.parse(sessionStorage.getItem('userSession') || 'null');
+            if (!userSession) {
+                alert('セッションが期限切れです。再度ログインしてください。');
+                window.location.href = 'login.html';
+            }
+        }, 5 * 60 * 1000);
+
+        // ページ読み込み時に認証チェック
+        document.addEventListener('DOMContentLoaded', checkAuth);
+
+        // 統計の自動更新（30秒ごと）
+        setInterval(updateStats, 30000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,753 @@
+/**
+ * データ管理
+ * データの保存、読み込み、バリデーション、API連携
+ */
+
+/**
+ * 当日データ読込処理
+ */
+function loadTodayData() {
+    console.log('当日データ読込処理を開始');
+    
+    try {
+        const today = getCurrentDate();
+        const dateElement = document.getElementById('date');
+        if (dateElement) {
+            dateElement.value = today;
+            console.log('今日の日付を設定しました:', today);
+        } else {
+            console.warn('date要素が見つかりません');
+        }
+        
+        const storeNameElement = document.getElementById('storeName');
+        const storeName = storeNameElement ? storeNameElement.value.trim() : '';
+        
+        if (!storeName) {
+            showError('店舗名を入力してからデータを読み込んでください');
+            return;
+        }
+        
+        loadSampleData(today, storeName);
+        
+    } catch (error) {
+        console.error('当日データ読込処理でエラー:', error);
+        showError('当日データの読み込み中にエラーが発生しました');
+    }
+}
+
+/**
+ * データ読込処理
+ */
+function handleLoadData() {
+    console.log('データ読込処理を開始');
+    
+    try {
+        const dateElement = document.getElementById('date');
+        const storeNameElement = document.getElementById('storeName');
+        
+        const selectedDate = dateElement ? dateElement.value : '';
+        const storeName = storeNameElement ? storeNameElement.value.trim() : '';
+        
+        if (!selectedDate) {
+            showError('読み込む日付を選択してください');
+            return;
+        }
+        
+        if (!storeName) {
+            showError('店舗名を入力してください');
+            return;
+        }
+        
+        console.log(`データ読み込み対象: ${selectedDate} - ${storeName}`);
+        loadSampleData(selectedDate, storeName);
+        
+    } catch (error) {
+        console.error('データ読込処理でエラー:', error);
+        showError('データの読み込み中にエラーが発生しました');
+    }
+}
+
+/**
+ * サンプルデータ読込（LocalStorageから）
+ * @param {string} date 日付
+ * @param {string} storeName 店舗名
+ */
+function loadSampleData(date, storeName) {
+    console.log(`サンプルデータ読込を開始: ${date} - ${storeName}`);
+    
+    try {
+        const dataKey = `dailyReport_${date}_${storeName}`;
+        console.log('データキー:', dataKey);
+        
+        const savedData = localStorage.getItem(dataKey);
+        
+        if (savedData) {
+            try {
+                const data = JSON.parse(savedData);
+                console.log('保存されたデータを取得しました:', data);
+                
+                if (typeof loadDataIntoForm === 'function') {
+                    loadDataIntoForm(data);
+                    showSuccess('保存されたデータを読み込みました');
+                } else {
+                    console.error('loadDataIntoForm関数が見つかりません');
+                    showError('データ読み込み機能が利用できません');
+                }
+                
+            } catch (parseError) {
+                console.error('JSONパースエラー:', parseError);
+                console.error('問題のあるデータ:', savedData);
+                showError('保存されたデータが壊れています。新しくデータを入力してください。');
+            }
+        } else {
+            console.log('指定されたデータが見つかりません');
+            showError('指定された日付・店舗のデータが見つかりません');
+        }
+        
+    } catch (error) {
+        console.error('サンプルデータ読込でエラー:', error);
+        showError('データの読み込みに失敗しました');
+    }
+}
+
+/**
+ * 経費データ収集
+ * @returns {Array} 経費データの配列
+ */
+function collectExpenseData() {
+    console.log('経費データ収集を開始');
+    
+    try {
+        const expenses = [];
+        const expenseRecords = document.querySelectorAll('.expense-record');
+        
+        console.log(`経費レコード数: ${expenseRecords.length}`);
+        
+        expenseRecords.forEach((record, index) => {
+            try {
+                const vendorInput = record.querySelector('[data-field="vendor"]');
+                const accountSelect = record.querySelector('[data-field="account"]');
+                const itemInput = record.querySelector('[data-field="item"]');
+                const amountInput = record.querySelector('[data-field="amount"]');
+                
+                if (vendorInput && accountSelect && itemInput && amountInput) {
+                    const expense = {
+                        id: parseInt(vendorInput.dataset.id) || index + 1,
+                        vendor: vendorInput.value.trim(),
+                        account: accountSelect.value,
+                        item: itemInput.value.trim(),
+                        amount: parseFloat(amountInput.value) || 0
+                    };
+                    
+                    // 空の経費レコードは除外（金額が0でない、またはいずれかのフィールドに入力がある場合のみ追加）
+                    if (expense.amount > 0 || expense.vendor || expense.account || expense.item) {
+                        expenses.push(expense);
+                        console.log(`経費レコード ${index + 1} を収集:`, expense);
+                    }
+                } else {
+                    console.warn(`経費レコード ${index + 1} の必要な要素が見つかりません`);
+                }
+                
+            } catch (recordError) {
+                console.error(`経費レコード ${index + 1} の処理でエラー:`, recordError);
+            }
+        });
+        
+        console.log(`経費データ収集完了: ${expenses.length} 件`);
+        return expenses;
+        
+    } catch (error) {
+        console.error('経費データ収集でエラー:', error);
+        return [];
+    }
+}
+
+/**
+ * 現金データ収集
+ * @returns {Object} 現金データオブジェクト
+ */
+function collectCashData() {
+    console.log('現金データ収集を開始');
+    
+    try {
+        const cashData = {};
+        
+        if (!denominations || !Array.isArray(denominations)) {
+            console.error('denominations が正しく定義されていません');
+            return {};
+        }
+        
+        denominations.forEach(denom => {
+            try {
+                const registerInput = document.querySelector(`[data-type="register"][data-denom="${denom.key}"]`);
+                const safeInput = document.querySelector(`[data-type="safe"][data-denom="${denom.key}"]`);
+                
+                if (registerInput && safeInput) {
+                    cashData[denom.key] = {
+                        register: parseInt(registerInput.value) || 0,
+                        safe: parseInt(safeInput.value) || 0
+                    };
+                    console.log(`現金データ ${denom.key} を収集:`, cashData[denom.key]);
+                } else {
+                    console.warn(`現金データ ${denom.key} の入力要素が見つかりません`);
+                    cashData[denom.key] = { register: 0, safe: 0 };
+                }
+                
+            } catch (denomError) {
+                console.error(`現金データ ${denom.key} の処理でエラー:`, denomError);
+                cashData[denom.key] = { register: 0, safe: 0 };
+            }
+        });
+        
+        console.log('現金データ収集完了:', cashData);
+        return cashData;
+        
+    } catch (error) {
+        console.error('現金データ収集でエラー:', error);
+        return {};
+    }
+}
+
+/**
+ * フォームデータをすべて収集
+ * @returns {Object} 収集されたデータオブジェクト
+ */
+function collectAllFormData() {
+    console.log('全フォームデータ収集を開始');
+    
+    try {
+        // 基本情報
+        const dateElement = document.getElementById('date');
+        const storeNameElement = document.getElementById('storeName');
+        const inputByElement = document.getElementById('inputBy');
+        
+        const basicData = {
+            date: dateElement ? dateElement.value : '',
+            storeName: storeNameElement ? storeNameElement.value.trim() : '',
+            inputBy: inputByElement ? inputByElement.value.trim() : ''
+        };
+        
+        console.log('基本データ収集完了:', basicData);
+
+        // 動的な売上データ収集
+        const sales = {};
+        if (paymentMethodConfig && Array.isArray(paymentMethodConfig)) {
+            paymentMethodConfig.forEach(method => {
+                try {
+                    const element10 = document.getElementById(`${method.id}10`);
+                    const element8 = document.getElementById(`${method.id}8`);
+                    sales[`${method.id}10`] = element10 ? (parseFloat(element10.value) || 0) : 0;
+                    sales[`${method.id}8`] = element8 ? (parseFloat(element8.value) || 0) : 0;
+                } catch (salesError) {
+                    console.error(`売上データ ${method.id} の収集でエラー:`, salesError);
+                    sales[`${method.id}10`] = 0;
+                    sales[`${method.id}8`] = 0;
+                }
+            });
+        }
+        console.log('売上データ収集完了:', sales);
+
+        // 動的なポイント・クーポン支払データ収集
+        const pointPayments = {};
+        if (pointPaymentConfig && Array.isArray(pointPaymentConfig)) {
+            pointPaymentConfig.forEach(payment => {
+                try {
+                    const element10 = document.getElementById(`${payment.id}10`);
+                    const element8 = document.getElementById(`${payment.id}8`);
+                    pointPayments[`${payment.id}10`] = element10 ? (parseFloat(element10.value) || 0) : 0;
+                    pointPayments[`${payment.id}8`] = element8 ? (parseFloat(element8.value) || 0) : 0;
+                } catch (pointError) {
+                    console.error(`ポイント・クーポン支払データ ${payment.id} の収集でエラー:`, pointError);
+                    pointPayments[`${payment.id}10`] = 0;
+                    pointPayments[`${payment.id}8`] = 0;
+                }
+            });
+        }
+        console.log('ポイント・クーポン支払データ収集完了:', pointPayments);
+
+        // 入金・雑収入
+        const nyukinElement = document.getElementById('nyukin');
+        const miscIncomeElement = document.getElementById('miscIncome');
+        const foundMoneyElement = document.getElementById('foundMoney');
+        
+        const income = {
+            nyukin: nyukinElement ? (parseFloat(nyukinElement.value) || 0) : 0,
+            miscIncome: miscIncomeElement ? (parseFloat(miscIncomeElement.value) || 0) : 0,
+            foundMoney: foundMoneyElement ? (parseFloat(foundMoneyElement.value) || 0) : 0
+        };
+        console.log('入金・雑収入データ収集完了:', income);
+
+        // 前日現金残
+        const previousCashElement = document.getElementById('previousCashBalance');
+        const previousCashBalance = previousCashElement ? (parseFloat(previousCashElement.value) || 0) : 0;
+        console.log('前日現金残データ収集完了:', previousCashBalance);
+
+        // 備考・報告事項
+        const remarksElement = document.getElementById('remarks');
+        const remarks = remarksElement ? remarksElement.value.trim() : '';
+        console.log('備考データ収集完了');
+
+        // 各データを収集
+        const expenses = collectExpenseData();
+        const cash = collectCashData();
+        const attachedFiles = typeof collectFileData === 'function' ? collectFileData() : [];
+
+        const allData = {
+            ...basicData,
+            sales,
+            pointPayments,
+            income,
+            previousCashBalance,
+            expenses,
+            cash,
+            attachedFiles,
+            remarks,
+            submittedAt: new Date().toISOString()
+        };
+        
+        console.log('全フォームデータ収集完了');
+        return allData;
+        
+    } catch (error) {
+        console.error('全フォームデータ収集でエラー:', error);
+        return {
+            date: '',
+            storeName: '',
+            inputBy: '',
+            sales: {},
+            pointPayments: {},
+            income: { nyukin: 0, miscIncome: 0, foundMoney: 0 },
+            previousCashBalance: 0,
+            expenses: [],
+            cash: {},
+            attachedFiles: [],
+            remarks: '',
+            submittedAt: new Date().toISOString()
+        };
+    }
+}
+
+/**
+ * データのバリデーション
+ * @param {Object} data バリデーション対象のデータ
+ * @returns {Object} バリデーション結果 {isValid: boolean, errors: Array}
+ */
+function validateFormData(data) {
+    console.log('データバリデーションを開始');
+    
+    try {
+        const errors = [];
+
+        // 設定の確認
+        if (!appConfig || !appConfig.VALIDATION || !appConfig.VALIDATION.REQUIRED_FIELDS) {
+            console.warn('バリデーション設定が見つかりません');
+            return { isValid: true, errors: [] }; // 設定が無い場合は通す
+        }
+
+        // 必須項目チェック
+        appConfig.VALIDATION.REQUIRED_FIELDS.forEach(field => {
+            if (!data[field] || data[field].toString().trim() === '') {
+                switch (field) {
+                    case 'date':
+                        errors.push('日付を入力してください');
+                        break;
+                    case 'storeName':
+                        errors.push('店舗名を入力してください');
+                        break;
+                    case 'inputBy':
+                        errors.push('担当者を入力してください');
+                        break;
+                    default:
+                        errors.push(`${field}を入力してください`);
+                }
+            }
+        });
+
+        // 日付の妥当性チェック
+        if (data.date) {
+            try {
+                const inputDate = new Date(data.date);
+                const today = new Date();
+                const oneWeekAgo = new Date();
+                oneWeekAgo.setDate(today.getDate() - 7);
+                
+                if (inputDate > today) {
+                    errors.push('未来の日付は入力できません');
+                }
+                
+                if (inputDate < oneWeekAgo) {
+                    errors.push('1週間より前の日付は入力できません（過去データの修正が必要な場合は管理者にお問い合わせください）');
+                }
+            } catch (dateError) {
+                console.error('日付バリデーションでエラー:', dateError);
+                errors.push('日付の形式が正しくありません');
+            }
+        }
+
+        // 備考の文字数チェック
+        if (data.remarks && appConfig.VALIDATION.MAX_REMARKS_LENGTH) {
+            if (data.remarks.length > appConfig.VALIDATION.MAX_REMARKS_LENGTH) {
+                errors.push(`備考は${appConfig.VALIDATION.MAX_REMARKS_LENGTH}文字以内で入力してください`);
+            }
+        }
+
+        // 売上データの妥当性チェック
+        let totalSales = 0;
+        try {
+            Object.values(data.sales || {}).forEach(amount => {
+                const numAmount = parseFloat(amount) || 0;
+                if (numAmount < 0) {
+                    errors.push('売上金額に負の値は入力できません');
+                }
+                totalSales += numAmount;
+            });
+
+            Object.values(data.pointPayments || {}).forEach(amount => {
+                const numAmount = parseFloat(amount) || 0;
+                if (numAmount < 0) {
+                    errors.push('ポイント・クーポン支払金額に負の値は入力できません');
+                }
+                totalSales += numAmount;
+            });
+
+            if (totalSales === 0) {
+                errors.push('売上データが入力されていません');
+            }
+        } catch (salesValidationError) {
+            console.error('売上データバリデーションでエラー:', salesValidationError);
+            errors.push('売上データの検証中にエラーが発生しました');
+        }
+
+        // 現金過不足の確認
+        try {
+            const theoreticalBalanceElement = document.getElementById('theoreticalBalance');
+            const actualBalanceElement = document.getElementById('totalCash');
+            
+            if (theoreticalBalanceElement && actualBalanceElement) {
+                const theoreticalBalance = parseFloat(theoreticalBalanceElement.textContent.replace(/[¥,]/g, '')) || 0;
+                const actualBalance = parseFloat(actualBalanceElement.textContent.replace(/[¥,]/g, '')) || 0;
+                const difference = Math.abs(actualBalance - theoreticalBalance);
+                
+                if (difference > 10000) {
+                    errors.push(`現金過不足が${formatCurrency(difference)}と大きくなっています。金種の入力を確認してください`);
+                }
+            }
+        } catch (cashValidationError) {
+            console.error('現金過不足バリデーションでエラー:', cashValidationError);
+        }
+
+        // ファイルの妥当性チェック
+        try {
+            if (data.attachedFiles && fileUploadConfig && data.attachedFiles.length > fileUploadConfig.MAX_FILES) {
+                errors.push(`添付ファイル数が上限（${fileUploadConfig.MAX_FILES}件）を超えています`);
+            }
+        } catch (fileValidationError) {
+            console.error('ファイルバリデーションでエラー:', fileValidationError);
+        }
+
+        console.log(`バリデーション完了: ${errors.length > 0 ? 'エラー有り' : '問題なし'}`);
+        if (errors.length > 0) {
+            console.log('バリデーションエラー一覧:', errors);
+        }
+
+        return {
+            isValid: errors.length === 0,
+            errors
+        };
+        
+    } catch (error) {
+        console.error('データバリデーションでエラー:', error);
+        return {
+            isValid: false,
+            errors: ['データの検証中にエラーが発生しました']
+        };
+    }
+}
+
+/**
+ * 送信処理
+ */
+async function handleSubmit() {
+    console.log('送信処理を開始');
+    
+    try {
+        // データ収集
+        const reportData = collectAllFormData();
+        console.log('収集されたデータ:', reportData);
+        
+        // バリデーション
+        const validation = validateFormData(reportData);
+        if (!validation.isValid) {
+            const errorMessage = '入力内容に問題があります：\n\n' + validation.errors.join('\n');
+            showError(errorMessage);
+            return;
+        }
+
+        // ファイルデータをエンコード
+        let encodedFiles = [];
+        try {
+            if (typeof collectEncodedFileData === 'function') {
+                encodedFiles = await collectEncodedFileData();
+            }
+            reportData.attachedFiles = encodedFiles;
+        } catch (fileError) {
+            console.error('ファイルエンコードでエラー:', fileError);
+            showError('添付ファイルの処理中にエラーが発生しました。ファイルを確認してください。');
+            return;
+        }
+
+        // 確認メッセージ
+        const confirmMessage = `以下の内容で送信します：\n\n` +
+            `日付: ${reportData.date}\n` +
+            `店舗: ${reportData.storeName}\n` +
+            `担当者: ${reportData.inputBy}\n` +
+            `添付ファイル: ${encodedFiles.length}件\n\n` +
+            `送信してよろしいですか？`;
+        
+        if (!confirm(confirmMessage)) {
+            console.log('送信がキャンセルされました');
+            return;
+        }
+
+        // データ保存（LocalStorage - 開発用）
+        try {
+            const dataKey = `dailyReport_${reportData.date}_${reportData.storeName}`;
+            localStorage.setItem(dataKey, JSON.stringify(reportData));
+            console.log('LocalStorageに保存しました:', dataKey);
+        } catch (storageError) {
+            console.error('LocalStorage保存でエラー:', storageError);
+            // 保存エラーがあっても処理は継続
+        }
+        
+        // TODO: バックエンドAPI連携（後で実装）
+        // await submitToServer(reportData);
+        
+        console.log('送信データ:', reportData);
+        showSuccess('データが保存され、経理課に送信されました！');
+        
+    } catch (error) {
+        console.error('送信エラー:', error);
+        showError('送信中にエラーが発生しました。もう一度お試しください。');
+    }
+}
+
+/**
+ * サーバーへのデータ送信（将来の実装用）
+ * @param {Object} data 送信するデータ
+ * @returns {Promise} API呼び出しの結果
+ */
+async function submitToServer(data) {
+    try {
+        if (!apiConfig || !apiConfig.BASE_URL) {
+            throw new Error('APIの設定が未完了です');
+        }
+
+        const response = await fetch(apiConfig.BASE_URL + apiConfig.ENDPOINTS.DAILY_REPORT, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || 'サーバーエラーが発生しました');
+        }
+
+        return await response.json();
+        
+    } catch (error) {
+        console.error('サーバー送信でエラー:', error);
+        throw error;
+    }
+}
+
+/**
+ * 店舗設定データの取得（将来の実装用）
+ * @param {string} storeCode 店舗コード
+ * @returns {Promise<Object>} 店舗設定データ
+ */
+async function fetchStoreConfig(storeCode) {
+    try {
+        if (!apiConfig || !apiConfig.BASE_URL) {
+            // APIが未設定の場合はデフォルト設定を返す
+            return {
+                paymentMethods: paymentMethodConfig || [],
+                pointPayments: pointPaymentConfig || []
+            };
+        }
+
+        const response = await fetch(
+            `${apiConfig.BASE_URL}${apiConfig.ENDPOINTS.STORE_CONFIG}?store_code=${storeCode}`,
+            {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error('店舗設定の取得に失敗しました');
+        }
+
+        return await response.json();
+        
+    } catch (error) {
+        console.error('店舗設定取得でエラー:', error);
+        throw error;
+    }
+}
+
+/**
+ * 自動保存機能
+ */
+let autoSaveTimer = null;
+
+/**
+ * 自動保存を開始
+ */
+function startAutoSave() {
+    console.log('自動保存機能を開始');
+    
+    try {
+        if (autoSaveTimer) {
+            clearInterval(autoSaveTimer);
+        }
+
+        const interval = (appConfig && appConfig.AUTO_SAVE_INTERVAL) ? appConfig.AUTO_SAVE_INTERVAL : 30000;
+
+        autoSaveTimer = setInterval(() => {
+            try {
+                const data = collectAllFormData();
+                if (data.date && data.storeName) {
+                    const autoSaveKey = `autoSave_${data.date}_${data.storeName}`;
+                    const autoSaveData = {
+                        ...data,
+                        autoSavedAt: new Date().toISOString()
+                    };
+                    
+                    localStorage.setItem(autoSaveKey, JSON.stringify(autoSaveData));
+                    
+                    if (appConfig && appConfig.DEBUG) {
+                        console.log('自動保存完了:', autoSaveKey);
+                    }
+                }
+            } catch (error) {
+                console.error('自動保存エラー:', error);
+            }
+        }, interval);
+        
+        console.log(`自動保存を開始しました（間隔: ${interval}ms）`);
+        
+    } catch (error) {
+        console.error('自動保存開始でエラー:', error);
+    }
+}
+
+/**
+ * 自動保存を停止
+ */
+function stopAutoSave() {
+    try {
+        if (autoSaveTimer) {
+            clearInterval(autoSaveTimer);
+            autoSaveTimer = null;
+            console.log('自動保存を停止しました');
+        }
+    } catch (error) {
+        console.error('自動保存停止でエラー:', error);
+    }
+}
+
+/**
+ * 自動保存データの復元
+ */
+function restoreAutoSaveData() {
+    console.log('自動保存データの復元を試行');
+    
+    try {
+        const dateElement = document.getElementById('date');
+        const storeNameElement = document.getElementById('storeName');
+        
+        if (!dateElement || !storeNameElement) {
+            console.warn('日付または店舗名要素が見つかりません');
+            return;
+        }
+        
+        const date = dateElement.value;
+        const storeName = storeNameElement.value.trim();
+        
+        if (!date || !storeName) {
+            console.log('日付または店舗名が未入力のため自動保存データの復元をスキップします');
+            return;
+        }
+        
+        const autoSaveKey = `autoSave_${date}_${storeName}`;
+        const autoSaveData = localStorage.getItem(autoSaveKey);
+        
+        if (autoSaveData) {
+            try {
+                const data = JSON.parse(autoSaveData);
+                const autoSaveTime = new Date(data.autoSavedAt);
+                const message = `自動保存されたデータがあります（${autoSaveTime.toLocaleString()}）。\n復元しますか？`;
+                
+                if (confirm(message)) {
+                    if (typeof loadDataIntoForm === 'function') {
+                        loadDataIntoForm(data);
+                        showSuccess('自動保存データを復元しました');
+                    } else {
+                        console.error('loadDataIntoForm関数が見つかりません');
+                        showError('データ復元機能が利用できません');
+                    }
+                }
+            } catch (parseError) {
+                console.error('自動保存データの解析エラー:', parseError);
+                showError('自動保存データが壊れています');
+            }
+        } else {
+            console.log('自動保存データは見つかりませんでした');
+        }
+        
+    } catch (error) {
+        console.error('自動保存データ復元でエラー:', error);
+    }
+}
+
+/**
+ * ページを離れる前の確認
+ */
+function setupBeforeUnloadWarning() {
+    console.log('ページ離脱警告を設定');
+    
+    try {
+        window.addEventListener('beforeunload', function(e) {
+            try {
+                const data = collectAllFormData();
+                const hasData = data.date && data.storeName && (
+                    Object.values(data.sales).some(v => v > 0) ||
+                    Object.values(data.pointPayments).some(v => v > 0) ||
+                    data.income.nyukin > 0 ||
+                    data.income.miscIncome > 0 ||
+                    data.income.foundMoney > 0 ||
+                    data.expenses.length > 0 ||
+                    data.remarks
+                );
+                
+                if (hasData) {
+                    e.preventDefault();
+                    e.returnValue = '入力中のデータが失われる可能性があります。本当にページを離れますか？';
+                    return e.returnValue;
+                }
+            } catch (error) {
+                console.error('ページ離脱チェックでエラー:', error);
+            }
+        });
+        
+        console.log('ページ離脱警告の設定完了');
+        
+    } catch (error) {
+        console.error('ページ離脱警告設定でエラー:', error);
+    }
+}
