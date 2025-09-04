@@ -9,6 +9,7 @@ let pointPaymentConfig = [];
 let denominations = [];
 let fileUploadConfig = {};
 let storeInfo = {};
+let appConfig = {}; 
 
 /**
  * API通信ユーティリティ
@@ -233,6 +234,16 @@ console.log('✅ store_id取得成功:', userSession.store_id);
                 'image/gif'
             ],
             ALLOWED_EXTENSIONS: '.pdf,.xls,.xlsx,.doc,.docx,.jpg,.jpeg,.png,.gif'
+        };
+
+        appConfig = {
+            VERSION: '1.0.0',
+            DEBUG: false,
+            AUTO_SAVE_INTERVAL: 30000,
+            VALIDATION: {
+                REQUIRED_FIELDS: ['date', 'storeName', 'inputBy'],
+                MAX_REMARKS_LENGTH: 1000
+            }
         };
     },
     

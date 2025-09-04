@@ -418,23 +418,6 @@ function validateFormData(data) {
             errors.push('売上データの検証中にエラーが発生しました');
         }
 
-        // 現金過不足の確認
-        try {
-            const theoreticalBalanceElement = document.getElementById('theoreticalBalance');
-            const actualBalanceElement = document.getElementById('totalCash');
-            
-            if (theoreticalBalanceElement && actualBalanceElement) {
-                const theoreticalBalance = parseFloat(theoreticalBalanceElement.textContent.replace(/[¥,]/g, '')) || 0;
-                const actualBalance = parseFloat(actualBalanceElement.textContent.replace(/[¥,]/g, '')) || 0;
-                const difference = Math.abs(actualBalance - theoreticalBalance);
-                
-                if (difference > 10000) {
-                    errors.push(`現金過不足が${formatCurrency(difference)}と大きくなっています。金種の入力を確認してください`);
-                }
-            }
-        } catch (cashValidationError) {
-            console.error('現金過不足バリデーションでエラー:', cashValidationError);
-        }
 
         // ファイルの妥当性チェック
         try {
