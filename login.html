@@ -260,14 +260,18 @@
                 const result = await response.json();
 
                 if (result.success) {
+                    // 修正: store_idを追加
                     const userSession = {
                         isLoggedIn: true,
                         username: result.user.displayName,
                         role: result.user.role,
+                        store_id: result.user.store_id,  // 追加
                         storeName: result.user.storeName,
                         loginTime: Date.now(),
                         rememberMe
                     };
+
+                    console.log('ログイン成功。セッション情報:', userSession); // デバッグ用
 
                     sessionStorage.setItem('userSession', JSON.stringify(userSession));
                     if (rememberMe) {
@@ -280,6 +284,7 @@
                     showErrorMessage(result.message);
                 }
             } catch (error) {
+                console.error('ログインエラー:', error);
                 showErrorMessage('サーバーエラー: ' + error.message);
             } finally {
                 button.disabled = false;

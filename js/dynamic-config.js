@@ -1,5 +1,5 @@
 /**
- * 動的設定管理システム
+ * 動的設定管理システム（修正版）
  * 店舗別設定をAPIから取得し、グローバル変数として提供
  */
 
@@ -65,12 +65,23 @@ const ConfigLoader = {
             if (!userSession) {
                 throw new Error('ユーザーセッションが見つかりません');
             }
+
+            console.log('ユーザーセッション情報:', userSession); // デバッグ用
+
+            // store_idの確認
+            if (!userSession.store_id) {
+                console.warn('ユーザーセッションにstore_idが含まれていません。フォールバック設定を使用します。');
+                this.applyFallbackConfig();
+                this.hideLoading();
+                return;
+            }
             
             // 店舗設定をAPIから取得
             const response = await API.request('getStoreSettings', {
-                user_id: userSession.username,
-                store_id: userSession.storeId
+                storeId: userSession.store_id  // キー名を修正
             });
+
+            console.log('API応答:', response); // デバッグ用
             
             // グローバル変数に設定
             this.applyStoreConfig(response);
@@ -101,39 +112,89 @@ const ConfigLoader = {
      * 設定をグローバル変数に適用
      */
     applyStoreConfig(response) {
-        // 店舗情報
-        storeInfo = {
-            id: response.data.store_id,
-            name: response.data.store_name || '店舗名未設定',
-            code: response.data.store_code || ''
-        };
-        
-        // 支払方法設定
-        paymentMethodConfig = response.data.payment_methods || [];
-        pointPaymentConfig = response.data.point_payments || [];
-        
-        // その他設定（デフォルト値を使用）
+        try {
+            // レスポンス構造を確認
+            if (!response || !response.data) {
+                console.warn('APIレスポンスの構造が期待と異なります:', response);
+                this.applyFallbackConfig();
+                return;
+            }
+
+            const data = response.data;
+
+            // 店舗情報
+            storeInfo = {
+                id: data.store_id,
+                name: data.store_name || '店舗名未設定',
+                code: data.store_code || ''
+            };
+            
+            // 支払方法設定を変換
+            paymentMethodConfig = (data.payment_methods || []).map(method => ({
+                id: method.method_id,
+                label: method.name || method.method_name,
+                color: method.color_code || 'blue',
+                isCash: method.method_type === 'cash',
+                enabled: true
+            }));
+            
+            // ポイント・クーポン設定を変換
+            pointPaymentConfig = (data.point_payments || []).map(payment => ({
+                id: payment.method_id,
+                label: payment.name || payment.method_name,
+                enabled: true
+            }));
+            
+            // デフォルト設定
+            this.applyDefaultConfigs();
+            
+            // ページタイトルに店舗名を反映
+            if (storeInfo.name && storeInfo.name !== '店舗名未設定') {
+                document.title = `日次売上報告書 - ${storeInfo.name}`;
+            }
+            
+            // 店舗情報をページに反映
+            this.updateStoreDisplay();
+            
+        } catch (error) {
+            console.error('設定適用エラー:', error);
+            this.applyFallbackConfig();
+        }
+    },
+    
+    /**
+     * デフォルト設定を適用
+     */
+    applyDefaultConfigs() {
+        // 金種設定
         denominations = [
-            { value: 10000, label: '10,000円' },
-            { value: 5000, label: '5,000円' },
-            { value: 1000, label: '1,000円' },
-            { value: 500, label: '500円' },
-            { value: 100, label: '100円' }
+            { key: 'bill10000', label: '10,000円札', value: 10000 },
+            { key: 'bill5000', label: '5,000円札', value: 5000 },
+            { key: 'bill1000', label: '1,000円札', value: 1000 },
+            { key: 'coin500', label: '500円玉', value: 500 },
+            { key: 'coin100', label: '100円玉', value: 100 },
+            { key: 'coin50', label: '50円玉', value: 50 },
+            { key: 'coin10', label: '10円玉', value: 10 },
+            { key: 'coin5', label: '5円玉', value: 5 },
+            { key: 'coin1', label: '1円玉', value: 1 }
         ];
         
+        // ファイルアップロード設定
         fileUploadConfig = {
-            maxFiles: 5,
-            maxSize: 10485760,
-            allowedTypes: ['image/jpeg', 'image/png', 'application/pdf']
+            MAX_FILES: 5,
+            MAX_FILE_SIZE: 10485760, // 10MB
+            ALLOWED_TYPES: [
+                'application/pdf',
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'image/jpeg',
+                'image/png',
+                'image/gif'
+            ],
+            ALLOWED_EXTENSIONS: '.pdf,.xls,.xlsx,.doc,.docx,.jpg,.jpeg,.png,.gif'
         };
-        
-        // ページタイトルに店舗名を反映
-        if (storeInfo.name) {
-            document.title = `日次売上報告書 - ${storeInfo.name}`;
-        }
-        
-        // 店舗情報をページに反映
-        this.updateStoreDisplay();
     },
     
     /**
@@ -144,28 +205,24 @@ const ConfigLoader = {
         
         paymentMethodConfig = [
             { id: 'cash', label: '現金', color: 'green', isCash: true, enabled: true },
-            { id: 'card', label: 'クレジットカード', color: 'blue', isCash: false, enabled: true }
+            { id: 'card', label: 'クレジットカード', color: 'blue', isCash: false, enabled: true },
+            { id: 'paypay', label: 'PayPay', color: 'red', isCash: false, enabled: true },
+            { id: 'linepay', label: 'LINE Pay', color: 'green', isCash: false, enabled: true }
         ];
         
         pointPaymentConfig = [
-            { id: 'point', label: 'ポイント利用', color: 'purple', enabled: true }
+            { id: 'hotpepper', label: 'HOT PEPPER', enabled: true },
+            { id: 'tabelog', label: '食べログ', enabled: true }
         ];
         
-        denominations = [
-            { value: 10000, label: '10,000円' },
-            { value: 5000, label: '5,000円' },
-            { value: 1000, label: '1,000円' },
-            { value: 500, label: '500円' },
-            { value: 100, label: '100円' }
-        ];
-        
-        fileUploadConfig = {
-            maxFiles: 5,
-            maxSize: 10485760,
-            allowedTypes: ['image/jpeg', 'image/png', 'application/pdf']
+        storeInfo = { 
+            name: '店舗未設定', 
+            code: '', 
+            id: null 
         };
-        
-        storeInfo = { name: '店舗未設定', code: '', id: null };
+
+        // デフォルト設定を適用
+        this.applyDefaultConfigs();
     },
     
     /**
@@ -193,7 +250,12 @@ const ConfigLoader = {
         const storeNameElements = document.querySelectorAll('.store-name, #storeName');
         storeNameElements.forEach(element => {
             if (element) {
-                element.textContent = storeInfo.name || '店舗未設定';
+                if (element.tagName === 'INPUT') {
+                    element.value = storeInfo.name || '店舗未設定';
+                    element.readOnly = true; // 店舗名は変更不可
+                } else {
+                    element.textContent = storeInfo.name || '店舗未設定';
+                }
             }
         });
         
@@ -201,7 +263,11 @@ const ConfigLoader = {
         const storeCodeElements = document.querySelectorAll('.store-code, #storeCode');
         storeCodeElements.forEach(element => {
             if (element) {
-                element.textContent = storeInfo.code || '';
+                if (element.tagName === 'INPUT') {
+                    element.value = storeInfo.code || '';
+                } else {
+                    element.textContent = storeInfo.code || '';
+                }
             }
         });
     },
