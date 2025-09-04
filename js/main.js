@@ -73,7 +73,6 @@ function initializeApplication() {
         
         // データ管理機能
         setupBeforeUnloadWarning();
-        startAutoSave();
         
         // 初期日付設定
         const dateElement = document.getElementById('date');
@@ -251,7 +250,7 @@ function checkForUnsavedData() {
  */
 window.addEventListener('beforeunload', function() {
     try {
-        stopAutoSave();
+        
     } catch (error) {
         console.error('終了処理でエラー:', error);
     }
@@ -311,59 +310,8 @@ function setupNumberInputFocus() {
     }
 }
 
-/**
- * 自動保存機能
- */
-let autoSaveTimer = null;
 
-function startAutoSave() {
-    console.log('自動保存機能を開始');
-    
-    try {
-        if (autoSaveTimer) {
-            clearInterval(autoSaveTimer);
-        }
 
-        const interval = 30000; // 30秒
-
-        autoSaveTimer = setInterval(() => {
-            try {
-                if (typeof collectAllFormData === 'function') {
-                    const data = collectAllFormData();
-                    if (data.date && data.storeName) {
-                        const autoSaveKey = `autoSave_${data.date}_${data.storeName}`;
-                        const autoSaveData = {
-                            ...data,
-                            autoSavedAt: new Date().toISOString()
-                        };
-                        
-                        localStorage.setItem(autoSaveKey, JSON.stringify(autoSaveData));
-                        console.log('自動保存完了:', autoSaveKey);
-                    }
-                }
-            } catch (error) {
-                console.error('自動保存エラー:', error);
-            }
-        }, interval);
-        
-        console.log(`自動保存を開始しました（間隔: ${interval}ms）`);
-        
-    } catch (error) {
-        console.error('自動保存開始でエラー:', error);
-    }
-}
-
-function stopAutoSave() {
-    try {
-        if (autoSaveTimer) {
-            clearInterval(autoSaveTimer);
-            autoSaveTimer = null;
-            console.log('自動保存を停止しました');
-        }
-    } catch (error) {
-        console.error('自動保存停止でエラー:', error);
-    }
-}
 
 // デバッグ用: グローバルスコープに公開
 if (typeof window !== 'undefined') {

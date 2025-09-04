@@ -19,6 +19,8 @@ const API = {
      */
     async request(action, data = {}) {
         try {
+            console.log('API リクエスト送信:', action, data);
+            
             const response = await fetch('api.php', {
                 method: 'POST',
                 headers: {
@@ -30,11 +32,30 @@ const API = {
                 })
             });
             
+            console.log('レスポンス状態:', response.status, response.statusText);
+            
+            // レスポンステキストを先に取得
+            const responseText = await response.text();
+            console.log('生レスポンス:', responseText);
+            
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error(`HTTP error! status: ${response.status}, response: ${responseText}`);
             }
             
-            const result = await response.json();
+            // JSONパース（デバッグ出力を除去）
+            let result;
+            try {
+                // JSONの開始位置を見つける
+                const jsonStart = responseText.indexOf('{');
+                const cleanResponseText = jsonStart >= 0 ? responseText.substring(jsonStart) : responseText;
+                
+                console.log('クリーンなレスポンス:', cleanResponseText);
+                result = JSON.parse(cleanResponseText);
+            } catch (parseError) {
+                console.error('JSON parse error:', parseError);
+                console.error('Response text:', responseText);
+                throw new Error(`Invalid JSON response: ${responseText.substring(0, 100)}`);
+            }
             
             if (!result.success) {
                 throw new Error(result.message || 'APIエラーが発生しました');
@@ -69,12 +90,23 @@ const ConfigLoader = {
             console.log('ユーザーセッション情報:', userSession); // デバッグ用
 
             // store_idの確認
-            if (!userSession.store_id) {
-                console.warn('ユーザーセッションにstore_idが含まれていません。フォールバック設定を使用します。');
+            // store_idの確認（デバッグ強化）
+            console.log('🔍 セッション全体:', userSession);
+            console.log('🔍 store_id詳細:', {
+                store_id: userSession.store_id,
+                type: typeof userSession.store_id,
+                isNull: userSession.store_id === null,
+                isUndefined: userSession.store_id === undefined
+            });
+
+            if (!userSession.store_id && userSession.store_id !== 0) {
+                console.error('❌ store_id取得失敗 - フォールバック設定を使用');
                 this.applyFallbackConfig();
                 this.hideLoading();
                 return;
             }
+
+console.log('✅ store_id取得成功:', userSession.store_id);
             
             // 店舗設定をAPIから取得
             const response = await API.request('getStoreSettings', {
@@ -114,36 +146,43 @@ const ConfigLoader = {
     applyStoreConfig(response) {
         try {
             // レスポンス構造を確認
-            if (!response || !response.data) {
-                console.warn('APIレスポンスの構造が期待と異なります:', response);
+            if (!response) {
+                console.warn('APIレスポンスが空です:', response);
                 this.applyFallbackConfig();
                 return;
             }
 
-            const data = response.data;
+            // レスポンスが直接データを持っている場合の対応
+            const data = response.data || response;
+            console.log('設定データ:', data);
 
             // 店舗情報
             storeInfo = {
                 id: data.store_id,
-                name: data.store_name || '店舗名未設定',
+                name: '四代目菊川　三ノ宮店', // 一時的に固定値
                 code: data.store_code || ''
             };
-            
-            // 支払方法設定を変換
-            paymentMethodConfig = (data.payment_methods || []).map(method => ({
+
+            // 支払方法設定を変換（payment_settingsから）
+            const paymentSettings = data.payment_settings || {};
+            paymentMethodConfig = Object.values(paymentSettings).map(method => ({
                 id: method.method_id,
-                label: method.name || method.method_name,
+                label: method.display_name,
                 color: method.color_code || 'blue',
                 isCash: method.method_type === 'cash',
-                enabled: true
-            }));
-            
-            // ポイント・クーポン設定を変換
-            pointPaymentConfig = (data.point_payments || []).map(payment => ({
+                enabled: method.is_enabled == 1
+            })).filter(method => method.enabled);
+
+            // ポイント・クーポン設定を変換（point_settingsから）
+            const pointSettings = data.point_settings || {};
+            pointPaymentConfig = Object.values(pointSettings).map(payment => ({
                 id: payment.method_id,
-                label: payment.name || payment.method_name,
-                enabled: true
-            }));
+                label: payment.display_name,
+                enabled: payment.is_enabled == 1
+            })).filter(payment => payment.enabled);
+
+            console.log('変換された支払方法:', paymentMethodConfig);
+            console.log('変換されたポイント設定:', pointPaymentConfig);
             
             // デフォルト設定
             this.applyDefaultConfigs();

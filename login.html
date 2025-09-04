@@ -260,6 +260,10 @@
                 const result = await response.json();
 
                 if (result.success) {
+                    // デバッグ情報追加
+                    console.log('🔍 API完全レスポンス:', result);
+                    console.log('🔍 ユーザー情報:', result.user);
+                    console.log('🔍 store_id確認:', result.user.store_id, typeof result.user.store_id);
                     // 修正: store_idを追加
                     const userSession = {
                         isLoggedIn: true,

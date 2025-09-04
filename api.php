@@ -4,12 +4,11 @@
  * 全てのAPI処理を一元管理
  */
 
-echo "API Start\n";
 
 // セッション開始
 session_start();
+header('Content-Type: application/json');
 
-echo "Session started\n";
 
 // エラー表示設定
 ini_set('display_errors', 1);
