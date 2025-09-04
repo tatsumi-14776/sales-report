@@ -68,8 +68,12 @@ try {
         throw new Exception('データベース接続エラー。XAMPPのMySQLが起動しているか確認してください。エラー詳細: ' . $e->getMessage());
     }
 
-    // ユーザー検索（修正版クエリ - store_idも取得）
-    $sql = "SELECT id, store_id, pass, role, store_name, is_active FROM users WHERE id = :username AND is_active = 1 LIMIT 1";
+    // ユーザー検索（store_idも取得）
+    $sql = "SELECT u.id, u.store_id, u.pass, u.role, u.store_name, u.is_active, s.store_code
+            FROM users u 
+            LEFT JOIN stores s ON u.store_id = s.id 
+            WHERE u.id = :username AND u.is_active = 1 
+            LIMIT 1";
     $stmt = $pdo->prepare($sql);
     $stmt->bindParam(':username', $username);
     $stmt->execute();
@@ -123,7 +127,7 @@ try {
     $role = strtolower(trim($user['role']));
     $normalizedRole = ($role === 'admin') ? 'admin' : (($role === 'manager') ? 'manager' : 'user');
 
-    // 成功レスポンス（store_id追加）
+    // 成功レスポンス（store_id追加・修正）
     echo json_encode([
         'success' => true,
         'message' => 'ログイン成功',
@@ -132,8 +136,9 @@ try {
             'username' => $user['id'],
             'displayName' => $user['id'],
             'role' => $normalizedRole,
-            'store_id' => $user['store_id'],  // 追加
-            'storeName' => $user['store_name'] ?? ''
+            'store_id' => intval($user['store_id'] ?? 0),  // 修正：intvalで数値に変換
+            'storeName' => $user['store_name'] ?? '',
+            'storeCode' => $user['store_code'] ?? ''
         ]
     ]);
 
