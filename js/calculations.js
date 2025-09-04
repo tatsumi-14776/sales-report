@@ -11,6 +11,7 @@ function updateAllCalculations() {
     updatePointPaymentCalculation();
     updateIncomeCalculation();
     updateExpenseCalculation();
+    updateCashCalculation(); 
     updateSummaryCalculation();
     updateCashDifferenceCalculation();
     updatePrintSummary();

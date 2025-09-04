@@ -157,10 +157,11 @@ console.log('✅ store_id取得成功:', userSession.store_id);
             const data = response.data || response;
             console.log('設定データ:', data);
 
-            // 店舗情報
+            // 店舗情報（ユーザーセッションから取得）
+            const userSession = this.getUserSession();
             storeInfo = {
                 id: data.store_id,
-                name: '四代目菊川　三ノ宮店', // 一時的に固定値
+                name: userSession?.storeName || data.store_name || '店舗未設定',
                 code: data.store_code || ''
             };
 
@@ -296,15 +297,22 @@ console.log('✅ store_id取得成功:', userSession.store_id);
      * 店舗情報をページに表示
      */
     updateStoreDisplay() {
+        // ユーザーセッションから店舗名を取得
+        const userSession = this.getUserSession();
+        const storeName = userSession?.storeName || storeInfo.name || '店舗未設定';
+        
         // 店舗名の表示更新
         const storeNameElements = document.querySelectorAll('.store-name, #storeName');
         storeNameElements.forEach(element => {
             if (element) {
                 if (element.tagName === 'INPUT') {
-                    element.value = storeInfo.name || '店舗未設定';
+                    // 既に値が設定されている場合は上書きしない
+                    if (!element.value || element.value === '店舗未設定') {
+                        element.value = storeName;
+                    }
                     element.readOnly = true; // 店舗名は変更不可
                 } else {
-                    element.textContent = storeInfo.name || '店舗未設定';
+                    element.textContent = storeName;
                 }
             }
         });
