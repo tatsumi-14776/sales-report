@@ -453,7 +453,10 @@
     </div>
 
     <!-- JavaScript ファイルを読み込み -->
-    <script src="js/config.js"></script>
+    <!-- 動的設定システム（最初に読み込み） -->
+    <script src="js/dynamic-config.js"></script>
+    
+    <!-- 既存のJavaScriptファイル -->
     <script src="js/calculations.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/fileManager.js"></script>
