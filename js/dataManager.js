@@ -123,7 +123,8 @@ async function loadSampleData(date, storeName) {
  * @returns {Object} フォーム用データ
  */
 function convertDatabaseToFormData(dbData) {
-    console.log('データベースデータをフォーム用に変換中:', dbData);
+    console.log('=== データベースデータをフォーム用に変換中 ===');
+    console.log('生のデータベースデータ:', dbData);
     
     try {
         const formData = {
@@ -133,66 +134,119 @@ function convertDatabaseToFormData(dbData) {
             remarks: dbData.remarks || ''
         };
         
-        // JSONデータをパース
+        // 売上データを正しく復元
+        console.log('=== 売上データ復元開始 ===');
+        console.log('dbData.sales_data (生):', dbData.sales_data);
         if (dbData.sales_data) {
             try {
                 const salesData = typeof dbData.sales_data === 'string' ? 
                     JSON.parse(dbData.sales_data) : dbData.sales_data;
-                Object.assign(formData, salesData);
+                formData.sales = salesData;
+                console.log('売上データ復元完了:', formData.sales);
             } catch (e) {
                 console.warn('売上データのパースに失敗:', e);
+                formData.sales = {};
             }
+        } else {
+            formData.sales = {};
         }
         
+        // ポイント・クーポン支払データを正しく復元
+        console.log('=== ポイント支払データ復元開始 ===');
+        console.log('dbData.point_payments_data (生):', dbData.point_payments_data);
         if (dbData.point_payments_data) {
             try {
                 const pointData = typeof dbData.point_payments_data === 'string' ? 
                     JSON.parse(dbData.point_payments_data) : dbData.point_payments_data;
-                Object.assign(formData, pointData);
+                formData.pointPayments = pointData;
+                console.log('ポイント支払データ復元完了:', formData.pointPayments);
             } catch (e) {
                 console.warn('ポイント支払データのパースに失敗:', e);
+                formData.pointPayments = {};
             }
+        } else {
+            formData.pointPayments = {};
         }
         
+        // 入金・雑収入データを正しく復元
+        console.log('=== 入金データ復元開始 ===');
+        console.log('dbData.income_data (生):', dbData.income_data);
         if (dbData.income_data) {
             try {
                 const incomeData = typeof dbData.income_data === 'string' ? 
                     JSON.parse(dbData.income_data) : dbData.income_data;
-                Object.assign(formData, incomeData);
+                formData.income = incomeData;
+                console.log('入金・雑収入データ復元完了:', formData.income);
             } catch (e) {
                 console.warn('入金データのパースに失敗:', e);
+                formData.income = { nyukin: 0, miscIncome: 0, foundMoney: 0 };
             }
+        } else {
+            formData.income = { nyukin: 0, miscIncome: 0, foundMoney: 0 };
         }
         
+        // 経費データを正しく復元
+        console.log('=== 経費データ復元開始 ===');
+        console.log('dbData.expense_data (生):', dbData.expense_data);
         if (dbData.expense_data) {
             try {
                 const expenseData = typeof dbData.expense_data === 'string' ? 
                     JSON.parse(dbData.expense_data) : dbData.expense_data;
-                formData.expenseRecords = expenseData;
+                formData.expenses = Array.isArray(expenseData) ? expenseData : [];
+                console.log('経費データ復元完了:', formData.expenses);
             } catch (e) {
                 console.warn('経費データのパースに失敗:', e);
+                formData.expenses = [];
             }
+        } else {
+            formData.expenses = [];
         }
         
+        // 現金管理データを正しく復元
+        console.log('=== 現金データ復元開始 ===');
+        console.log('dbData.cash_data (生):', dbData.cash_data);
         if (dbData.cash_data) {
             try {
                 const cashData = typeof dbData.cash_data === 'string' ? 
                     JSON.parse(dbData.cash_data) : dbData.cash_data;
-                Object.assign(formData, cashData);
+                formData.cash = cashData;
+                console.log('現金データ復元完了:', formData.cash);
             } catch (e) {
                 console.warn('現金データのパースに失敗:', e);
+                formData.cash = {};
             }
+        } else {
+            formData.cash = {};
+        }
+        
+        // 現金管理データを正しく復元
+        console.log('=== 現金データ復元開始 ===');
+        console.log('dbData.cash_data (生):', dbData.cash_data);
+        if (dbData.cash_data) {
+            try {
+                const cashData = typeof dbData.cash_data === 'string' ? 
+                    JSON.parse(dbData.cash_data) : dbData.cash_data;
+                formData.cash = cashData;
+                console.log('現金データ復元完了:', formData.cash);
+            } catch (e) {
+                console.warn('現金データのパースに失敗:', e);
+                formData.cash = {};
+            }
+        } else {
+            formData.cash = {};
         }
         
         // 前日現金残と現金過不足
         if (dbData.previous_cash_balance !== undefined) {
-            formData.previousCashBalance = dbData.previous_cash_balance;
+            formData.previousCashBalance = parseFloat(dbData.previous_cash_balance) || 0;
+            console.log('前日現金残復元完了:', formData.previousCashBalance);
         }
         if (dbData.cash_difference !== undefined) {
-            formData.cashDifference = dbData.cash_difference;
+            formData.cashDifference = parseFloat(dbData.cash_difference) || 0;
+            console.log('現金過不足復元完了:', formData.cashDifference);
         }
         
-        console.log('変換完了:', formData);
+        console.log('変換完了（全体）:', formData);
         return formData;
         
     } catch (error) {
@@ -217,7 +271,6 @@ async function saveReportToDatabase(reportData) {
         }
 
         const storeId = userSession.store_id || 8;
-        // 担当者は手入力された値を使用（reportData.inputBy）
         const userId = reportData.inputBy || userSession.username; 
         
         console.log('保存用ユーザー情報:', {
@@ -230,27 +283,32 @@ async function saveReportToDatabase(reportData) {
             throw new Error('担当者名が入力されていません。');
         }
         
-        // APIリクエスト用のデータを準備（JSON文字列化は不要）
+        // APIリクエスト用のデータを準備（キー名を正しく設定）
         const requestData = {
             action: 'saveReport',
             report_date: reportData.date,
             store_id: storeId,
             user_id: userId,
-            sales_data: reportData.sales || {},
-            point_payments_data: reportData.pointPayments || {},
-            income_data: {
+            sales_data: JSON.stringify(reportData.sales || {}),           // JSON文字列に変換
+            point_payments_data: JSON.stringify(reportData.pointPayments || {}),  // JSON文字列に変換
+            income_data: JSON.stringify({
                 nyukin: parseFloat(reportData.income?.nyukin) || 0,
                 miscIncome: parseFloat(reportData.income?.miscIncome) || 0,
                 foundMoney: parseFloat(reportData.income?.foundMoney) || 0
-            },
-            expense_data: reportData.expenses || [],
-            cash_data: reportData.cash || {},
+            }),
+            expense_data: JSON.stringify(reportData.expenses || []),
+            cash_data: JSON.stringify(reportData.cash || {}),
             previous_cash_balance: parseFloat(reportData.previousCashBalance) || 0,
             cash_difference: 0,
             remarks: reportData.remarks || ''
         };
         
-        console.log('APIリクエストデータ:', requestData);
+        console.log('APIリクエストデータ（詳細）:', requestData);
+        console.log('保存対象の売上データ:', reportData.sales);
+        console.log('保存対象のポイント支払データ:', reportData.pointPayments);
+        console.log('保存対象の入金データ:', reportData.income);
+        console.log('保存対象の経費データ:', reportData.expenses);
+        console.log('保存対象の現金データ:', reportData.cash);
         
         // APIへのPOSTリクエスト
         const response = await fetch('api.php', {
@@ -261,7 +319,6 @@ async function saveReportToDatabase(reportData) {
             body: JSON.stringify(requestData)
         });
         
-        // レスポンステキストを先に取得してデバッグ
         const responseText = await response.text();
         console.log('API生レスポンス:', responseText);
         
@@ -269,7 +326,6 @@ async function saveReportToDatabase(reportData) {
             throw new Error(`HTTP error! status: ${response.status}, response: ${responseText}`);
         }
         
-        // JSONパースを試行
         let result;
         try {
             result = JSON.parse(responseText);
