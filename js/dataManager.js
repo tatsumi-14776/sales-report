@@ -50,25 +50,44 @@ function handleLoadData() {
         const dateElement = document.getElementById('date');
         const storeNameElement = document.getElementById('storeName');
         
-        const selectedDate = dateElement ? dateElement.value : '';
-        const storeName = storeNameElement ? storeNameElement.value.trim() : '';
-        
+        // URLパラメータから値を取得
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlDate = urlParams.get('date');
+        const urlStoreId = urlParams.get('store_id');
+        const viewMode = urlParams.get('mode');
+
+        let selectedDate = dateElement ? dateElement.value : '';
+        let storeName = storeNameElement ? storeNameElement.value.trim() : '';
+
+        // URLパラメータがある場合は優先
+        if (urlDate) {
+            selectedDate = urlDate;
+            if (dateElement) {
+                dateElement.value = urlDate;
+            }
+        }
+
         if (!selectedDate) {
             showError('読み込む日付を選択してください');
             return;
         }
-        
+
         if (!storeName) {
             showError('店舗名を入力してください');
             return;
         }
-        
+
         // ローディング表示を開始
         showLoadingIndicator(true);
-        
+
         console.log(`データ読み込み対象: ${selectedDate} - ${storeName}`);
-        loadSampleData(selectedDate, storeName);
-        
+
+        // URLパラメータで店舗IDが指定されている場合は直接使用
+        if (urlStoreId && viewMode) {
+            loadSampleDataByStoreId(selectedDate, parseInt(urlStoreId), storeName);
+        } else {
+            loadSampleData(selectedDate, storeName);
+        }
     } catch (error) {
         console.error('データ読込処理でエラー:', error);
         showError('データの読み込み中にエラーが発生しました');
@@ -432,6 +451,72 @@ async function rebuildUIWithSavedConfig(savedPaymentConfig, savedPointConfig) {
     } catch (error) {
         console.error('UI再構築でエラー:', error);
         showError('過去の設定での表示に失敗しました。現在の設定で表示します。');
+    }
+}
+
+/**
+ * 店舗IDを直接指定してデータ読込
+ * @param {string} date 日付
+ * @param {number} storeId 店舗ID
+ * @param {string} storeName 店舗名
+ */
+async function loadSampleDataByStoreId(date, storeId, storeName) {
+    console.log(`店舗ID指定でデータ読込を開始: ${date} - 店舗ID:${storeId} (${storeName})`);
+    
+    try {
+        console.log(`対象店舗ID: ${storeId}, 店舗名: ${storeName}, 日付: ${date}`);
+        
+        // APIからデータを取得
+        const response = await fetch(`api.php?action=getReport&report_date=${encodeURIComponent(date)}&store_id=${storeId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            console.log('=== API成功レスポンス詳細 ===');
+            console.log('データベースからデータを取得しました:', result.data);
+            
+            if (typeof loadDataIntoForm === 'function') {
+                // データベースから取得したデータをフォーム用に変換
+                const formData = convertDatabaseToFormData(result.data);
+                
+                // 店舗名を正しく設定
+                formData.storeName = storeName;
+                
+                // 保存時の設定がある場合は、それを使用してUIを再構築
+                if (formData.savedPaymentMethodConfig || formData.savedPointPaymentConfig) {
+                    console.log('保存時の設定でUIを再構築します');
+                    await rebuildUIWithSavedConfig(formData.savedPaymentMethodConfig, formData.savedPointPaymentConfig);
+                }
+                
+                loadDataIntoForm(formData);
+                
+                // データ読み込み完了後にローディングを非表示
+                showLoadingIndicator(false);
+            } else {
+                console.error('loadDataIntoForm関数が見つかりません');
+                showError('データ読み込み機能が利用できません');
+                showLoadingIndicator(false);
+            }
+            
+        } else {
+            console.log('指定されたデータが見つかりません:', result.message);
+            showError(result.message || '指定された日付・店舗のデータが見つかりません');
+            showLoadingIndicator(false);
+        }
+        
+    } catch (error) {
+        console.error('データ読込でエラー:', error);
+        showError('データの読み込みに失敗しました: ' + error.message);
+        showLoadingIndicator(false);
     }
 }
 

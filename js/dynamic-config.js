@@ -75,6 +75,13 @@ const ConfigLoader = {
         try {
             // ローディング表示
             this.showLoading('店舗設定を読み込み中...');
+          // URLパラメータから店舗IDと日付を取得
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlStoreId = urlParams.get('store_id');
+            const urlDate = urlParams.get('date');
+            const viewMode = urlParams.get('mode');
+            
+            console.log('URLパラメータ:', { urlStoreId, urlDate, viewMode });
             
             // セッションからユーザー情報を取得
             const userSession = this.getUserSession();
@@ -106,18 +113,33 @@ const ConfigLoader = {
                 isUndefined: userSession.store_id === undefined
             });
 
-            if (!userSession.store_id && userSession.store_id !== 0) {
-                console.error('❌ store_id取得失敗 - フォールバック設定を使用');
-                this.applyFallbackConfig();
-                this.hideLoading();
-                return { success: false, message: '店舗IDが設定されていません' };
+            // 使用する店舗IDを決定（URLパラメータ優先）
+            let targetStoreId;
+            if (urlStoreId && userSession.role === 'admin') {
+                // 管理者がURLパラメータで店舗IDを指定した場合
+                targetStoreId = parseInt(urlStoreId);
+                console.log('管理者：URLパラメータの店舗IDを使用:', targetStoreId);
+            } else if (userSession.store_id || userSession.store_id === 0) {
+                // 通常のユーザーセッションの店舗ID
+                targetStoreId = userSession.store_id;
+                console.log('セッションの店舗IDを使用:', targetStoreId);
+            } else {
+                // 管理者で店舗IDがない場合はフォールバック設定
+                if (userSession.role === 'admin') {
+                    console.log('管理者：店舗未選択のためフォールバック設定を適用');
+                    this.applyFallbackConfig();
+                    this.hideLoading();
+                    return { success: true, message: '管理者モード：フォールバック設定適用' };
+                } else {
+                    throw new Error('店舗IDが設定されていません');
+                }
             }
 
-console.log('✅ store_id取得成功:', userSession.store_id);
-            
+            console.log('✅ 対象店舗ID:', targetStoreId);
+
             // 店舗設定をAPIから取得
             const response = await API.request('getStoreSettings', {
-                storeId: userSession.store_id  // キー名を修正
+                storeId: targetStoreId
             });
 
             console.log('API応答:', response); // デバッグ用

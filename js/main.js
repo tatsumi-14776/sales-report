@@ -79,7 +79,10 @@ function initializeApplication() {
         if (dateElement && !dateElement.value) {
             dateElement.value = getCurrentDate();
         }
-        
+
+        // URLパラメータをチェックして自動データ読み込み
+        checkAndAutoLoadData();
+
         // 初期化完了
         isAppInitialized = true;
         console.log('✅ アプリケーション機能の初期化が完了しました');
@@ -91,9 +94,43 @@ function initializeApplication() {
 }
 
 /**
- * 設定読み込み前の代替処理
- * 設定が読み込まれる前に最低限の機能を提供
+ * URLパラメータをチェックして自動データ読み込み
  */
+function checkAndAutoLoadData() {
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlDate = urlParams.get('date');
+        const urlStoreId = urlParams.get('store_id');
+        const viewMode = urlParams.get('mode');
+        
+        console.log('URLパラメータチェック:', { urlDate, urlStoreId, viewMode });
+        
+        if (urlDate && urlStoreId && viewMode === 'view') {
+            console.log('確認モード：自動データ読み込みを実行');
+            
+            // 少し遅らせてUIが完全に準備されてから実行
+            setTimeout(() => {
+                if (typeof handleLoadData === 'function') {
+                    handleLoadData();
+                } else {
+                    console.error('handleLoadData関数が見つかりません');
+                }
+            }, 500);
+        } else if (urlDate) {
+            // 日付のみ指定されている場合は日付を設定
+            const dateElement = document.getElementById('date');
+            if (dateElement) {
+                dateElement.value = urlDate;
+                console.log('URLパラメータから日付を設定:', urlDate);
+            }
+        }
+        
+    } catch (error) {
+        console.error('URLパラメータチェックでエラー:', error);
+    }
+}
+
+// 設定読み込み前の代替処理
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM読み込み完了。設定読み込みを待機中...');
     

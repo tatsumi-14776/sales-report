@@ -204,14 +204,25 @@ class APIController {
     /**
      * 店舗設定取得
      */
-    /**
-     * 店舗設定取得
-     */
     private function getStoreSettings($data) {
-        $storeId = $data['storeId'] ?? $data['store_id'] ?? 1; // URLパラメータとJSONの両方に対応
+        $storeId = $data['storeId'] ?? $data['store_id'] ?? 1;
         
         if (empty($storeId)) {
             throw new Exception('店舗IDが指定されていません');
+        }
+        
+        // 店舗情報を取得
+        $stmt = $this->db->prepare("
+            SELECT id, store_name, store_code, created_at 
+            FROM stores 
+            WHERE id = ? 
+            LIMIT 1
+        ");
+        $stmt->execute([$storeId]);
+        $storeInfo = $stmt->fetch();
+        
+        if (!$storeInfo) {
+            throw new Exception('指定された店舗が見つかりません');
         }
         
         // 支払い方法設定を取得
@@ -251,6 +262,8 @@ class APIController {
         return [
             'success' => true,
             'store_id' => $storeId,
+            'store_name' => $storeInfo['store_name'],
+            'store_code' => $storeInfo['store_code'],
             'payment_settings' => array_filter($paymentSettings, function($p) { return $p['is_enabled']; }),
             'point_settings' => array_filter($pointSettings, function($p) { return $p['is_enabled']; })
         ];
