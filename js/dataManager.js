@@ -210,48 +210,44 @@ async function saveReportToDatabase(reportData) {
     console.log('データベース保存開始:', reportData);
     
     try {
-        const storeId = sessionStorage.getItem('storeId') || 8; // セッションから店舗IDを取得
+        // ユーザーセッションからログイン中のユーザー情報を取得
+        const userSession = getUserSession();
+        if (!userSession) {
+            throw new Error('ユーザーセッションが見つかりません。再度ログインしてください。');
+        }
+
+        const storeId = userSession.store_id || 8; // セッションから店舗IDを取得
+        const userId = userSession.username || userSession.user_id; // ログイン中のユーザーIDを使用
+        
+        console.log('保存用ユーザー情報:', {
+            userId: userId,
+            storeId: storeId,
+            session: userSession
+        });
+
+        // usersテーブルにユーザーが存在するかチェック
+        if (!userId) {
+            throw new Error('ユーザーIDが取得できませんでした。再度ログインしてください。');
+        }
         
         // APIリクエスト用のデータを準備
         const requestData = {
             action: 'saveReport',
             report_date: reportData.date,
             store_id: storeId,
-            user_id: reportData.inputBy || 'system',
-            remarks: reportData.remarks || '',
-            
-            // 売上データ
-            sales_data: JSON.stringify({
-                totalSales: reportData.totalSales || 0,
-                visitorsCount: reportData.visitorsCount || 0,
-                averageSpend: reportData.averageSpend || 0
-            }),
-            
-            // ポイント支払データ
-            point_payments_data: JSON.stringify({
-                pointPayments: reportData.pointPayments || {}
-            }),
-            
-            // 入金データ
+            user_id: userId, // セッションからのユーザーIDを使用（重要：フォームの値は使わない）
+            sales_data: JSON.stringify(reportData.sales || {}),
+            point_payments_data: JSON.stringify(reportData.pointPayments || {}),
             income_data: JSON.stringify({
-                salesCash: reportData.salesCash || 0,
-                creditCard: reportData.creditCard || 0,
-                electronicMoney: reportData.electronicMoney || 0,
-                totalIncome: reportData.totalIncome || 0
+                nyukin: parseFloat(reportData.income?.nyukin) || 0,
+                miscIncome: parseFloat(reportData.income?.miscIncome) || 0,
+                foundMoney: parseFloat(reportData.income?.foundMoney) || 0
             }),
-            
-            // 経費データ
-            expense_data: JSON.stringify(reportData.expenseRecords || []),
-            
-            // 現金データ
-            cash_data: JSON.stringify({
-                cashOnHand: reportData.cashOnHand || 0,
-                calculatedCash: reportData.calculatedCash || 0
-            }),
-            
-            // その他の数値データ
+            expense_data: JSON.stringify(reportData.expenses || []),
+            cash_data: JSON.stringify(reportData.cash || {}),
             previous_cash_balance: parseFloat(reportData.previousCashBalance) || 0,
-            cash_difference: parseFloat(reportData.cashDifference) || 0
+            cash_difference: 0, // 現在は0で保存、後で計算ロジックを追加可能
+            remarks: reportData.remarks || ''
         };
         
         console.log('APIリクエストデータ:', requestData);
@@ -282,6 +278,22 @@ async function saveReportToDatabase(reportData) {
     } catch (error) {
         console.error('データベース保存でエラー:', error);
         throw error;
+    }
+}
+
+/**
+ * ユーザーセッション情報を取得する関数
+ */
+function getUserSession() {
+    try {
+        const session = sessionStorage.getItem('userSession') || localStorage.getItem('userSession');
+        if (session) {
+            return JSON.parse(session);
+        }
+        return null;
+    } catch (error) {
+        console.error('ユーザーセッション取得エラー:', error);
+        return null;
     }
 }
 

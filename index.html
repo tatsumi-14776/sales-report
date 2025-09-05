@@ -66,11 +66,17 @@
         // 店舗名を設定（読み取り専用）
         const storeNameElement = document.getElementById('storeName');
         if (storeNameElement && userSession.storeName) {
-            // 既に値がある場合でも、ユーザーセッションの店舗名を優先
             if (!storeNameElement.value || storeNameElement.value === '店舗未設定') {
                 storeNameElement.value = userSession.storeName;
             }
-            storeNameElement.readOnly = true; // 店舗名は変更不可
+            storeNameElement.readOnly = true;
+        }
+
+        // 担当者フィールドにログイン中のユーザー名を設定
+        const inputByElement = document.getElementById('inputBy');
+        if (inputByElement && userSession.username) {
+            inputByElement.value = userSession.username;
+            inputByElement.readOnly = true; // 変更不可にする
             
             // data属性として保存（後で参照用）
             storeNameElement.setAttribute('data-original-store-name', userSession.storeName);
