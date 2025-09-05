@@ -23,15 +23,16 @@ const accountCategories = [
 ];
 
 // 設定読み込み完了後の処理
-// 設定読み込み完了イベントリスナー
 document.addEventListener('configLoaded', function(event) {
-    if (!isAppInitialized) {
-        try {
-            initializeApplication();
-        } catch (error) {
-            console.error('初期化エラー:', error);
-            showError('アプリケーションの初期化に失敗しました');
-        }
+    console.log('設定読み込み完了。アプリケーション初期化を開始します。');
+    console.log('イベント詳細:', event.detail);
+    
+    try {
+        initializeApplication();
+        console.log('✅ アプリケーション初期化完了');
+    } catch (error) {
+        console.error('❌ アプリケーション初期化エラー:', error);
+        showError('アプリケーションの初期化に失敗しました: ' + error.message);
     }
 });
 
@@ -40,19 +41,52 @@ document.addEventListener('configLoaded', function(event) {
  */
 function initializeApplication() {
     if (isAppInitialized) {
+        console.log('既に初期化済みです');
         return;
     }
     
-    try {/**
- * 管理者用店舗選択ドロップダウンのチェックと設定
- */
-function checkAndSetupAdminStoreSelection() {
-    // グローバルフラグまたは要素の属性から管理者モードをチェック
-    const storeNameElement = document.getElementById('storeName');
-    const isAdmin = window.isAdminUser || (storeNameElement && storeNameElement.getAttribute('data-admin-mode') === 'true');
-    
-    if (isAdmin && storeNameElement) {
-        setupAdminStoreSelection(storeNameElement);
+    try {
+        console.log('初期化開始:', {
+            paymentMethods: paymentMethodConfig?.length || 0,
+            pointMethods: pointPaymentConfig?.length || 0,
+            denominations: denominations?.length || 0
+        });
+
+        // 初期経費レコードを設定
+        if (expenseRecords.length === 0) {
+            expenseRecords.push({id: 1, vendor: '', account: '', item: '', amount: ''});
+        }
+        
+        // UI要素の生成
+        generatePaymentMethods();
+        generateDiscountSection();
+        generateDenominationRows();
+        generateFileInputs();
+        
+        // イベントリスナーの設定
+        setupEventListeners();
+        setupRemarksListeners();
+        setupNumberInputFocus();
+        
+        // 初期計算
+        updateAllCalculations();
+        
+        // データ管理機能
+        setupBeforeUnloadWarning();
+        
+        // 初期日付設定
+        const dateElement = document.getElementById('date');
+        if (dateElement && !dateElement.value) {
+            dateElement.value = getCurrentDate();
+        }
+        
+        // 初期化完了
+        isAppInitialized = true;
+        console.log('✅ アプリケーション機能の初期化が完了しました');
+        
+    } catch (error) {
+        console.error('アプリケーション初期化でエラー:', error);
+        throw error;
     }
 }
 
@@ -61,8 +95,7 @@ function checkAndSetupAdminStoreSelection() {
  * 設定が読み込まれる前に最低限の機能を提供
  */
 document.addEventListener('DOMContentLoaded', function() {
-    // 管理者用店舗選択ドロップダウンの設定
-    checkAndSetupAdminStoreSelection();
+    console.log('DOM読み込み完了。設定読み込みを待機中...');
     
     // 設定読み込み完了まで待機
     const maxWaitTime = 10000; // 10秒
@@ -70,11 +103,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const checkConfig = () => {
         if (isAppInitialized) {
+            console.log('アプリケーション初期化済み');
             return;
         }
         
         const elapsed = Date.now() - startTime;
         if (elapsed > maxWaitTime) {
+            console.warn('設定読み込みがタイムアウトしました。フォールバック処理を実行します。');
             try {
                 // フォールバック設定が適用されているかチェック
                 if (!paymentMethodConfig || paymentMethodConfig.length === 0) {
@@ -90,6 +125,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // 設定が読み込まれているかチェック
         if (paymentMethodConfig && paymentMethodConfig.length > 0) {
+            console.log('設定読み込み確認。初期化を実行します。');
             try {
                 initializeApplication();
             } catch (error) {
@@ -232,7 +268,8 @@ function showError(message) {
  * 成功表示（グローバル）
  */
 function showSuccess(message) {
-    showToast(message, 'success');
+    console.log('成功:', message);
+    alert(message);
 }
 
 /**
@@ -252,15 +289,20 @@ function getCurrentDate() {
  */
 function setupNumberInputFocus() {
     try {
+        console.log('数値入力フォーカス設定を開始');
+        
         document.addEventListener('focus', function(e) {
             if (e.target.type === 'number') {
                 try {
                     e.target.select();
                 } catch (selectError) {
                     // select()が失敗しても処理を継続
+                    console.warn('入力フィールドの選択でエラー:', selectError);
                 }
             }
         }, true);
+        
+        console.log('数値入力フォーカス設定完了');
         
     } catch (error) {
         console.error('数値入力フォーカス設定でエラー:', error);
@@ -286,108 +328,6 @@ if (typeof window !== 'undefined') {
             initializeApplication();
         }
     };
+    
+    console.log('デバッグ機能をwindow.appDebugに公開しました');
 }
-
-/**
- * 管理者用店舗選択ドロップダウンの設定
- * @param {HTMLElement} storeInputElement 既存の店舗名入力要素
- */
-async function setupAdminStoreSelection(storeInputElement) {
-    try {
-        // 現在の入力フィールドを選択フィールドに置き換え
-        const parent = storeInputElement.parentElement;
-        
-        // 新しい選択フィールドを作成
-        const selectElement = document.createElement('select');
-        selectElement.id = 'storeName';
-        selectElement.className = 'info-input wide';
-        selectElement.required = true;
-        
-        // 既存の入力フィールドを削除
-        storeInputElement.remove();
-        
-        // 新しい選択フィールドを追加
-        parent.appendChild(selectElement);
-        
-        // 店舗一覧を取得してオプションを追加
-        await loadStoreOptions(selectElement);
-        
-        // 店舗選択時のイベントリスナーを追加
-        selectElement.addEventListener('change', async function(event) {
-            const selectedStoreName = event.target.value;
-            
-            if (selectedStoreName) {
-                try {
-                    // 店舗IDを取得
-                    const storeId = await getStoreIdByName(selectedStoreName);
-                    
-                    // セッションに店舗情報を更新
-                    const userSession = JSON.parse(sessionStorage.getItem('userSession') || '{}');
-                    userSession.store_id = storeId;
-                    userSession.storeName = selectedStoreName;
-                    sessionStorage.setItem('userSession', JSON.stringify(userSession));
-                    
-                    // 設定を再読み込み
-                    if (window.ConfigLoader) {
-                        await window.ConfigLoader.loadStoreConfig();
-                    }
-                    
-                } catch (error) {
-                    console.error('店舗選択時のエラー:', error);
-                }
-            }
-        });
-        
-    } catch (error) {
-        console.error('管理者用店舗選択の設定でエラー:', error);
-    }
-}
-
-/**
- * 店舗一覧を取得してselectにオプションを追加
- * @param {HTMLSelectElement} selectElement 店舗選択要素
- */
-async function loadStoreOptions(selectElement) {
-    try {
-        const response = await fetch('api.php?action=getAllStores', {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const result = await response.json();
-        
-        if (result.success && result.data) {
-            // デフォルトオプション
-            selectElement.innerHTML = '<option value="">店舗を選択してください</option>';
-            
-            // 店舗一覧をオプションとして追加
-            result.data.forEach(store => {
-                const option = document.createElement('option');
-                option.value = store.store_name;
-                option.textContent = store.store_name;
-                selectElement.appendChild(option);
-            });
-            
-            console.log(`${result.data.length}件の店舗を読み込みました`);
-            
-        } else {
-            console.error('店舗一覧の取得に失敗:', result.message);
-            // エラー時のデフォルトオプション
-            selectElement.innerHTML = '<option value="">店舗一覧の取得に失敗しました</option>';
-        }
-        
-    } catch (error) {
-        console.error('店舗一覧取得でエラー:', error);
-        selectElement.innerHTML = '<option value="">エラー: 店舗一覧を取得できませんでした</option>';
-    }
-}
-
-// グローバル関数として公開
-window.setupAdminStoreSelection = setupAdminStoreSelection;
-window.loadStoreOptions = loadStoreOptions;
