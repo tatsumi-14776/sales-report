@@ -406,16 +406,30 @@ private function getReport($data) {
     $reportDate = $data['report_date'] ?? '';
     $storeId = $data['store_id'] ?? 0;
     
+    error_log("getReport: 日付=$reportDate, 店舗ID=$storeId");
+    
     if (empty($reportDate) || empty($storeId)) {
         throw new Exception('日付と店舗IDが必要です');
     }
     
+    // 該当するレコードを検索
     $stmt = $this->db->prepare("
         SELECT * FROM daily_reports 
         WHERE report_date = ? AND store_id = ?
     ");
     $stmt->execute([$reportDate, $storeId]);
     $report = $stmt->fetch();
+    
+    error_log("getReport: 検索結果 = " . ($report ? "データ見つかった (ID: " . $report['id'] . ")" : "データなし"));
+    
+    // デバッグ用：同じ日付の全データを確認
+    $debugStmt = $this->db->prepare("
+        SELECT id, report_date, store_id FROM daily_reports 
+        WHERE report_date = ?
+    ");
+    $debugStmt->execute([$reportDate]);
+    $allReports = $debugStmt->fetchAll();
+    error_log("getReport: 同じ日付($reportDate)の全レポート = " . json_encode($allReports));
     
     if (!$report) {
         return [
@@ -725,6 +739,8 @@ private function addPaymentMethod($data) {
      */
     private function getAllStores($input) {
         try {
+            error_log("getAllStores: 全店舗データを取得中...");
+            
             $stmt = $this->db->prepare("
                 SELECT id, store_name, store_code, created_at 
                 FROM stores 
@@ -734,6 +750,9 @@ private function addPaymentMethod($data) {
             $stmt->execute();
             $stores = $stmt->fetchAll();
             
+            error_log("getAllStores: " . count($stores) . "件の店舗を取得しました");
+            error_log("getAllStores: 店舗データ = " . json_encode($stores));
+            
             return [
                 'success' => true,
                 'data' => $stores,
@@ -741,6 +760,7 @@ private function addPaymentMethod($data) {
             ];
             
         } catch (Exception $e) {
+            error_log("getAllStores: エラー - " . $e->getMessage());
             throw new Exception('店舗一覧の取得に失敗しました: ' . $e->getMessage());
         }
     }

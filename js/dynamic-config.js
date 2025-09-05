@@ -113,12 +113,12 @@ const ConfigLoader = {
                 isUndefined: userSession.store_id === undefined
             });
 
-            // 使用する店舗IDを決定（URLパラメータ優先）
+            // 使用する店舗IDを決定（URLパラメータを最優先）
             let targetStoreId;
-            if (urlStoreId && userSession.role === 'admin') {
-                // 管理者がURLパラメータで店舗IDを指定した場合
+            if (urlStoreId) {
+                // URLパラメータで店舗IDが指定されている場合（管理者・一般ユーザー問わず優先）
                 targetStoreId = parseInt(urlStoreId);
-                console.log('管理者：URLパラメータの店舗IDを使用:', targetStoreId);
+                console.log('🎯 URLパラメータの店舗IDを使用:', targetStoreId);
             } else if (userSession.store_id || userSession.store_id === 0) {
                 // 通常のユーザーセッションの店舗ID
                 targetStoreId = userSession.store_id;
@@ -185,13 +185,23 @@ const ConfigLoader = {
             const data = response.data || response;
             console.log('設定データ:', data);
 
-            // 店舗情報（ユーザーセッションから取得）
+            // URLパラメータをチェック（追加）
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlStoreId = urlParams.get('store_id');
+
+            // 店舗情報の設定を修正
             const userSession = this.getUserSession();
             storeInfo = {
                 id: data.store_id,
-                name: userSession?.storeName || data.store_name || '店舗未設定',
+                // URLパラメータがある場合はAPIから取得した店舗名を優先
+                name: urlStoreId ? (data.store_name || '店舗未設定') : (userSession?.storeName || data.store_name || '店舗未設定'),
                 code: data.store_code || ''
             };
+
+            // デバッグログ追加
+            if (urlStoreId) {
+                console.log('🏪 URLパラメータ店舗の情報を適用:', storeInfo);
+            }
 
             // 支払方法設定を変換（payment_settingsから）
             const paymentSettings = data.payment_settings || {};
@@ -325,23 +335,27 @@ const ConfigLoader = {
      * 店舗情報をページに表示
      */
     updateStoreDisplay() {
-        // ユーザーセッションから店舗名を取得
-        const userSession = this.getUserSession();
-        const storeName = userSession?.storeName || storeInfo.name || '店舗未設定';
+        // URLパラメータをチェック
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlStoreId = urlParams.get('store_id');
         
-        // 店舗名の表示更新
+        let displayStoreName;
+        if (urlStoreId && storeInfo.name) {
+            // URLパラメータで店舗が指定されている場合はその店舗名を使用
+            displayStoreName = storeInfo.name;
+            console.log('🏪 URLパラメータ指定店舗名を表示:', displayStoreName);
+        } else {
+            // 通常の場合はセッションの店舗名を使用
+            const userSession = this.getUserSession();
+            displayStoreName = userSession?.storeName || storeInfo.name || '店舗未設定';
+        }
+        
         const storeNameElements = document.querySelectorAll('.store-name, #storeName');
         storeNameElements.forEach(element => {
-            if (element) {
-                if (element.tagName === 'INPUT') {
-                    // 既に値が設定されている場合は上書きしない
-                    if (!element.value || element.value === '店舗未設定') {
-                        element.value = storeName;
-                    }
-                    element.readOnly = true; // 店舗名は変更不可
-                } else {
-                    element.textContent = storeName;
-                }
+            if (element.tagName === 'INPUT') {
+                element.value = displayStoreName;
+                // URLパラメータがある場合は読み取り専用に
+                element.readOnly = !!urlStoreId;
             }
         });
         

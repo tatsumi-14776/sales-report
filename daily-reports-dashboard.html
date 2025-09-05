@@ -601,8 +601,12 @@
             <div class="filters-section">
                 <div class="filters-grid">
                     <div class="filter-group">
-                        <label class="filter-label">対象日</label>
-                        <input type="date" id="filterDate" class="filter-input">
+                        <label class="filter-label">開始日</label>
+                        <input type="date" id="filterStartDate" class="filter-input">
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">終了日</label>
+                        <input type="date" id="filterEndDate" class="filter-input">
                     </div>
                     <div class="filter-group">
                         <label class="filter-label">店舗</label>
@@ -728,9 +732,10 @@
         // ページ初期化
         async function initializePage() {
             try {
-                // 今日の日付を設定
+                // 今日の日付を設定（開始日・終了日両方に）
                 const today = new Date().toISOString().split('T')[0];
-                document.getElementById('filterDate').value = today;
+                document.getElementById('filterStartDate').value = today;
+                document.getElementById('filterEndDate').value = today;
                 
                 // 店舗一覧とデータを読み込み
                 await loadStores();
@@ -758,7 +763,12 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    allStores = result.data || [];
+                    // 本社を除外してフィルタリング
+                    allStores = (result.data || []).filter(store => {
+                        // 店舗名に「本社」が含まれる場合は除外
+                        return !store.store_name.includes('本社');
+                    });
+                    console.log(`店舗一覧を取得（本社除外後: ${allStores.length}件）`);
                     updateStoreFilter();
                 } else {
                     console.error('店舗一覧の取得に失敗:', result.message);
@@ -786,43 +796,64 @@
             showLoading(true);
             
             try {
-                const targetDate = document.getElementById('filterDate').value || new Date().toISOString().split('T')[0];
+                const startDate = document.getElementById('filterStartDate').value;
+                const endDate = document.getElementById('filterEndDate').value;
                 
-                // 各店舗の指定日付の日報を取得
+                if (!startDate || !endDate) {
+                    showAlert('開始日と終了日を指定してください', 'error');
+                    return;
+                }
+                
+                if (startDate > endDate) {
+                    showAlert('開始日は終了日より前の日付を指定してください', 'error');
+                    return;
+                }
+                
+                console.log(`期間データ読み込み: ${startDate} ～ ${endDate}`);
+                
+                // 期間内の全日付を生成
+                const dateRange = getDateRange(startDate, endDate);
+                console.log(`対象日数: ${dateRange.length}日`);
+                
                 const reports = [];
                 
+                // 各店舗・各日付の日報を取得
                 for (const store of allStores) {
-                    try {
-                        const response = await fetch(`api.php?action=getReport&report_date=${targetDate}&store_id=${store.id}`);
-                        const result = await response.json();
-                        
-                        if (result.success) {
-                            // 提出済み
-                            reports.push({
-                                ...result.data,
-                                store_name: store.store_name,
-                                status: 'submitted',
-                                total_sales: calculateTotalSales(result.data)
-                            });
-                        } else {
-                            // 未提出
-                            reports.push({
-                                id: null,
-                                report_date: targetDate,
-                                store_id: store.id,
-                                store_name: store.store_name,
-                                user_id: '-',
-                                status: 'pending',
-                                total_sales: 0,
-                                cash_difference: 0,
-                                created_at: null,
-                                updated_at: null
-                            });
+                    for (const date of dateRange) {
+                        try {
+                            const response = await fetch(`api.php?action=getReport&report_date=${date}&store_id=${store.id}`);
+                            const result = await response.json();
+                            
+                            if (result.success) {
+                                // 提出済み
+                                reports.push({
+                                    ...result.data,
+                                    store_name: store.store_name,
+                                    status: 'submitted',
+                                    total_sales: calculateTotalSales(result.data)
+                                });
+                            } else {
+                                // 未提出
+                                reports.push({
+                                    id: null,
+                                    report_date: date,
+                                    store_id: store.id,
+                                    store_name: store.store_name,
+                                    user_id: '-',
+                                    status: 'pending',
+                                    total_sales: 0,
+                                    cash_difference: 0,
+                                    created_at: null,
+                                    updated_at: null
+                                });
+                            }
+                        } catch (error) {
+                            console.error(`店舗 ${store.store_name} - ${date} のデータ取得エラー:`, error);
                         }
-                    } catch (error) {
-                        console.error(`店舗 ${store.store_name} のデータ取得エラー:`, error);
                     }
                 }
+                
+                console.log(`期間データ読み込み完了: ${reports.length}件`);
                 
                 allReports = reports;
                 applyFilters();
@@ -834,6 +865,20 @@
             } finally {
                 showLoading(false);
             }
+        }
+
+        // 日付範囲を生成するヘルパー関数
+        function getDateRange(startDate, endDate) {
+            const dates = [];
+            const currentDate = new Date(startDate);
+            const endDateObj = new Date(endDate);
+            
+            while (currentDate <= endDateObj) {
+                dates.push(currentDate.toISOString().split('T')[0]);
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            
+            return dates;
         }
 
         // 売上合計を計算
@@ -872,11 +917,20 @@
 
         // フィルター適用
         function applyFilters() {
-            currentFilters.date = document.getElementById('filterDate').value;
+            currentFilters.startDate = document.getElementById('filterStartDate').value;
+            currentFilters.endDate = document.getElementById('filterEndDate').value;
             currentFilters.store = document.getElementById('filterStore').value;
             currentFilters.status = document.getElementById('filterStatus').value;
             
             let filteredReports = [...allReports];
+            
+            // 期間フィルター
+            if (currentFilters.startDate && currentFilters.endDate) {
+                filteredReports = filteredReports.filter(report => 
+                    report.report_date >= currentFilters.startDate && 
+                    report.report_date <= currentFilters.endDate
+                );
+            }
             
             // 店舗フィルター
             if (currentFilters.store) {
@@ -1163,7 +1217,31 @@
         });
 
         // フィルター入力時の自動更新
-        document.getElementById('filterDate').addEventListener('change', loadReports);
+        document.getElementById('filterStartDate').addEventListener('change', validateDateRange);
+        document.getElementById('filterEndDate').addEventListener('change', validateDateRange);
+
+        // 日付範囲のバリデーション
+        function validateDateRange() {
+            const startDate = document.getElementById('filterStartDate').value;
+            const endDate = document.getElementById('filterEndDate').value;
+            
+            if (startDate && endDate) {
+                if (startDate > endDate) {
+                    showAlert('開始日は終了日より前の日付を指定してください', 'error');
+                    return;
+                }
+                
+                // 日付範囲が30日を超える場合は警告
+                const daysDiff = Math.floor((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24));
+                if (daysDiff > 30) {
+                    if (!confirm(`${daysDiff + 1}日間のデータを読み込みます。時間がかかる場合があります。続行しますか？`)) {
+                        return;
+                    }
+                }
+                
+                loadReports();
+            }
+        }
     </script>
 </body>
 </html>
