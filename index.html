@@ -75,9 +75,7 @@
         // 担当者フィールドにログイン中のユーザー名を設定
         const inputByElement = document.getElementById('inputBy');
         if (inputByElement && userSession.username) {
-            inputByElement.value = userSession.username;
-            inputByElement.readOnly = true; // 変更不可にする
-            
+
             // data属性として保存（後で参照用）
             storeNameElement.setAttribute('data-original-store-name', userSession.storeName);
         }

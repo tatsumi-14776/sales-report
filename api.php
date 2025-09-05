@@ -254,86 +254,153 @@ class APIController {
      * 売上レポート保存
      */
     private function saveReport($data) {
-        $reportDate = $data['report_date'] ?? '';
-        $storeId = $data['store_id'] ?? 0;
-        $userId = $data['user_id'] ?? '';
-        $salesData = $data['sales_data'] ?? [];
-        
-        if (empty($reportDate) || empty($storeId) || empty($userId)) {
-            throw new Exception('必須項目が不足しています');
-        }
-        
-        // 既存レポートの確認
-        $stmt = $this->db->prepare("
-            SELECT id FROM daily_reports 
-            WHERE report_date = ? AND store_id = ?
-        ");
-        $stmt->execute([$reportDate, $storeId]);
-        $existing = $stmt->fetch();
-        
-        if ($existing) {
-            // 更新
+        try {
+            $reportDate = $data['report_date'] ?? '';
+            $storeId = $data['store_id'] ?? 0;
+            $userId = $data['user_id'] ?? '';
+            $salesData = $data['sales_data'] ?? [];
+            $pointPaymentsData = $data['point_payments_data'] ?? [];
+            $incomeData = $data['income_data'] ?? [];
+            $expenseData = $data['expense_data'] ?? [];
+            $cashData = $data['cash_data'] ?? [];
+            $previousCashBalance = floatval($data['previous_cash_balance'] ?? 0);
+            $cashDifference = floatval($data['cash_difference'] ?? 0);
+            $remarks = $data['remarks'] ?? '';
+            
+            if (empty($reportDate) || empty($storeId) || empty($userId)) {
+                throw new Exception('必須項目が不足しています');
+            }
+            
+            // 既存レポートの確認
             $stmt = $this->db->prepare("
-                UPDATE daily_reports 
-                SET sales_data = ?, user_id = ?, updated_at = NOW()
-                WHERE id = ?
+                SELECT id FROM daily_reports 
+                WHERE report_date = ? AND store_id = ?
             ");
-            $stmt->execute([json_encode($salesData), $userId, $existing['id']]);
-            $reportId = $existing['id'];
-        } else {
-            // 新規作成
-            $stmt = $this->db->prepare("
-                INSERT INTO daily_reports (report_date, store_id, user_id, sales_data)
-                VALUES (?, ?, ?, ?)
-            ");
-            $stmt->execute([$reportDate, $storeId, $userId, json_encode($salesData)]);
-            $reportId = $this->db->lastInsertId();
+            $stmt->execute([$reportDate, $storeId]);
+            $existing = $stmt->fetch();
+            
+            if ($existing) {
+                // 更新
+                $stmt = $this->db->prepare("
+                    UPDATE daily_reports 
+                    SET sales_data = ?, 
+                        point_payments_data = ?,
+                        income_data = ?,
+                        expense_data = ?,
+                        cash_data = ?,
+                        previous_cash_balance = ?,
+                        cash_difference = ?,
+                        remarks = ?,
+                        user_id = ?, 
+                        updated_at = NOW()
+                    WHERE id = ?
+                ");
+                $stmt->execute([
+                    json_encode($salesData), 
+                    json_encode($pointPaymentsData),
+                    json_encode($incomeData),
+                    json_encode($expenseData),
+                    json_encode($cashData),
+                    $previousCashBalance,
+                    $cashDifference,
+                    $remarks,
+                    $userId, 
+                    $existing['id']
+                ]);
+                $reportId = $existing['id'];
+            } else {
+                // 新規作成
+                $stmt = $this->db->prepare("
+                    INSERT INTO daily_reports (
+                        report_date, 
+                        store_id, 
+                        user_id, 
+                        sales_data,
+                        point_payments_data,
+                        income_data,
+                        expense_data,
+                        cash_data,
+                        previous_cash_balance,
+                        cash_difference,
+                        remarks
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ");
+                $stmt->execute([
+                    $reportDate, 
+                    $storeId, 
+                    $userId, 
+                    json_encode($salesData),
+                    json_encode($pointPaymentsData),
+                    json_encode($incomeData),
+                    json_encode($expenseData),
+                    json_encode($cashData),
+                    $previousCashBalance,
+                    $cashDifference,
+                    $remarks
+                ]);
+                $reportId = $this->db->lastInsertId();
+            }
+            
+            return [
+                'success' => true,
+                'report_id' => $reportId,
+                'message' => '売上レポートを保存しました'
+            ];
+            
+        } catch (Exception $e) {
+            error_log('saveReport error: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
         }
-        
-        return [
-            'success' => true,
-            'report_id' => $reportId,
-            'message' => '売上レポートを保存しました'
-        ];
     }
     
     /**
      * 売上レポート取得
      */
-    private function getReport($data) {
-        $reportDate = $data['report_date'] ?? '';
-        $storeId = $data['store_id'] ?? 0;
-        
-        if (empty($reportDate) || empty($storeId)) {
-            throw new Exception('日付と店舗IDが必要です');
-        }
-        
-        $stmt = $this->db->prepare("
-            SELECT * FROM daily_reports 
-            WHERE report_date = ? AND store_id = ?
-        ");
-        $stmt->execute([$reportDate, $storeId]);
-        $report = $stmt->fetch();
-        
-        if (!$report) {
-            return [
-                'success' => false,
-                'message' => '指定された日付のレポートが見つかりません'
-            ];
-        }
-        
+private function getReport($data) {
+    $reportDate = $data['report_date'] ?? '';
+    $storeId = $data['store_id'] ?? 0;
+    
+    if (empty($reportDate) || empty($storeId)) {
+        throw new Exception('日付と店舗IDが必要です');
+    }
+    
+    $stmt = $this->db->prepare("
+        SELECT * FROM daily_reports 
+        WHERE report_date = ? AND store_id = ?
+    ");
+    $stmt->execute([$reportDate, $storeId]);
+    $report = $stmt->fetch();
+    
+    if (!$report) {
         return [
-            'success' => true,
-            'report' => [
-                'id' => $report['id'],
-                'report_date' => $report['report_date'],
-                'store_id' => $report['store_id'],
-                'user_id' => $report['user_id'],
-                'sales_data' => json_decode($report['sales_data'], true),
-                'created_at' => $report['created_at'],
-                'updated_at' => $report['updated_at']
-            ]
+            'success' => false,
+            'message' => '指定された日付のレポートが見つかりません'
         ];
+    }
+    
+    return [
+        'success' => true,
+        'data' => [
+            'id' => $report['id'],
+            'report_date' => $report['report_date'],
+            'store_id' => $report['store_id'],
+            'user_id' => $report['user_id'],
+            'sales_data' => $report['sales_data'] ? json_decode($report['sales_data'], true) : [],
+            'point_payments_data' => $report['point_payments_data'] ? json_decode($report['point_payments_data'], true) : [],
+            'income_data' => $report['income_data'] ? json_decode($report['income_data'], true) : [],
+            'expense_data' => $report['expense_data'] ? json_decode($report['expense_data'], true) : [],
+            'cash_data' => $report['cash_data'] ? json_decode($report['cash_data'], true) : [],
+            'previous_cash_balance' => floatval($report['previous_cash_balance'] ?? 0),
+            'cash_difference' => floatval($report['cash_difference'] ?? 0),
+            'remarks' => $report['remarks'] ?? '',
+            'created_at' => $report['created_at'],
+            'updated_at' => $report['updated_at']
+        ]
+    ];
+}
     }
     
     /**

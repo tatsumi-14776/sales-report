@@ -216,8 +216,9 @@ async function saveReportToDatabase(reportData) {
             throw new Error('ユーザーセッションが見つかりません。再度ログインしてください。');
         }
 
-        const storeId = userSession.store_id || 8; // セッションから店舗IDを取得
-        const userId = userSession.username || userSession.user_id; // ログイン中のユーザーIDを使用
+        const storeId = userSession.store_id || 8;
+        // 担当者は手入力された値を使用（reportData.inputBy）
+        const userId = reportData.inputBy || userSession.username; 
         
         console.log('保存用ユーザー情報:', {
             userId: userId,
@@ -225,28 +226,27 @@ async function saveReportToDatabase(reportData) {
             session: userSession
         });
 
-        // usersテーブルにユーザーが存在するかチェック
         if (!userId) {
-            throw new Error('ユーザーIDが取得できませんでした。再度ログインしてください。');
+            throw new Error('担当者名が入力されていません。');
         }
         
-        // APIリクエスト用のデータを準備
+        // APIリクエスト用のデータを準備（JSON文字列化は不要）
         const requestData = {
             action: 'saveReport',
             report_date: reportData.date,
             store_id: storeId,
-            user_id: userId, // セッションからのユーザーIDを使用（重要：フォームの値は使わない）
-            sales_data: JSON.stringify(reportData.sales || {}),
-            point_payments_data: JSON.stringify(reportData.pointPayments || {}),
-            income_data: JSON.stringify({
+            user_id: userId,
+            sales_data: reportData.sales || {},
+            point_payments_data: reportData.pointPayments || {},
+            income_data: {
                 nyukin: parseFloat(reportData.income?.nyukin) || 0,
                 miscIncome: parseFloat(reportData.income?.miscIncome) || 0,
                 foundMoney: parseFloat(reportData.income?.foundMoney) || 0
-            }),
-            expense_data: JSON.stringify(reportData.expenses || []),
-            cash_data: JSON.stringify(reportData.cash || {}),
+            },
+            expense_data: reportData.expenses || [],
+            cash_data: reportData.cash || {},
             previous_cash_balance: parseFloat(reportData.previousCashBalance) || 0,
-            cash_difference: 0, // 現在は0で保存、後で計算ロジックを追加可能
+            cash_difference: 0,
             remarks: reportData.remarks || ''
         };
         
@@ -261,11 +261,23 @@ async function saveReportToDatabase(reportData) {
             body: JSON.stringify(requestData)
         });
         
+        // レスポンステキストを先に取得してデバッグ
+        const responseText = await response.text();
+        console.log('API生レスポンス:', responseText);
+        
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(`HTTP error! status: ${response.status}, response: ${responseText}`);
         }
         
-        const result = await response.json();
+        // JSONパースを試行
+        let result;
+        try {
+            result = JSON.parse(responseText);
+        } catch (parseError) {
+            console.error('JSON parse error:', parseError);
+            throw new Error(`APIからの応答が正しくありません: ${responseText.substring(0, 200)}`);
+        }
+        
         console.log('API応答:', result);
         
         if (result.success) {
