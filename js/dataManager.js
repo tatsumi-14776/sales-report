@@ -68,45 +68,220 @@ function handleLoadData() {
 }
 
 /**
- * サンプルデータ読込（LocalStorageから）
+ * データ読込（データベースから）
  * @param {string} date 日付
  * @param {string} storeName 店舗名
  */
-function loadSampleData(date, storeName) {
-    console.log(`サンプルデータ読込を開始: ${date} - ${storeName}`);
+async function loadSampleData(date, storeName) {
+    console.log(`データ読込を開始: ${date} - ${storeName}`);
     
     try {
-        const dataKey = `dailyReport_${date}_${storeName}`;
-        console.log('データキー:', dataKey);
+        // 店舗情報を取得
+        const storeId = sessionStorage.getItem('storeId') || 8; // セッションから店舗IDを取得
         
-        const savedData = localStorage.getItem(dataKey);
-        
-        if (savedData) {
-            try {
-                const data = JSON.parse(savedData);
-                console.log('保存されたデータを取得しました:', data);
-                
-                if (typeof loadDataIntoForm === 'function') {
-                    loadDataIntoForm(data);
-                    showSuccess('保存されたデータを読み込みました');
-                } else {
-                    console.error('loadDataIntoForm関数が見つかりません');
-                    showError('データ読み込み機能が利用できません');
-                }
-                
-            } catch (parseError) {
-                console.error('JSONパースエラー:', parseError);
-                console.error('問題のあるデータ:', savedData);
-                showError('保存されたデータが壊れています。新しくデータを入力してください。');
+        // APIからデータを取得
+        const response = await fetch(`api.php?action=getReport&report_date=${encodeURIComponent(date)}&store_id=${storeId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
             }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            console.log('データベースからデータを取得しました:', result.data);
+            
+            if (typeof loadDataIntoForm === 'function') {
+                // データベースから取得したデータをフォーム用に変換
+                const formData = convertDatabaseToFormData(result.data);
+                loadDataIntoForm(formData);
+                showSuccess('保存されたデータを読み込みました');
+            } else {
+                console.error('loadDataIntoForm関数が見つかりません');
+                showError('データ読み込み機能が利用できません');
+            }
+            
         } else {
-            console.log('指定されたデータが見つかりません');
-            showError('指定された日付・店舗のデータが見つかりません');
+            console.log('指定されたデータが見つかりません:', result.message);
+            showError(result.message || '指定された日付・店舗のデータが見つかりません');
         }
         
     } catch (error) {
-        console.error('サンプルデータ読込でエラー:', error);
-        showError('データの読み込みに失敗しました');
+        console.error('データ読込でエラー:', error);
+        showError('データの読み込みに失敗しました: ' + error.message);
+    }
+}
+
+/**
+ * データベースデータをフォームデータに変換
+ * @param {Object} dbData データベースから取得したデータ
+ * @returns {Object} フォーム用データ
+ */
+function convertDatabaseToFormData(dbData) {
+    console.log('データベースデータをフォーム用に変換中:', dbData);
+    
+    try {
+        const formData = {
+            date: dbData.report_date || '',
+            storeName: dbData.store_name || '',
+            inputBy: dbData.user_id || '',
+            remarks: dbData.remarks || ''
+        };
+        
+        // JSONデータをパース
+        if (dbData.sales_data) {
+            try {
+                const salesData = typeof dbData.sales_data === 'string' ? 
+                    JSON.parse(dbData.sales_data) : dbData.sales_data;
+                Object.assign(formData, salesData);
+            } catch (e) {
+                console.warn('売上データのパースに失敗:', e);
+            }
+        }
+        
+        if (dbData.point_payments_data) {
+            try {
+                const pointData = typeof dbData.point_payments_data === 'string' ? 
+                    JSON.parse(dbData.point_payments_data) : dbData.point_payments_data;
+                Object.assign(formData, pointData);
+            } catch (e) {
+                console.warn('ポイント支払データのパースに失敗:', e);
+            }
+        }
+        
+        if (dbData.income_data) {
+            try {
+                const incomeData = typeof dbData.income_data === 'string' ? 
+                    JSON.parse(dbData.income_data) : dbData.income_data;
+                Object.assign(formData, incomeData);
+            } catch (e) {
+                console.warn('入金データのパースに失敗:', e);
+            }
+        }
+        
+        if (dbData.expense_data) {
+            try {
+                const expenseData = typeof dbData.expense_data === 'string' ? 
+                    JSON.parse(dbData.expense_data) : dbData.expense_data;
+                formData.expenseRecords = expenseData;
+            } catch (e) {
+                console.warn('経費データのパースに失敗:', e);
+            }
+        }
+        
+        if (dbData.cash_data) {
+            try {
+                const cashData = typeof dbData.cash_data === 'string' ? 
+                    JSON.parse(dbData.cash_data) : dbData.cash_data;
+                Object.assign(formData, cashData);
+            } catch (e) {
+                console.warn('現金データのパースに失敗:', e);
+            }
+        }
+        
+        // 前日現金残と現金過不足
+        if (dbData.previous_cash_balance !== undefined) {
+            formData.previousCashBalance = dbData.previous_cash_balance;
+        }
+        if (dbData.cash_difference !== undefined) {
+            formData.cashDifference = dbData.cash_difference;
+        }
+        
+        console.log('変換完了:', formData);
+        return formData;
+        
+    } catch (error) {
+        console.error('データ変換でエラー:', error);
+        throw new Error('データの変換に失敗しました');
+    }
+}
+
+/**
+ * データベースにレポートデータを保存
+ * @param {Object} reportData フォームから収集したデータ
+ * @returns {Promise<boolean>} 保存成功フラグ
+ */
+async function saveReportToDatabase(reportData) {
+    console.log('データベース保存開始:', reportData);
+    
+    try {
+        const storeId = sessionStorage.getItem('storeId') || 8; // セッションから店舗IDを取得
+        
+        // APIリクエスト用のデータを準備
+        const requestData = {
+            action: 'saveReport',
+            report_date: reportData.date,
+            store_id: storeId,
+            user_id: reportData.inputBy || 'system',
+            remarks: reportData.remarks || '',
+            
+            // 売上データ
+            sales_data: JSON.stringify({
+                totalSales: reportData.totalSales || 0,
+                visitorsCount: reportData.visitorsCount || 0,
+                averageSpend: reportData.averageSpend || 0
+            }),
+            
+            // ポイント支払データ
+            point_payments_data: JSON.stringify({
+                pointPayments: reportData.pointPayments || {}
+            }),
+            
+            // 入金データ
+            income_data: JSON.stringify({
+                salesCash: reportData.salesCash || 0,
+                creditCard: reportData.creditCard || 0,
+                electronicMoney: reportData.electronicMoney || 0,
+                totalIncome: reportData.totalIncome || 0
+            }),
+            
+            // 経費データ
+            expense_data: JSON.stringify(reportData.expenseRecords || []),
+            
+            // 現金データ
+            cash_data: JSON.stringify({
+                cashOnHand: reportData.cashOnHand || 0,
+                calculatedCash: reportData.calculatedCash || 0
+            }),
+            
+            // その他の数値データ
+            previous_cash_balance: parseFloat(reportData.previousCashBalance) || 0,
+            cash_difference: parseFloat(reportData.cashDifference) || 0
+        };
+        
+        console.log('APIリクエストデータ:', requestData);
+        
+        // APIへのPOSTリクエスト
+        const response = await fetch('api.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestData)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        console.log('API応答:', result);
+        
+        if (result.success) {
+            console.log('データベース保存成功');
+            return true;
+        } else {
+            throw new Error(result.message || 'データベース保存に失敗');
+        }
+        
+    } catch (error) {
+        console.error('データベース保存でエラー:', error);
+        throw error;
     }
 }
 
@@ -492,21 +667,22 @@ async function handleSubmit() {
             return;
         }
 
-        // データ保存（LocalStorage - 開発用）
+        // データベースに保存
         try {
-            const dataKey = `dailyReport_${reportData.date}_${reportData.storeName}`;
-            localStorage.setItem(dataKey, JSON.stringify(reportData));
-            console.log('LocalStorageに保存しました:', dataKey);
-        } catch (storageError) {
-            console.error('LocalStorage保存でエラー:', storageError);
-            // 保存エラーがあっても処理は継続
+            const success = await saveReportToDatabase(reportData);
+            if (success) {
+                console.log('データベースに保存しました');
+                showSuccess('データが保存され、経理課に送信されました！');
+            } else {
+                throw new Error('データベースへの保存に失敗しました');
+            }
+        } catch (saveError) {
+            console.error('保存エラー:', saveError);
+            showError('データの保存に失敗しました: ' + saveError.message);
+            return;
         }
         
-        // TODO: バックエンドAPI連携（後で実装）
-        // await submitToServer(reportData);
-        
         console.log('送信データ:', reportData);
-        showSuccess('データが保存され、経理課に送信されました！');
         
     } catch (error) {
         console.error('送信エラー:', error);
@@ -601,20 +777,25 @@ function startAutoSave() {
 
         const interval = (appConfig && appConfig.AUTO_SAVE_INTERVAL) ? appConfig.AUTO_SAVE_INTERVAL : 30000;
 
-        autoSaveTimer = setInterval(() => {
+        autoSaveTimer = setInterval(async () => {
             try {
                 const data = collectAllFormData();
                 if (data.date && data.storeName) {
-                    const autoSaveKey = `autoSave_${data.date}_${data.storeName}`;
+                    // 自動保存データをデータベースに保存
                     const autoSaveData = {
                         ...data,
-                        autoSavedAt: new Date().toISOString()
+                        autoSavedAt: new Date().toISOString(),
+                        isAutoSave: true // 自動保存フラグ
                     };
                     
-                    localStorage.setItem(autoSaveKey, JSON.stringify(autoSaveData));
-                    
-                    if (appConfig && appConfig.DEBUG) {
-                        console.log('自動保存完了:', autoSaveKey);
+                    // データベースへの自動保存（エラーが発生しても自動保存は継続）
+                    try {
+                        await saveReportToDatabase(autoSaveData);
+                        if (appConfig && appConfig.DEBUG) {
+                            console.log('自動保存完了（データベース）:', data.date, data.storeName);
+                        }
+                    } catch (saveError) {
+                        console.warn('自動保存エラー（継続）:', saveError.message);
                     }
                 }
             } catch (error) {
@@ -646,8 +827,9 @@ function stopAutoSave() {
 
 /**
  * 自動保存データの復元
+ * データベースから最新の自動保存データを取得して復元
  */
-function restoreAutoSaveData() {
+async function restoreAutoSaveData() {
     console.log('自動保存データの復元を試行');
     
     try {
@@ -667,30 +849,39 @@ function restoreAutoSaveData() {
             return;
         }
         
-        const autoSaveKey = `autoSave_${date}_${storeName}`;
-        const autoSaveData = localStorage.getItem(autoSaveKey);
+        // データベースから自動保存データを取得
+        const storeId = sessionStorage.getItem('storeId') || 8;
+        const response = await fetch(`api.php?action=getReport&report_date=${encodeURIComponent(date)}&store_id=${storeId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
         
-        if (autoSaveData) {
-            try {
-                const data = JSON.parse(autoSaveData);
-                const autoSaveTime = new Date(data.autoSavedAt);
-                const message = `自動保存されたデータがあります（${autoSaveTime.toLocaleString()}）。\n復元しますか？`;
+        if (response.ok) {
+            const result = await response.json();
+            
+            if (result.success && result.data) {
+                const data = convertDatabaseToFormData(result.data);
+                
+                // 自動保存データかどうかを確認（作成日時から判断）
+                const updatedAt = new Date(result.data.updated_at);
+                const message = `保存されたデータがあります（${updatedAt.toLocaleString()}）。\n復元しますか？`;
                 
                 if (confirm(message)) {
                     if (typeof loadDataIntoForm === 'function') {
                         loadDataIntoForm(data);
-                        showSuccess('自動保存データを復元しました');
+                        showSuccess('保存データを復元しました');
                     } else {
                         console.error('loadDataIntoForm関数が見つかりません');
                         showError('データ復元機能が利用できません');
                     }
                 }
-            } catch (parseError) {
-                console.error('自動保存データの解析エラー:', parseError);
-                showError('自動保存データが壊れています');
+            } else {
+                console.log('自動保存データが見つかりませんでした');
             }
         } else {
-            console.log('自動保存データは見つかりませんでした');
+            console.log('自動保存データの取得に失敗しました');
         }
         
     } catch (error) {
