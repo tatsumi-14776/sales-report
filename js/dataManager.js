@@ -134,7 +134,6 @@ async function loadSampleData(date, storeName) {
                 console.log('=== loadDataIntoForm 呼び出し前 ===');
                 loadDataIntoForm(formData);
                 console.log('=== loadDataIntoForm 呼び出し後 ===');
-                showSuccess('保存されたデータを読み込みました');
                 
                 // データ読み込み完了後にローディングを非表示
                 showLoadingIndicator(false);
