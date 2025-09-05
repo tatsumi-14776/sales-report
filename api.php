@@ -401,62 +401,8 @@ private function getReport($data) {
         ]
     ];
 }
-    }
-    
-    /**
-     * 支払方法マスタ一覧取得
-     */
-    private function getPaymentMethods($data) {
-        try {
-            // 支払方法マスタ取得
-            $stmt = $this->db->prepare("
-                SELECT id, method_id, method_name, method_type, method_category,
-                       color_code, display_order, is_active
-                FROM payment_method_masters 
-                WHERE is_active = 1 AND deleted_at IS NULL
-                ORDER BY display_order ASC, id ASC
-            ");
-            $stmt->execute();
-            $allMethods = $stmt->fetchAll();
-            
-            // 支払方法（payment）とポイント・クーポン（point）で分離
-            $paymentMethods = [];
-            $pointMethods = [];
-            
-            foreach ($allMethods as $method) {
-                // データ構造を統一
-                $methodData = [
-                    'method_id' => $method['id'], // 主キーをmethod_idとして使用
-                    'method_name' => $method['method_name'],
-                    'display_name' => $method['method_name'], // display_nameは method_nameと同じ
-                    'color_code' => $method['color_code'] ?: '#667eea',
-                    'is_active' => $method['is_active'],
-                    'method_type' => $method['method_type'],
-                    'sort_order' => $method['display_order']
-                ];
-                
-                if ($method['method_category'] === 'point') {
-                    $pointMethods[] = $methodData;
-                } else {
-                    $paymentMethods[] = $methodData;
-                }
-            }
-            
-            return [
-                'success' => true,
-                'payment_methods' => $paymentMethods,
-                'point_methods' => $pointMethods,
-                'all_methods' => array_merge($paymentMethods, $pointMethods)
-            ];
-        } catch (Exception $e) {
-            throw new Exception('支払方法データの取得に失敗しました: ' . $e->getMessage());
-        }
-    }
-    
-    /**
-     * 支払方法新規追加
-     */
-    private function addPaymentMethod($data) {
+
+private function addPaymentMethod($data) {
         $methodName = trim($data['method_name'] ?? '');
         $methodType = trim($data['method_type'] ?? '');
         $colorCode = trim($data['color_code'] ?? '#667eea');
