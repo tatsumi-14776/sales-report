@@ -257,7 +257,7 @@ class APIController {
         try {
             $reportDate = $data['report_date'] ?? '';
             $storeId = $data['store_id'] ?? 0;
-            $userId = $data['user_id'] ?? '';
+            $userId = $data['user_id'] ?? '';  // 入力された文字列をそのまま使用
             $salesData = $data['sales_data'] ?? [];
             $pointPaymentsData = $data['point_payments_data'] ?? [];
             $incomeData = $data['income_data'] ?? [];

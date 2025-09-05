@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- ホスト: 127.0.0.1
--- 生成日時: 2025-09-05 03:05:42
+-- 生成日時: 2025-09-05 03:44:17
 -- サーバのバージョン： 10.4.32-MariaDB
 -- PHP のバージョン: 8.2.12
 
@@ -45,8 +45,7 @@ CREATE TABLE `daily_reports` (
 --
 
 INSERT INTO `daily_reports` (`id`, `report_date`, `store_id`, `user_id`, `sales_data`, `point_payments_data`, `income_data`, `expense_data`, `cash_data`, `previous_cash_balance`, `cash_difference`, `remarks`, `status`, `submitted_at`, `created_at`, `updated_at`) VALUES
-(1, '2025-08-31', 1, 'yanagisawa', '{\"cash10\": 50000, \"cash8\": 30000, \"card10\": 100000, \"card8\": 20000}', NULL, '{\"nyukin\": 0, \"miscIncome\": 500}', NULL, NULL, 0.00, 0.00, 'テスト用レポートデータ', 'draft', NULL, '2025-08-31 07:34:56', '2025-09-02 08:44:09'),
-(5, '2025-09-05', 8, 'user1', '\"{\\\"totalSales\\\":0,\\\"visitorsCount\\\":0,\\\"averageSpend\\\":0}\"', NULL, NULL, NULL, NULL, 0.00, 0.00, NULL, 'draft', NULL, '2025-09-05 00:47:51', '2025-09-05 01:04:35');
+(1, '2025-08-31', 1, 'yanagisawa', '{\"cash10\": 50000, \"cash8\": 30000, \"card10\": 100000, \"card8\": 20000}', NULL, '{\"nyukin\": 0, \"miscIncome\": 500}', NULL, NULL, 0.00, 0.00, 'テスト用レポートデータ', 'draft', NULL, '2025-08-31 07:34:56', '2025-09-02 08:44:09');
 
 -- --------------------------------------------------------
 
@@ -422,7 +421,7 @@ INSERT INTO `users` (`id`, `store_id`, `store_name`, `pass`, `role`, `is_active`
 ('admin', NULL, '管理者店舗', 'admin123', 'admin', 1, '2025-09-02 12:53:35', '2025-09-05 00:34:41'),
 ('okawa', 1, '本店', '$2y$10$pSNPlDalRyZfhZYfp46fF.mPKzw6T5V.W0cSQ.o0t7QDozadgp/9a', 'user', 1, '2025-09-04 01:15:14', '2025-09-04 08:37:02'),
 ('test', NULL, '経理課', '$2y$10$JIx0ctYIRZdtXsMsToqcQey6ka2mvvOpGAm8uDtsn05MLGKL/0UJG', 'admin', 1, '2025-09-03 02:04:43', '2025-09-03 02:04:43'),
-('user1', 8, '四代目菊川　三ノ宮店', 'user123', 'user', 1, '2025-09-02 12:53:35', '2025-09-05 00:35:25'),
+('user1', 8, '四代目菊川　三ノ宮店', 'user123', 'user', 1, '2025-09-02 12:53:35', '2025-09-05 01:22:26'),
 ('yanagisawa', NULL, '本店', '$2y$10$WSAuQ9f0mxI9CF1Kgh/zHu1OTO67qoYQJ99bCXhgmOMoie4L1KJL2', 'admin', 1, '2025-08-31 07:34:55', '2025-09-04 00:46:12');
 
 -- --------------------------------------------------------
@@ -582,7 +581,7 @@ ALTER TABLE `user_activity_logs`
 -- テーブルの AUTO_INCREMENT `daily_reports`
 --
 ALTER TABLE `daily_reports`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- テーブルの AUTO_INCREMENT `payment_method_masters`
@@ -628,7 +627,6 @@ ALTER TABLE `user_activity_logs`
 -- テーブルの制約 `daily_reports`
 --
 ALTER TABLE `daily_reports`
-  ADD CONSTRAINT `daily_reports_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),
   ADD CONSTRAINT `fk_daily_reports_store` FOREIGN KEY (`store_id`) REFERENCES `stores` (`id`);
 
 --
