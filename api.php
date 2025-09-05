@@ -251,13 +251,13 @@ class APIController {
     }
     
     /**
-     * 売上レポート保存
+     * 売上レポート保存（添付ファイル対応版）
      */
     private function saveReport($data) {
         try {
             $reportDate = $data['report_date'] ?? '';
             $storeId = $data['store_id'] ?? 0;
-            $userId = $data['user_id'] ?? '';  // 入力された文字列をそのまま使用
+            $userId = $data['user_id'] ?? '';
             $salesData = $data['sales_data'] ?? [];
             $pointPaymentsData = $data['point_payments_data'] ?? [];
             $incomeData = $data['income_data'] ?? [];
@@ -266,6 +266,14 @@ class APIController {
             $previousCashBalance = floatval($data['previous_cash_balance'] ?? 0);
             $cashDifference = floatval($data['cash_difference'] ?? 0);
             $remarks = $data['remarks'] ?? '';
+            
+            // 添付ファイルデータを追加
+            $attachedFiles = $data['attached_files'] ?? [];
+            
+            // デバッグログ追加
+            error_log("=== 添付ファイル保存デバッグ ===");
+            error_log("受信した添付ファイル数: " . count($attachedFiles));
+            error_log("添付ファイルデータ: " . json_encode($attachedFiles));
             
             // 保存時の支払方法設定を取得
             $paymentMethodConfig = $data['payment_method_config'] ?? null;
@@ -297,6 +305,7 @@ class APIController {
                         previous_cash_balance = ?,
                         cash_difference = ?,
                         remarks = ?,
+                        attached_files = ?,
                         user_id = ?, 
                         updated_at = NOW()
                     WHERE id = ?
@@ -312,6 +321,7 @@ class APIController {
                     $previousCashBalance,
                     $cashDifference,
                     $remarks,
+                    $attachedFiles ? json_encode($attachedFiles) : null, // 添付ファイル追加
                     $userId, 
                     $existing['id']
                 ]);
@@ -332,8 +342,9 @@ class APIController {
                         point_payment_config,
                         previous_cash_balance,
                         cash_difference,
-                        remarks
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        remarks,
+                        attached_files
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ");
                 $stmt->execute([
                     $reportDate, 
@@ -348,7 +359,8 @@ class APIController {
                     $pointPaymentConfig ? json_encode($pointPaymentConfig) : null,
                     $previousCashBalance,
                     $cashDifference,
-                    $remarks
+                    $remarks,
+                    $attachedFiles ? json_encode($attachedFiles) : null // 添付ファイル追加
                 ]);
                 $reportId = $this->db->lastInsertId();
             }
@@ -368,9 +380,9 @@ class APIController {
         }
     }
     
-    /**
-     * 売上レポート取得
-     */
+/**
+ * 売上レポート取得（添付ファイル対応版）
+ */
 private function getReport($data) {
     $reportDate = $data['report_date'] ?? '';
     $storeId = $data['store_id'] ?? 0;
@@ -393,6 +405,14 @@ private function getReport($data) {
         ];
     }
     
+    // デバッグログ追加
+    error_log("=== 添付ファイル取得デバッグ ===");
+    error_log("データベースの添付ファイル (生): " . $report['attached_files']);
+    
+    $attachedFilesData = $report['attached_files'] ? json_decode($report['attached_files'], true) : [];
+    error_log("デコード後の添付ファイル: " . json_encode($attachedFilesData));
+    error_log("添付ファイル数: " . count($attachedFilesData));
+    
     return [
         'success' => true,
         'data' => [
@@ -410,6 +430,7 @@ private function getReport($data) {
             'previous_cash_balance' => floatval($report['previous_cash_balance'] ?? 0),
             'cash_difference' => floatval($report['cash_difference'] ?? 0),
             'remarks' => $report['remarks'] ?? '',
+            'attached_files' => $attachedFilesData, // デバッグ済みデータを使用
             'created_at' => $report['created_at'],
             'updated_at' => $report['updated_at']
         ]

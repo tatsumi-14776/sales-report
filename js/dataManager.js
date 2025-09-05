@@ -94,11 +94,18 @@ async function loadSampleData(date, storeName) {
         const result = await response.json();
         
         if (result.success) {
+            console.log('=== API成功レスポンス詳細 ===');
             console.log('データベースからデータを取得しました:', result.data);
+            console.log('result.data.attached_files:', result.data.attached_files);
+            console.log('attached_files のタイプ:', typeof result.data.attached_files);
+            console.log('attached_files の内容:', JSON.stringify(result.data.attached_files));
             
             if (typeof loadDataIntoForm === 'function') {
                 // データベースから取得したデータをフォーム用に変換
+                console.log('=== convertDatabaseToFormData 呼び出し前 ===');
                 const formData = convertDatabaseToFormData(result.data);
+                console.log('=== convertDatabaseToFormData 呼び出し後 ===');
+                console.log('変換後のformData.attachedFiles:', formData.attachedFiles);
                 
                 // 保存時の設定がある場合は、それを使用してUIを再構築
                 if (formData.savedPaymentMethodConfig || formData.savedPointPaymentConfig) {
@@ -106,7 +113,9 @@ async function loadSampleData(date, storeName) {
                     await rebuildUIWithSavedConfig(formData.savedPaymentMethodConfig, formData.savedPointPaymentConfig);
                 }
                 
+                console.log('=== loadDataIntoForm 呼び出し前 ===');
                 loadDataIntoForm(formData);
+                console.log('=== loadDataIntoForm 呼び出し後 ===');
                 showSuccess('保存されたデータを読み込みました');
             } else {
                 console.error('loadDataIntoForm関数が見つかりません');
@@ -144,6 +153,20 @@ function convertDatabaseToFormData(dbData) {
         // 売上データを正しく復元
         console.log('=== 売上データ復元開始 ===');
         console.log('dbData.sales_data (生):', dbData.sales_data);
+                if (dbData.attached_files) {
+            try {
+                const attachedFilesData = typeof dbData.attached_files === 'string' ? 
+                    JSON.parse(dbData.attached_files) : dbData.attached_files;
+                formData.attachedFiles = attachedFilesData;
+                console.log('添付ファイルデータ復元完了:', formData.attachedFiles);
+            } catch (e) {
+                console.warn('添付ファイルデータのパースに失敗:', e);
+                formData.attachedFiles = [];
+            }
+        } else {
+            formData.attachedFiles = [];
+        }
+
         if (dbData.sales_data) {
             try {
                 const salesData = typeof dbData.sales_data === 'string' ? 
@@ -283,6 +306,43 @@ function convertDatabaseToFormData(dbData) {
             formData.savedPointPaymentConfig = null;
         }
         
+        // 添付ファイルデータを復元
+        console.log('=== 添付ファイルデータ復元開始 ===');
+        console.log('dbData.attached_files (生):', dbData.attached_files);
+        console.log('dbData.attached_files のタイプ:', typeof dbData.attached_files);
+        
+        if (dbData.attached_files) {
+            try {
+                const attachedFilesData = typeof dbData.attached_files === 'string' ? 
+                    JSON.parse(dbData.attached_files) : dbData.attached_files;
+                console.log('パース後の添付ファイルデータ:', attachedFilesData);
+                console.log('配列かどうか:', Array.isArray(attachedFilesData));
+                console.log('データの長さ:', attachedFilesData.length);
+                
+                formData.attachedFiles = Array.isArray(attachedFilesData) ? attachedFilesData : [];
+                console.log('添付ファイルデータ復元完了:', formData.attachedFiles);
+                
+                // 各ファイルの詳細をログ出力
+                if (formData.attachedFiles.length > 0) {
+                    formData.attachedFiles.forEach((file, index) => {
+                        console.log(`ファイル${index + 1}:`, {
+                            fileName: file.fileName,
+                            fileSize: file.fileSize,
+                            attachmentNumber: file.attachmentNumber,
+                            hasBase64Data: !!file.base64Data
+                        });
+                    });
+                }
+            } catch (e) {
+                console.error('添付ファイルデータのパースでエラー:', e);
+                console.warn('添付ファイルデータのパースに失敗:', e);
+                formData.attachedFiles = [];
+            }
+        } else {
+            console.log('添付ファイルデータが存在しません');
+            formData.attachedFiles = [];
+        }
+        
         console.log('変換完了（全体）:', formData);
         return formData;
         
@@ -353,9 +413,7 @@ async function rebuildUIWithSavedConfig(savedPaymentConfig, savedPointConfig) {
 }
 
 /**
- * データベースにレポートデータを保存
- * @param {Object} reportData フォームから収集したデータ
- * @returns {Promise<boolean>} 保存成功フラグ
+ * データベースにレポートデータを保存（添付ファイル対応版）
  */
 async function saveReportToDatabase(reportData) {
     console.log('データベース保存開始:', reportData);
@@ -380,14 +438,41 @@ async function saveReportToDatabase(reportData) {
             throw new Error('担当者名が入力されていません。');
         }
         
-        // APIリクエスト用のデータを準備（キー名を正しく設定）
+        // 添付ファイルをBase64エンコード
+        let encodedFiles = [];
+        try {
+            if (typeof collectEncodedFileData === 'function') {
+                encodedFiles = await collectEncodedFileData();
+                console.log('=== 添付ファイル保存詳細 ===');
+                console.log('エンコードされた添付ファイル数:', encodedFiles.length);
+                console.log('エンコードされた添付ファイル:', encodedFiles);
+                
+                // 各ファイルの詳細をログ
+                encodedFiles.forEach((file, index) => {
+                    console.log(`保存ファイル${index + 1}:`, {
+                        fileName: file.fileName,
+                        fileSize: file.fileSize,
+                        attachmentNumber: file.attachmentNumber,
+                        hasBase64Data: !!file.base64Data,
+                        base64Length: file.base64Data ? file.base64Data.length : 0
+                    });
+                });
+            } else {
+                console.warn('collectEncodedFileData関数が見つかりません');
+            }
+        } catch (fileError) {
+            console.error('ファイルエンコードでエラー:', fileError);
+            throw new Error('添付ファイルの処理に失敗しました');
+        }
+        
+        // APIリクエスト用のデータを準備（添付ファイル追加）
         const requestData = {
             action: 'saveReport',
             report_date: reportData.date,
             store_id: storeId,
             user_id: userId,
-            sales_data: JSON.stringify(reportData.sales || {}),           // JSON文字列に変換
-            point_payments_data: JSON.stringify(reportData.pointPayments || {}),  // JSON文字列に変換
+            sales_data: JSON.stringify(reportData.sales || {}),
+            point_payments_data: JSON.stringify(reportData.pointPayments || {}),
             income_data: JSON.stringify({
                 nyukin: parseFloat(reportData.income?.nyukin) || 0,
                 miscIncome: parseFloat(reportData.income?.miscIncome) || 0,
@@ -400,15 +485,11 @@ async function saveReportToDatabase(reportData) {
             point_payment_config: pointPaymentConfig || null,
             previous_cash_balance: parseFloat(reportData.previousCashBalance) || 0,
             cash_difference: 0,
-            remarks: reportData.remarks || ''
+            remarks: reportData.remarks || '',
+            attached_files: encodedFiles // 添付ファイルデータを追加
         };
         
         console.log('APIリクエストデータ（詳細）:', requestData);
-        console.log('保存対象の売上データ:', reportData.sales);
-        console.log('保存対象のポイント支払データ:', reportData.pointPayments);
-        console.log('保存対象の入金データ:', reportData.income);
-        console.log('保存対象の経費データ:', reportData.expenses);
-        console.log('保存対象の現金データ:', reportData.cash);
         
         // APIへのPOSTリクエスト
         const response = await fetch('api.php', {

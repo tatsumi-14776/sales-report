@@ -795,21 +795,66 @@ body {
 
 .file-info {
     display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+    align-items: center;
+    gap: 0.75rem;
     font-size: 0.75rem;
     color: #6b7280;
     min-width: 150px;
+    min-height: 48px;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+}
+
+.file-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+    min-width: 0;
 }
 
 .file-name {
     font-weight: 500;
     color: #374151;
     word-break: break-all;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ダウンロード可能なファイル名のスタイル - より強力な選択子 */
+.file-info .file-details .file-name.downloadable,
+span.file-name.downloadable {
+    color: #2563eb !important;
+    cursor: pointer !important;
+    text-decoration: underline !important;
+    text-decoration-color: #2563eb !important;
+    text-decoration-thickness: 2px !important;
+    text-underline-offset: 3px !important;
+    transition: all 0.2s ease !important;
+    font-weight: 700 !important;
+    background-color: rgba(37, 99, 235, 0.05) !important;
+    padding: 0.25rem 0.5rem !important;
+    border-radius: 0.375rem !important;
+    border: 1px solid rgba(37, 99, 235, 0.2) !important;
+    display: inline-block !important;
+}
+
+.file-info .file-details .file-name.downloadable:hover,
+span.file-name.downloadable:hover {
+    color: #1d4ed8 !important;
+    text-decoration-color: #1d4ed8 !important;
+    text-decoration-thickness: 3px !important;
+    background-color: rgba(37, 99, 235, 0.15) !important;
+    border-color: rgba(37, 99, 235, 0.4) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3) !important;
 }
 
 .file-size {
     color: #6b7280;
+    font-size: 0.6875rem;
 }
 
 .file-size.error {
@@ -818,8 +863,15 @@ body {
 
 .file-status {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 0.5rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.file-actions {
+    display: flex;
+    flex-shrink: 0;
 }
 
 .file-status-icon {
@@ -860,6 +912,20 @@ body {
 
 .clear-file-button.active:hover {
     background-color: #fef2f2;
+}
+
+/* 復元ファイルのダウンロード可能な表示 */
+.file-name.downloadable::after {
+    content: ' ⬇️';
+    margin-left: 0.5rem;
+    font-size: 0.875rem;
+    opacity: 0.8;
+    transition: all 0.2s ease;
+}
+
+.file-name.downloadable:hover::after {
+    opacity: 1;
+    transform: scale(1.2);
 }
 
 .remarks-section {

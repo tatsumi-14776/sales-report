@@ -149,9 +149,11 @@ function updateFileDisplay(attachmentNumber, file) {
             <svg class="file-status-icon success" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
-            <span class="file-name">${file.name}</span>
+            <div class="file-details">
+                <span class="file-name">${file.name}</span>
+                <span class="file-size">${fileSizeMB}MB</span>
+            </div>
         </div>
-        <span class="file-size">${fileSizeMB}MB</span>
     `;
     
     clearButton.style.display = 'flex';
@@ -173,9 +175,11 @@ function clearFileDisplay(attachmentNumber) {
     
     fileInfo.innerHTML = `
         <div class="file-status">
-            <span class="file-name">ファイル未選択</span>
+            <div class="file-details">
+                <span class="file-name">ファイル未選択</span>
+                <span class="file-size"></span>
+            </div>
         </div>
-        <span class="file-size"></span>
     `;
     
     clearButton.style.display = 'none';
@@ -356,4 +360,123 @@ function enableDragAndDrop() {
             }
         }
     });
+}
+
+/**
+ * Base64データから擬似Fileオブジェクトを作成
+ */
+function createFileFromBase64(fileData) {
+    try {
+        // Base64文字列からBlobを作成
+        const base64String = fileData.fileData.split(',')[1]; // data:mime;base64, の部分を除去
+        const byteCharacters = atob(base64String);
+        const byteNumbers = new Array(byteCharacters.length);
+        
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: fileData.fileType });
+        
+        // File風のオブジェクトを作成
+        const file = new File([blob], fileData.fileName, {
+            type: fileData.fileType,
+            lastModified: Date.now()
+        });
+        
+        return file;
+    } catch (error) {
+        console.error('Base64からFileオブジェクトの作成に失敗:', error);
+        return null;
+    }
+}
+
+/**
+ * 保存されたファイルデータからUI表示を更新
+ */
+function updateFileDisplayFromData(attachmentNumber, fileData) {
+    const fileInput = document.getElementById(`file_${attachmentNumber}`);
+    const fileInfo = document.getElementById(`fileInfo_${attachmentNumber}`);
+    const clearButton = document.getElementById(`clearBtn_${attachmentNumber}`);
+    
+    if (!fileInput || !fileInfo || !clearButton) return;
+    
+    const fileSizeMB = (fileData.fileSize / 1024 / 1024).toFixed(1);
+    
+    fileInput.classList.add('has-file');
+    
+    fileInfo.innerHTML = `
+        <div class="file-status">
+            <svg class="file-status-icon success" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <div class="file-details">
+                <span class="file-name downloadable" onclick="downloadRestoredFile(${attachmentNumber})" title="クリックしてダウンロード">📥 ${fileData.fileName} (復元済み)</span>
+                <span class="file-size">${fileSizeMB}MB</span>
+            </div>
+        </div>
+    `;
+    
+    clearButton.style.display = 'flex';
+    clearButton.classList.add('active');
+}
+
+/**
+ * 復元されたファイルをダウンロードする
+ * @param {number} attachmentNumber 添付番号
+ */
+function downloadRestoredFile(attachmentNumber) {
+    try {
+        console.log(`ファイル ${attachmentNumber} のダウンロードを開始`);
+        
+        // 添付ファイルデータを取得
+        const fileIndex = attachmentNumber - 1;
+        if (fileIndex < 0 || fileIndex >= attachedFiles.length || !attachedFiles[fileIndex] || !attachedFiles[fileIndex].hasFile) {
+            console.error('ダウンロード対象のファイルが見つかりません');
+            alert('ダウンロード対象のファイルが見つかりません');
+            return;
+        }
+        
+        const fileData = attachedFiles[fileIndex];
+        console.log('ダウンロード対象ファイル:', fileData);
+        
+        // Fileオブジェクトから Blob URL を作成
+        let downloadUrl, fileName;
+        
+        if (fileData.file && fileData.file instanceof File) {
+            // 通常のFileオブジェクトの場合（復元されたファイルも含む）
+            downloadUrl = URL.createObjectURL(fileData.file);
+            fileName = fileData.file.name;
+            console.log('標準Fileオブジェクトからダウンロード準備完了:', fileName);
+        } else {
+            console.error('ファイルデータの形式が不正です:', fileData);
+            alert('ファイルデータの形式が不正です');
+            return;
+        }
+        
+        // ダウンロードリンクを作成して実行
+        const downloadLink = document.createElement('a');
+        downloadLink.href = downloadUrl;
+        downloadLink.download = fileName;
+        downloadLink.style.display = 'none';
+        
+        // ページに追加して自動クリック
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        
+        // クリーンアップ
+        document.body.removeChild(downloadLink);
+        
+        // Blob URLを解放（メモリリーク防止）
+        setTimeout(() => {
+            URL.revokeObjectURL(downloadUrl);
+        }, 100);
+        
+        console.log(`ファイル ${fileName} のダウンロード完了`);
+        
+    } catch (error) {
+        console.error('ファイルダウンロードでエラー:', error);
+        alert('ファイルのダウンロードに失敗しました: ' + error.message);
+    }
 }

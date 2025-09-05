@@ -574,6 +574,59 @@ function loadDataIntoForm(data) {
                 }
             }
         }
+
+        // 添付ファイル復元の詳細ログ追加
+        console.log('=== loadDataIntoForm - 添付ファイルチェック ===');
+        console.log('data.attachedFiles:', data.attachedFiles);
+        console.log('data.attachedFiles のタイプ:', typeof data.attachedFiles);
+        console.log('data.attachedFiles は配列か:', Array.isArray(data.attachedFiles));
+        if (data.attachedFiles) {
+            console.log('data.attachedFiles の長さ:', data.attachedFiles.length);
+        }
+        
+        console.log('添付ファイル処理の条件チェック中...');
+        console.log('条件1 - data.attachedFiles が存在:', !!data.attachedFiles);
+        console.log('条件2 - Array.isArray(data.attachedFiles):', Array.isArray(data.attachedFiles));
+        console.log('条件3 - data.attachedFiles.length > 0:', data.attachedFiles ? data.attachedFiles.length > 0 : false);
+
+        if (data.attachedFiles && Array.isArray(data.attachedFiles) && data.attachedFiles.length > 0) {
+            console.log('添付ファイルデータを復元中:', data.attachedFiles);
+            
+            // ファイル入力欄をリセット
+            generateFileInputs();
+            
+            // 添付ファイルデータをグローバル変数に復元
+            data.attachedFiles.forEach((fileData, index) => {
+                if (fileData && fileData.attachmentNumber && fileData.fileName) {
+                    const attachmentIndex = fileData.attachmentNumber - 1;
+                    if (attachmentIndex >= 0 && attachmentIndex < attachedFiles.length) {
+                        // ファイルデータを復元（Base64から擬似Fileオブジェクトを作成）
+                        const restoredFile = createFileFromBase64(fileData);
+                        
+                        if (restoredFile) {
+                            attachedFiles[attachmentIndex] = {
+                                id: fileData.attachmentNumber,
+                                file: restoredFile,
+                                fileName: fileData.fileName,
+                                fileSize: fileData.fileSize,
+                                hasFile: true
+                            };
+                            
+                            // UIに表示
+                            updateFileDisplayFromData(fileData.attachmentNumber, fileData);
+                            console.log(`添付ファイル ${fileData.attachmentNumber} を復元しました:`, fileData.fileName);
+                        }
+                    }
+                }
+            });
+        } else {
+            console.log('=== 添付ファイル復元をスキップ ===');
+            console.log('理由: data.attachedFiles =', data.attachedFiles);
+            console.log('Array.isArray:', Array.isArray(data.attachedFiles));
+            console.log('length:', data.attachedFiles ? data.attachedFiles.length : 'undefined');
+        }
+        
+        console.log('=== 添付ファイル処理完了、計算更新開始 ===');
         
         // 計算を更新
         updateAllCalculations();
