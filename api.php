@@ -267,6 +267,10 @@ class APIController {
             $cashDifference = floatval($data['cash_difference'] ?? 0);
             $remarks = $data['remarks'] ?? '';
             
+            // 保存時の支払方法設定を取得
+            $paymentMethodConfig = $data['payment_method_config'] ?? null;
+            $pointPaymentConfig = $data['point_payment_config'] ?? null;
+            
             if (empty($reportDate) || empty($storeId) || empty($userId)) {
                 throw new Exception('必須項目が不足しています');
             }
@@ -288,6 +292,8 @@ class APIController {
                         income_data = ?,
                         expense_data = ?,
                         cash_data = ?,
+                        payment_method_config = ?,
+                        point_payment_config = ?,
                         previous_cash_balance = ?,
                         cash_difference = ?,
                         remarks = ?,
@@ -301,6 +307,8 @@ class APIController {
                     json_encode($incomeData),
                     json_encode($expenseData),
                     json_encode($cashData),
+                    $paymentMethodConfig ? json_encode($paymentMethodConfig) : null,
+                    $pointPaymentConfig ? json_encode($pointPaymentConfig) : null,
                     $previousCashBalance,
                     $cashDifference,
                     $remarks,
@@ -320,10 +328,12 @@ class APIController {
                         income_data,
                         expense_data,
                         cash_data,
+                        payment_method_config,
+                        point_payment_config,
                         previous_cash_balance,
                         cash_difference,
                         remarks
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ");
                 $stmt->execute([
                     $reportDate, 
@@ -334,6 +344,8 @@ class APIController {
                     json_encode($incomeData),
                     json_encode($expenseData),
                     json_encode($cashData),
+                    $paymentMethodConfig ? json_encode($paymentMethodConfig) : null,
+                    $pointPaymentConfig ? json_encode($pointPaymentConfig) : null,
                     $previousCashBalance,
                     $cashDifference,
                     $remarks
@@ -393,6 +405,8 @@ private function getReport($data) {
             'income_data' => $report['income_data'] ? json_decode($report['income_data'], true) : [],
             'expense_data' => $report['expense_data'] ? json_decode($report['expense_data'], true) : [],
             'cash_data' => $report['cash_data'] ? json_decode($report['cash_data'], true) : [],
+            'payment_method_config' => $report['payment_method_config'] ? json_decode($report['payment_method_config'], true) : null,
+            'point_payment_config' => $report['point_payment_config'] ? json_decode($report['point_payment_config'], true) : null,
             'previous_cash_balance' => floatval($report['previous_cash_balance'] ?? 0),
             'cash_difference' => floatval($report['cash_difference'] ?? 0),
             'remarks' => $report['remarks'] ?? '',

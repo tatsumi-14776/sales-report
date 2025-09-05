@@ -99,6 +99,13 @@ async function loadSampleData(date, storeName) {
             if (typeof loadDataIntoForm === 'function') {
                 // データベースから取得したデータをフォーム用に変換
                 const formData = convertDatabaseToFormData(result.data);
+                
+                // 保存時の設定がある場合は、それを使用してUIを再構築
+                if (formData.savedPaymentMethodConfig || formData.savedPointPaymentConfig) {
+                    console.log('保存時の設定でUIを再構築します');
+                    await rebuildUIWithSavedConfig(formData.savedPaymentMethodConfig, formData.savedPointPaymentConfig);
+                }
+                
                 loadDataIntoForm(formData);
                 showSuccess('保存されたデータを読み込みました');
             } else {
@@ -246,12 +253,102 @@ function convertDatabaseToFormData(dbData) {
             console.log('現金過不足復元完了:', formData.cashDifference);
         }
         
+        // 保存時の支払方法設定を復元
+        console.log('=== 支払方法設定復元開始 ===');
+        if (dbData.payment_method_config) {
+            try {
+                const savedPaymentConfig = typeof dbData.payment_method_config === 'string' ? 
+                    JSON.parse(dbData.payment_method_config) : dbData.payment_method_config;
+                formData.savedPaymentMethodConfig = savedPaymentConfig;
+                console.log('保存時の支払方法設定復元完了:', formData.savedPaymentMethodConfig);
+            } catch (e) {
+                console.warn('支払方法設定のパースに失敗:', e);
+                formData.savedPaymentMethodConfig = null;
+            }
+        } else {
+            formData.savedPaymentMethodConfig = null;
+        }
+        
+        if (dbData.point_payment_config) {
+            try {
+                const savedPointConfig = typeof dbData.point_payment_config === 'string' ? 
+                    JSON.parse(dbData.point_payment_config) : dbData.point_payment_config;
+                formData.savedPointPaymentConfig = savedPointConfig;
+                console.log('保存時のポイント支払設定復元完了:', formData.savedPointPaymentConfig);
+            } catch (e) {
+                console.warn('ポイント支払設定のパースに失敗:', e);
+                formData.savedPointPaymentConfig = null;
+            }
+        } else {
+            formData.savedPointPaymentConfig = null;
+        }
+        
         console.log('変換完了（全体）:', formData);
         return formData;
         
     } catch (error) {
         console.error('データ変換でエラー:', error);
         throw new Error('データの変換に失敗しました');
+    }
+}
+
+/**
+ * 保存された設定でUIを再構築
+ * @param {Array} savedPaymentConfig 保存時の支払方法設定
+ * @param {Array} savedPointConfig 保存時のポイント支払設定
+ */
+async function rebuildUIWithSavedConfig(savedPaymentConfig, savedPointConfig) {
+    console.log('=== 保存された設定でUIを再構築 ===');
+    console.log('保存時の支払方法設定:', savedPaymentConfig);
+    console.log('保存時のポイント支払設定:', savedPointConfig);
+    
+    try {
+        // 一時的にグローバル設定を保存された設定で置き換え
+        if (savedPaymentConfig) {
+            window.paymentMethodConfig = savedPaymentConfig;
+            console.log('支払方法設定を復元しました');
+        }
+        
+        if (savedPointConfig) {
+            window.pointPaymentConfig = savedPointConfig;
+            console.log('ポイント支払設定を復元しました');
+        }
+        
+        // UIの支払方法セクションを再構築
+        if (typeof generatePaymentMethodsHTML === 'function') {
+            const salesSection = document.getElementById('salesPaymentMethods');
+            if (salesSection && savedPaymentConfig) {
+                salesSection.innerHTML = generatePaymentMethodsHTML(savedPaymentConfig, 'sales');
+                console.log('売上支払方法セクションを再構築しました');
+            }
+        }
+        
+        // UIのポイント支払セクションを再構築
+        if (typeof generatePointPaymentHTML === 'function') {
+            const pointSection = document.getElementById('pointPaymentMethods');
+            if (pointSection && savedPointConfig) {
+                pointSection.innerHTML = generatePointPaymentHTML(savedPointConfig);
+                console.log('ポイント支払セクションを再構築しました');
+            }
+        }
+        
+        // 注意メッセージを表示
+        const message = `
+            <div class="alert alert-warning" style="margin: 10px 0; padding: 10px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px;">
+                <strong>⚠️ 注意:</strong> この日報は保存時の支払方法設定で表示されています。<br>
+                現在の設定と異なる場合があります。
+            </div>
+        `;
+        
+        const formContainer = document.querySelector('.form-container') || document.body;
+        const existingAlert = formContainer.querySelector('.alert-warning');
+        if (!existingAlert) {
+            formContainer.insertAdjacentHTML('afterbegin', message);
+        }
+        
+    } catch (error) {
+        console.error('UI再構築でエラー:', error);
+        showError('過去の設定での表示に失敗しました。現在の設定で表示します。');
     }
 }
 
@@ -298,6 +395,9 @@ async function saveReportToDatabase(reportData) {
             }),
             expense_data: JSON.stringify(reportData.expenses || []),
             cash_data: JSON.stringify(reportData.cash || {}),
+            // 保存時の支払方法設定も一緒に保存
+            payment_method_config: paymentMethodConfig || null,
+            point_payment_config: pointPaymentConfig || null,
             previous_cash_balance: parseFloat(reportData.previousCashBalance) || 0,
             cash_difference: 0,
             remarks: reportData.remarks || ''
