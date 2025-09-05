@@ -20,8 +20,6 @@ const API = {
      */
     async request(action, data = {}) {
         try {
-            console.log('API リクエスト送信:', action, data);
-            
             const response = await fetch('api.php', {
                 method: 'POST',
                 headers: {
@@ -33,11 +31,8 @@ const API = {
                 })
             });
             
-            console.log('レスポンス状態:', response.status, response.statusText);
-            
             // レスポンステキストを先に取得
             const responseText = await response.text();
-            console.log('生レスポンス:', responseText);
             
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}, response: ${responseText}`);
@@ -50,7 +45,6 @@ const API = {
                 const jsonStart = responseText.indexOf('{');
                 const cleanResponseText = jsonStart >= 0 ? responseText.substring(jsonStart) : responseText;
                 
-                console.log('クリーンなレスポンス:', cleanResponseText);
                 result = JSON.parse(cleanResponseText);
             } catch (parseError) {
                 console.error('JSON parse error:', parseError);

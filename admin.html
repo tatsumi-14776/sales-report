@@ -18,6 +18,16 @@
             color: #333;
         }
 
+        .btn-reports {
+            background: linear-gradient(45deg, #e91e63, #c2185b);
+            color: white;
+        }
+
+        .btn-reports:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(233, 30, 99, 0.3);
+        }
+
         .container {
             min-height: 100vh;
             display: flex;
@@ -290,6 +300,32 @@
                 </div>
             </div>
 
+            <!-- 日報管理ダッシュボード -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon" style="background: linear-gradient(45deg, #e91e63, #c2185b);">📊</div>
+                    <div class="card-title">日報管理</div>
+                </div>
+                <div class="card-description">
+                    各店舗の日報提出状況を一覧で確認。未提出・遅延・提出済みの状況を管理できます
+                </div>
+                <a href="daily-reports-dashboard.html" class="btn btn-reports">
+                    <span>📋</span>
+                    日報管理画面を開く
+                </a>
+                
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-number" id="todaySubmittedReports">-</div>
+                        <div class="stat-label">本日提出済み</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="pendingReports">-</div>
+                        <div class="stat-label">未提出店舗</div>
+                    </div>
+                </div>
+            </div>
+
             <!-- ユーザー管理 -->
             <div class="card">
                 <div class="card-header">
@@ -473,6 +509,44 @@
                 console.error('統計情報の更新でエラー:', error);
                 document.getElementById('totalReports').textContent = 'エラー';
                 document.getElementById('todayReports').textContent = 'エラー';
+            }
+            // 既存のupdateStats()関数内の最後に追加
+            async function updateDailyReportsStats() {
+                try {
+                    // 今日の日付
+                    const today = new Date().toISOString().split('T')[0];
+                    
+                    // LocalStorageから今日の日報データを検索
+                    const allKeys = Object.keys(localStorage);
+                    const todayReportKeys = allKeys.filter(key => 
+                        key.startsWith('dailyReport_') && key.includes(today)
+                    );
+                    
+                    // 提出済み店舗数
+                    document.getElementById('todaySubmittedReports').textContent = todayReportKeys.length;
+                    
+                    // 未提出店舗数（仮で計算 - 実際は全店舗数から提出済みを引く）
+                    const totalStores = await getTotalStoresCount();
+                    const pendingCount = Math.max(0, totalStores - todayReportKeys.length);
+                    document.getElementById('pendingReports').textContent = pendingCount;
+                    
+                } catch (error) {
+                    console.error('日報統計の更新でエラー:', error);
+                    document.getElementById('todaySubmittedReports').textContent = '?';
+                    document.getElementById('pendingReports').textContent = '?';
+                }
+            }
+
+            // 店舗総数を取得する関数（新規追加）
+            async function getTotalStoresCount() {
+                try {
+                    const response = await fetch('api.php?action=getAllStores');
+                    const result = await response.json();
+                    return result.success ? result.data.length : 5; // フォールバック値
+                } catch (error) {
+                    console.warn('店舗数取得エラー:', error);
+                    return 5; // デフォルト値
+                }
             }
         }
 

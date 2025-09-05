@@ -41,11 +41,9 @@
                 return false;
             }
             
-            console.log('認証成功。ユーザーセッション:', userSession); // デバッグ用
             return true;
             
         } catch (error) {
-            console.error('セッション解析エラー:', error);
             sessionStorage.removeItem('userSession');
             localStorage.removeItem('userSession');
             alert('セッションエラー。ログインページに移動します。');
@@ -69,29 +67,19 @@
         
         // 店舗名を設定
         const storeNameElement = document.getElementById('storeName');
-        console.log('=== 店舗フィールド設定開始 ===');
-        console.log('userSession:', userSession);
-        console.log('userSession.role:', userSession.role);
-        console.log('管理者判定:', userSession.role === 'admin');
         
         if (storeNameElement) {
             if (userSession.role === 'admin') {
-                console.log('管理者ユーザーです。main.js読み込み後に店舗選択ドロップダウンを設定します');
                 // 管理者フラグを要素に設定
                 storeNameElement.setAttribute('data-admin-mode', 'true');
             } else if (userSession.storeName) {
-                console.log('一般ユーザーとして店舗名を設定します:', userSession.storeName);
                 // 一般ユーザーの場合：読み取り専用
                 if (!storeNameElement.value || storeNameElement.value === '店舗未設定') {
                     storeNameElement.value = userSession.storeName;
                 }
                 storeNameElement.readOnly = true;
                 storeNameElement.setAttribute('data-original-store-name', userSession.storeName);
-            } else {
-                console.log('店舗情報が設定されていません');
             }
-        } else {
-            console.error('店舗名要素が見つかりません');
         }
         
         // ログアウトボタン追加

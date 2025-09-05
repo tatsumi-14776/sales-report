@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日報管理ダッシュボード - 日次売上報告書システム</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 2rem;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .admin-badge {
+            background: linear-gradient(45deg, #e91e63, #c2185b);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .nav-btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-btn.secondary {
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* 統計サマリー */
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .stats-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .stats-icon {
+            width: 3.5rem;
+            height: 3.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .stats-icon.submitted {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+        }
+
+        .stats-icon.pending {
+            background: linear-gradient(45deg, #FF9800, #F57C00);
+            color: white;
+        }
+
+        .stats-icon.late {
+            background: linear-gradient(45deg, #f44336, #d32f2f);
+            color: white;
+        }
+
+        .stats-icon.total-sales {
+            background: linear-gradient(45deg, #2196F3, #1976D2);
+            color: white;
+        }
+
+        .stats-info h3 {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.25rem;
+        }
+
+        .stats-info p {
+            color: #666;
+            font-size: 0.875rem;
+        }
+
+        /* フィルター・検索エリア */
+        .filters-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            align-items: end;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-label {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+
+        .filter-input,
+        .filter-select {
+            padding: 0.75rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .filter-input:focus,
+        .filter-select:focus {
+            outline: none;
+            border-color: #e91e63;
+        }
+
+        .filter-button {
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(45deg, #e91e63, #c2185b);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(233, 30, 99, 0.3);
+        }
+
+        /* 日報一覧テーブル */
+        .reports-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 1rem;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .export-button {
+            padding: 0.5rem 1rem;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+
+        .reports-table-container {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .reports-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        .reports-table th,
+        .reports-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .reports-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .reports-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        /* ステータスバッジ */
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-align: center;
+            min-width: 80px;
+            display: inline-block;
+        }
+
+        .status-submitted {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-late {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* アクションボタン */
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-small {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.75rem;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .btn-view {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .btn-view:hover {
+            background: #bbdefb;
+        }
+
+        .btn-edit {
+            background: #fff3e0;
+            color: #ef6c00;
+        }
+
+        .btn-edit:hover {
+            background: #ffe0b2;
+        }
+
+        .btn-download {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+
+        .btn-download:hover {
+            background: #c8e6c9;
+        }
+
+        /* 売上金額のフォーマット */
+        .sales-amount {
+            font-weight: 600;
+            color: #2563eb;
+            text-align: right;
+        }
+
+        /* ローディング */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e5e7eb;
+            border-top: 4px solid #e91e63;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 空状態 */
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+
+        /* アラート */
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            border: 1px solid #059669;
+            color: #065f46;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            border: 1px solid #dc2626;
+            color: #991b1b;
+        }
+
+        /* レスポンシブ */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .stats-overview {
+                grid-template-columns: 1fr;
+            }
+
+            .filters-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .reports-table {
+                min-width: 800px;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+
+        /* 詳細モーダル */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 1rem;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: bold;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .close-btn:hover {
+            color: #333;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .detail-item {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+        }
+
+        .detail-label {
+            font-size: 0.875rem;
+            color: #666;
+            margin-bottom: 0.25rem;
+        }
+
+        .detail-value {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- ヘッダー -->
+        <div class="header">
+            <div class="header-left">
+                <div class="admin-badge">📊 日報管理</div>
+                <div>
+                    <h1 style="margin-bottom: 0.25rem;">日報管理ダッシュボード</h1>
+                    <div style="font-size: 0.875rem; color: #666;" id="userInfo">読み込み中...</div>
+                </div>
+            </div>
+            <div class="nav-buttons">
+                <a href="admin.html" class="nav-btn secondary">
+                    <span>🏠</span>
+                    管理ダッシュボード
+                </a>
+                <button class="nav-btn secondary" onclick="handleLogout()">
+                    <span>🚪</span>
+                    ログアウト
+                </button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- 統計サマリー -->
+            <div class="stats-overview">
+                <div class="stats-card">
+                    <div class="stats-icon submitted">✅</div>
+                    <div class="stats-info">
+                        <h3 id="submittedCount">-</h3>
+                        <p>提出済み店舗</p>
+                    </div>
+                </div>
+                <div class="stats-card">
+                    <div class="stats-icon pending">⏳</div>
+                    <div class="stats-info">
+                        <h3 id="pendingCount">-</h3>
+                        <p>未提出店舗</p>
+                    </div>
+                </div>
+                <div class="stats-card">
+                    <div class="stats-icon late">⚠️</div>
+                    <div class="stats-info">
+                        <h3 id="lateCount">-</h3>
+                        <p>遅延提出</p>
+                    </div>
+                </div>
+                <div class="stats-card">
+                    <div class="stats-icon total-sales">💰</div>
+                    <div class="stats-info">
+                        <h3 id="totalSales">-</h3>
+                        <p>合計売上額</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- フィルター・検索エリア -->
+            <div class="filters-section">
+                <div class="filters-grid">
+                    <div class="filter-group">
+                        <label class="filter-label">対象日</label>
+                        <input type="date" id="filterDate" class="filter-input">
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">店舗</label>
+                        <select id="filterStore" class="filter-select">
+                            <option value="">すべての店舗</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">ステータス</label>
+                        <select id="filterStatus" class="filter-select">
+                            <option value="">すべて</option>
+                            <option value="submitted">提出済み</option>
+                            <option value="pending">未提出</option>
+                            <option value="late">遅延</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">&nbsp;</label>
+                        <button class="filter-button" onclick="applyFilters()">
+                            <span>🔍</span> 検索
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- アラートエリア -->
+            <div id="alertContainer"></div>
+
+            <!-- 日報一覧 -->
+            <div class="reports-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <span>📋</span>
+                        日報一覧
+                    </h2>
+                    <button class="export-button" onclick="exportReports()">
+                        <span>📄</span> CSV出力
+                    </button>
+                </div>
+
+                <!-- ローディング -->
+                <div class="loading" id="loading">
+                    <div class="loading-spinner"></div>
+                    <p>データを読み込み中...</p>
+                </div>
+
+                <!-- テーブル -->
+                <div class="reports-table-container" id="reportsTableContainer">
+                    <table class="reports-table">
+                        <thead>
+                            <tr>
+                                <th>日付</th>
+                                <th>店舗名</th>
+                                <th>担当者</th>
+                                <th>ステータス</th>
+                                <th>売上合計</th>
+                                <th>現金過不足</th>
+                                <th>提出日時</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reportsTableBody">
+                            <!-- データがJavaScriptで挿入される -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 空状態 -->
+                <div class="empty-state" id="emptyState" style="display: none;">
+                    <h3>日報データがありません</h3>
+                    <p>指定された条件に一致する日報が見つかりませんでした</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 日報詳細モーダル -->
+    <div class="modal" id="reportDetailModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">日報詳細</h3>
+                <button class="close-btn" onclick="closeReportDetail()">&times;</button>
+            </div>
+            
+            <div id="reportDetailContent">
+                <!-- 日報詳細内容がJavaScriptで挿入される -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // グローバル変数
+        let allReports = [];
+        let allStores = [];
+        let currentFilters = {
+            date: '',
+            store: '',
+            status: ''
+        };
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuth();
+            initializePage();
+        });
+
+        // 認証チェック
+        function checkAuth() {
+            const userSession = JSON.parse(sessionStorage.getItem('userSession') || 'null');
+            
+            if (!userSession || userSession.role !== 'admin') {
+                alert('管理者としてログインしてください');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const userInfo = document.getElementById('userInfo');
+            if (userInfo && userSession.username) {
+                userInfo.textContent = `${userSession.username} さんでログイン中`;
+            }
+        }
+
+        // ページ初期化
+        async function initializePage() {
+            try {
+                // 今日の日付を設定
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('filterDate').value = today;
+                
+                // 店舗一覧とデータを読み込み
+                await loadStores();
+                await loadReports();
+                
+            } catch (error) {
+                console.error('初期化エラー:', error);
+                showAlert('初期化に失敗しました', 'error');
+            }
+        }
+
+        // ログアウト処理
+        function handleLogout() {
+            if (confirm('ログアウトしますか？')) {
+                sessionStorage.removeItem('userSession');
+                localStorage.removeItem('userSession');
+                window.location.href = 'login.html';
+            }
+        }
+
+        // 店舗一覧読み込み
+        async function loadStores() {
+            try {
+                const response = await fetch('api.php?action=getAllStores');
+                const result = await response.json();
+
+                if (result.success) {
+                    allStores = result.data || [];
+                    updateStoreFilter();
+                } else {
+                    console.error('店舗一覧の取得に失敗:', result.message);
+                }
+            } catch (error) {
+                console.error('店舗読み込みエラー:', error);
+            }
+        }
+
+        // 店舗フィルターを更新
+        function updateStoreFilter() {
+            const filterStore = document.getElementById('filterStore');
+            filterStore.innerHTML = '<option value="">すべての店舗</option>';
+            
+            allStores.forEach(store => {
+                const option = document.createElement('option');
+                option.value = store.id;
+                option.textContent = store.store_name;
+                filterStore.appendChild(option);
+            });
+        }
+
+        // 日報データ読み込み
+        async function loadReports() {
+            showLoading(true);
+            
+            try {
+                const targetDate = document.getElementById('filterDate').value || new Date().toISOString().split('T')[0];
+                
+                // 各店舗の指定日付の日報を取得
+                const reports = [];
+                
+                for (const store of allStores) {
+                    try {
+                        const response = await fetch(`api.php?action=getReport&report_date=${targetDate}&store_id=${store.id}`);
+                        const result = await response.json();
+                        
+                        if (result.success) {
+                            // 提出済み
+                            reports.push({
+                                ...result.data,
+                                store_name: store.store_name,
+                                status: 'submitted',
+                                total_sales: calculateTotalSales(result.data)
+                            });
+                        } else {
+                            // 未提出
+                            reports.push({
+                                id: null,
+                                report_date: targetDate,
+                                store_id: store.id,
+                                store_name: store.store_name,
+                                user_id: '-',
+                                status: 'pending',
+                                total_sales: 0,
+                                cash_difference: 0,
+                                created_at: null,
+                                updated_at: null
+                            });
+                        }
+                    } catch (error) {
+                        console.error(`店舗 ${store.store_name} のデータ取得エラー:`, error);
+                    }
+                }
+                
+                allReports = reports;
+                applyFilters();
+                updateStats();
+                
+            } catch (error) {
+                console.error('日報読み込みエラー:', error);
+                showAlert('日報データの読み込みに失敗しました', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 売上合計を計算
+        function calculateTotalSales(reportData) {
+            try {
+                let total = 0;
+                
+                // 売上データから計算
+                if (reportData.sales_data) {
+                    const salesData = typeof reportData.sales_data === 'string' 
+                        ? JSON.parse(reportData.sales_data) 
+                        : reportData.sales_data;
+                    
+                    Object.values(salesData).forEach(amount => {
+                        total += parseFloat(amount) || 0;
+                    });
+                }
+                
+                // ポイント支払データから計算
+                if (reportData.point_payments_data) {
+                    const pointData = typeof reportData.point_payments_data === 'string' 
+                        ? JSON.parse(reportData.point_payments_data) 
+                        : reportData.point_payments_data;
+                    
+                    Object.values(pointData).forEach(amount => {
+                        total += parseFloat(amount) || 0;
+                    });
+                }
+                
+                return total;
+            } catch (error) {
+                console.error('売上計算エラー:', error);
+                return 0;
+            }
+        }
+
+        // フィルター適用
+        function applyFilters() {
+            currentFilters.date = document.getElementById('filterDate').value;
+            currentFilters.store = document.getElementById('filterStore').value;
+            currentFilters.status = document.getElementById('filterStatus').value;
+            
+            let filteredReports = [...allReports];
+            
+            // 店舗フィルター
+            if (currentFilters.store) {
+                filteredReports = filteredReports.filter(report => 
+                    report.store_id == currentFilters.store
+                );
+            }
+            
+            // ステータスフィルター
+            if (currentFilters.status) {
+                filteredReports = filteredReports.filter(report => 
+                    report.status === currentFilters.status
+                );
+            }
+            
+            renderReportsTable(filteredReports);
+        }
+
+        // テーブル描画
+        function renderReportsTable(reports) {
+            const tbody = document.getElementById('reportsTableBody');
+            const tableContainer = document.getElementById('reportsTableContainer');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (reports.length === 0) {
+                tableContainer.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            tableContainer.style.display = 'block';
+            emptyState.style.display = 'none';
+            
+            tbody.innerHTML = reports.map(report => `
+                <tr>
+                    <td>${formatDate(report.report_date)}</td>
+                    <td><strong>${escapeHtml(report.store_name)}</strong></td>
+                    <td>${escapeHtml(report.user_id || '-')}</td>
+                    <td>${getStatusBadge(report.status)}</td>
+                    <td class="sales-amount">${formatCurrency(report.total_sales)}</td>
+                    <td style="text-align: right; ${report.cash_difference > 0 ? 'color: #059669;' : report.cash_difference < 0 ? 'color: #dc2626;' : ''}">${formatCurrency(report.cash_difference)}</td>
+                    <td>${formatDateTime(report.updated_at)}</td>
+                    <td>
+                        <div class="action-buttons">
+                            ${report.status === 'submitted' ? `
+                                <button class="btn-small btn-view" onclick="viewReportDetail(${report.id})">👁️ 詳細</button>
+                                <button class="btn-small btn-download" onclick="downloadReport(${report.id})">📄 PDF</button>
+                            ` : `
+                                <button class="btn-small btn-edit" onclick="createReport(${report.store_id}, '${report.report_date}')">✏️ 作成</button>
+                            `}
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // 統計更新
+        function updateStats() {
+            const submitted = allReports.filter(r => r.status === 'submitted').length;
+            const pending = allReports.filter(r => r.status === 'pending').length;
+            const late = allReports.filter(r => r.status === 'late').length;
+            const totalSales = allReports
+                .filter(r => r.status === 'submitted')
+                .reduce((sum, r) => sum + r.total_sales, 0);
+            
+            document.getElementById('submittedCount').textContent = submitted;
+            document.getElementById('pendingCount').textContent = pending;
+            document.getElementById('lateCount').textContent = late;
+            document.getElementById('totalSales').textContent = formatCurrency(totalSales);
+        }
+
+        // ステータスバッジ生成
+        function getStatusBadge(status) {
+            const badges = {
+                submitted: '<span class="status-badge status-submitted">✅ 提出済み</span>',
+                pending: '<span class="status-badge status-pending">⏳ 未提出</span>',
+                late: '<span class="status-badge status-late">⚠️ 遅延</span>'
+            };
+            return badges[status] || '';
+        }
+
+        // 日報詳細表示
+        async function viewReportDetail(reportId) {
+            try {
+                // APIから詳細データを取得
+                const report = allReports.find(r => r.id == reportId);
+                if (!report) return;
+                
+                const detailContent = document.getElementById('reportDetailContent');
+                detailContent.innerHTML = `
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">日付</div>
+                            <div class="detail-value">${formatDate(report.report_date)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">店舗</div>
+                            <div class="detail-value">${escapeHtml(report.store_name)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">担当者</div>
+                            <div class="detail-value">${escapeHtml(report.user_id)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">売上合計</div>
+                            <div class="detail-value">${formatCurrency(report.total_sales)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">現金過不足</div>
+                            <div class="detail-value">${formatCurrency(report.cash_difference)}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">提出日時</div>
+                            <div class="detail-value">${formatDateTime(report.updated_at)}</div>
+                        </div>
+                    </div>
+                    
+                    ${report.remarks ? `
+                        <div style="margin-top: 1.5rem;">
+                            <h4 style="margin-bottom: 0.5rem;">備考・報告事項</h4>
+                            <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; white-space: pre-wrap;">${escapeHtml(report.remarks)}</div>
+                        </div>
+                    ` : ''}
+                `;
+                
+                document.getElementById('reportDetailModal').classList.add('show');
+                
+            } catch (error) {
+                console.error('詳細表示エラー:', error);
+                showAlert('詳細の読み込みに失敗しました', 'error');
+            }
+        }
+
+        // 日報作成
+        function createReport(storeId, date) {
+            const url = `index.html?store_id=${storeId}&date=${date}&mode=create`;
+            window.open(url, '_blank');
+        }
+
+        // PDF出力
+        function downloadReport(reportId) {
+            // PDF生成機能は実装予定
+            showAlert('PDF出力機能は開発中です', 'error');
+        }
+
+        // CSV出力
+        function exportReports() {
+            try {
+                const filteredReports = allReports.filter(report => {
+                    if (currentFilters.store && report.store_id != currentFilters.store) return false;
+                    if (currentFilters.status && report.status !== currentFilters.status) return false;
+                    return true;
+                });
+                
+                const csvData = [
+                    ['日付', '店舗名', '担当者', 'ステータス', '売上合計', '現金過不足', '提出日時'],
+                    ...filteredReports.map(report => [
+                        report.report_date,
+                        report.store_name,
+                        report.user_id || '-',
+                        report.status === 'submitted' ? '提出済み' : report.status === 'pending' ? '未提出' : '遅延',
+                        report.total_sales,
+                        report.cash_difference,
+                        report.updated_at || '-'
+                    ])
+                ];
+                
+                const csvContent = csvData.map(row => row.join(',')).join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                
+                if (link.download !== undefined) {
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', `日報一覧_${new Date().toISOString().split('T')[0]}.csv`);
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+                
+            } catch (error) {
+                console.error('CSV出力エラー:', error);
+                showAlert('CSV出力に失敗しました', 'error');
+            }
+        }
+
+        // モーダルを閉じる
+        function closeReportDetail() {
+            document.getElementById('reportDetailModal').classList.remove('show');
+        }
+
+        // ローディング表示/非表示
+        function showLoading(show) {
+            const loading = document.getElementById('loading');
+            if (show) {
+                loading.classList.add('show');
+            } else {
+                loading.classList.remove('show');
+            }
+        }
+
+        // アラート表示
+        function showAlert(message, type) {
+            const container = document.getElementById('alertContainer');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            
+            container.innerHTML = '';
+            container.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+
+        // ユーティリティ関数
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('ja-JP');
+        }
+
+        function formatDateTime(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('ja-JP') + ' ' + date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function formatCurrency(amount) {
+            return `¥${amount.toLocaleString()}`;
+        }
+
+        // モーダル外クリックで閉じる
+        document.getElementById('reportDetailModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeReportDetail();
+            }
+        });
+
+        // ESCキーでモーダルを閉じる
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeReportDetail();
+            }
+        });
+
+        // フィルター入力時の自動更新
+        document.getElementById('filterDate').addEventListener('change', loadReports);
+    </script>
+</body>
+</html>
