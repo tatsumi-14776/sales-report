@@ -393,7 +393,7 @@ function createFileFromBase64(fileData) {
 }
 
 /**
- * 保存されたファイルデータからUI表示を更新
+ * 保存されたファイルデータからUI表示を更新（改善版）
  */
 function updateFileDisplayFromData(attachmentNumber, fileData) {
     const fileInput = document.getElementById(`file_${attachmentNumber}`);
@@ -406,22 +406,45 @@ function updateFileDisplayFromData(attachmentNumber, fileData) {
     
     fileInput.classList.add('has-file');
     
+    // 🎨 より明確でわかりやすいダウンロード表示
     fileInfo.innerHTML = `
         <div class="file-status">
             <svg class="file-status-icon success" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
             <div class="file-details">
-                <span class="file-name downloadable" onclick="downloadRestoredFile(${attachmentNumber})" title="クリックしてダウンロード">📥 ${fileData.fileName} (復元済み)</span>
-                <span class="file-size">${fileSizeMB}MB</span>
+                <div style="margin-bottom: 0.75rem; padding: 0.5rem; background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 0.375rem;">
+                    <div style="font-size: 0.875rem; color: #374151; font-weight: 500;">
+                        ${fileData.fileName}
+                    </div>
+                </div>
+                <button class="file-name downloadable highlight" 
+                        onclick="downloadRestoredFile(${attachmentNumber})" 
+                        title="このファイルをPCにダウンロードします"
+                        style="border: none; font-family: inherit; width: 100%;">
+                    📥 PCにダウンロード
+                </button>
             </div>
         </div>
     `;
     
     clearButton.style.display = 'flex';
     clearButton.classList.add('active');
+    
+    // 🔥 初回表示時に3秒間点滅して注意を引く
+    const downloadButton = fileInfo.querySelector('.file-name.downloadable');
+    if (downloadButton) {
+        // 少し遅らせてからアニメーションを開始
+        setTimeout(() => {
+            downloadButton.classList.add('highlight');
+        }, 100);
+        
+        // 3秒後にアニメーションを停止
+        setTimeout(() => {
+            downloadButton.classList.remove('highlight');
+        }, 3100);
+    }
 }
-
 /**
  * 復元されたファイルをダウンロードする
  * @param {number} attachmentNumber 添付番号

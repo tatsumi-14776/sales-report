@@ -27,11 +27,16 @@ function loadTodayData() {
             return;
         }
         
+        // ローディング表示を開始
+        showLoadingIndicator(true);
+        
         loadSampleData(today, storeName);
         
     } catch (error) {
         console.error('当日データ読込処理でエラー:', error);
         showError('当日データの読み込み中にエラーが発生しました');
+        // エラー時もローディングを非表示
+        showLoadingIndicator(false);
     }
 }
 
@@ -58,12 +63,17 @@ function handleLoadData() {
             return;
         }
         
+        // ローディング表示を開始
+        showLoadingIndicator(true);
+        
         console.log(`データ読み込み対象: ${selectedDate} - ${storeName}`);
         loadSampleData(selectedDate, storeName);
         
     } catch (error) {
         console.error('データ読込処理でエラー:', error);
         showError('データの読み込み中にエラーが発生しました');
+        // エラー時もローディングを非表示
+        showLoadingIndicator(false);
     }
 }
 
@@ -117,19 +127,25 @@ async function loadSampleData(date, storeName) {
                 loadDataIntoForm(formData);
                 console.log('=== loadDataIntoForm 呼び出し後 ===');
                 showSuccess('保存されたデータを読み込みました');
+                
+                // データ読み込み完了後にローディングを非表示
+                showLoadingIndicator(false);
             } else {
                 console.error('loadDataIntoForm関数が見つかりません');
                 showError('データ読み込み機能が利用できません');
+                showLoadingIndicator(false);
             }
             
         } else {
             console.log('指定されたデータが見つかりません:', result.message);
             showError(result.message || '指定された日付・店舗のデータが見つかりません');
+            showLoadingIndicator(false);
         }
         
     } catch (error) {
         console.error('データ読込でエラー:', error);
         showError('データの読み込みに失敗しました: ' + error.message);
+        showLoadingIndicator(false);
     }
 }
 
@@ -1184,5 +1200,61 @@ function setupBeforeUnloadWarning() {
         
     } catch (error) {
         console.error('ページ離脱警告設定でエラー:', error);
+    }
+}
+
+/**
+ * ローディングインジケーターの表示/非表示
+ * @param {boolean} show 表示する場合はtrue、非表示にする場合はfalse
+ */
+function showLoadingIndicator(show) {
+    try {
+        let loadingOverlay = document.getElementById('loadingOverlay');
+        
+        if (show) {
+            // ローディングオーバーレイが存在しない場合は作成
+            if (!loadingOverlay) {
+                loadingOverlay = document.createElement('div');
+                loadingOverlay.id = 'loadingOverlay';
+                loadingOverlay.innerHTML = `
+                    <div class="loading-content">
+                        <div class="loading-spinner"></div>
+                        <div class="loading-text">データを読み込み中...</div>
+                        <div class="loading-subtext">しばらくお待ちください</div>
+                    </div>
+                `;
+                document.body.appendChild(loadingOverlay);
+            }
+            
+            // ローディングを表示
+            loadingOverlay.style.display = 'flex';
+            console.log('ローディング表示を開始');
+            
+            // データ読み込みボタンを無効化
+            const loadButton = document.querySelector('button[onclick="handleLoadData()"]');
+            if (loadButton) {
+                loadButton.disabled = true;
+                loadButton.style.opacity = '0.6';
+                loadButton.style.cursor = 'not-allowed';
+            }
+            
+        } else {
+            // ローディングを非表示
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'none';
+                console.log('ローディング表示を終了');
+            }
+            
+            // データ読み込みボタンを有効化
+            const loadButton = document.querySelector('button[onclick="handleLoadData()"]');
+            if (loadButton) {
+                loadButton.disabled = false;
+                loadButton.style.opacity = '1';
+                loadButton.style.cursor = 'pointer';
+            }
+        }
+        
+    } catch (error) {
+        console.error('ローディング表示でエラー:', error);
     }
 }

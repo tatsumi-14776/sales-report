@@ -826,30 +826,100 @@ body {
 /* ダウンロード可能なファイル名のスタイル - より強力な選択子 */
 .file-info .file-details .file-name.downloadable,
 span.file-name.downloadable {
-    color: #2563eb !important;
+    color: #ffffff !important;
     cursor: pointer !important;
-    text-decoration: underline !important;
-    text-decoration-color: #2563eb !important;
-    text-decoration-thickness: 2px !important;
-    text-underline-offset: 3px !important;
-    transition: all 0.2s ease !important;
+    text-decoration: none !important;
     font-weight: 700 !important;
-    background-color: rgba(37, 99, 235, 0.05) !important;
-    padding: 0.25rem 0.5rem !important;
-    border-radius: 0.375rem !important;
-    border: 1px solid rgba(37, 99, 235, 0.2) !important;
-    display: inline-block !important;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+    padding: 0.75rem 1.25rem !important;
+    border-radius: 0.5rem !important;
+    border: 2px solid #1d4ed8 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3) !important;
+    position: relative !important;
+    min-height: 44px !important;
+    justify-content: center !important;
+    font-family: inherit !important;
+    font-size: 0.875rem !important;
 }
 
-.file-info .file-details .file-name.downloadable:hover,
-span.file-name.downloadable:hover {
-    color: #1d4ed8 !important;
-    text-decoration-color: #1d4ed8 !important;
-    text-decoration-thickness: 3px !important;
-    background-color: rgba(37, 99, 235, 0.15) !important;
-    border-color: rgba(37, 99, 235, 0.4) !important;
+.file-info .file-details .file-name.downloadable::before {
+    content: '⬇️' !important;
+    font-size: 1.2rem !important;
+    margin-right: 0.25rem !important;
+    animation: downloadBounce 2s infinite !important;
+}
+
+.file-info .file-details .file-name.downloadable::after {
+    content: 'クリックしてダウンロード' !important;
+    position: absolute !important;
+    top: -35px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    background: #1f2937 !important;
+    color: white !important;
+    padding: 0.375rem 0.75rem !important;
+    border-radius: 0.375rem !important;
+    font-size: 0.75rem !important;
+    white-space: nowrap !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: opacity 0.3s ease !important;
+    z-index: 1000 !important;
+    font-weight: 500 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+.file-info .file-details .file-name.downloadable:hover {
+    background: linear-gradient(135deg, #1d4ed8, #1e40af) !important;
     transform: translateY(-2px) !important;
+    box-shadow: 0 8px 16px rgba(37, 99, 235, 0.4) !important;
+    border-color: #1e40af !important;
+}
+
+.file-info .file-details .file-name.downloadable:hover::after {
+    opacity: 1 !important;
+}
+
+.file-info .file-details .file-name.downloadable:active {
+    transform: translateY(0px) !important;
     box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3) !important;
+}
+
+/* ダウンロードアイコンのアニメーション */
+@keyframes downloadBounce {
+    0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(-3px);
+    }
+    60% {
+        transform: translateY(-1px);
+    }
+}
+
+/* 注意を引く点滅効果 */
+.file-name.downloadable.highlight {
+    animation: downloadPulse 1.5s ease-in-out 3 !important;
+}
+
+@keyframes downloadPulse {
+    0% {
+        box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 8px 20px rgba(37, 99, 235, 0.6);
+        transform: scale(1.05);
+    }
+    100% {
+        box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+        transform: scale(1);
+    }
 }
 
 .file-size {
@@ -1433,4 +1503,57 @@ span.file-name.downloadable:hover {
     .content {
         gap: 20px;
     }
+}
+
+/* ローディング表示のスタイル */
+#loadingOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    backdrop-filter: blur(4px);
+}
+
+.loading-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 1rem;
+    text-align: center;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    max-width: 300px;
+    width: 90%;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid #e5e7eb;
+    border-top: 4px solid #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+}
+
+.loading-subtext {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-bottom: 0;
 }
