@@ -86,8 +86,16 @@ async function loadSampleData(date, storeName) {
     console.log(`データ読込を開始: ${date} - ${storeName}`);
     
     try {
-        // 店舗情報を取得
-        const storeId = sessionStorage.getItem('storeId') || 8; // セッションから店舗IDを取得
+        // 店舗名から店舗IDを取得
+        let storeId = await getStoreIdByName(storeName);
+        
+        if (!storeId) {
+            console.log(`店舗「${storeName}」が見つからないため、新規店舗として扱います`);
+            // 新規店舗の場合は店舗IDを生成
+            storeId = await createNewStore(storeName);
+        }
+        
+        console.log(`対象店舗ID: ${storeId}, 店舗名: ${storeName}, 日付: ${date}`);
         
         // APIからデータを取得
         const response = await fetch(`api.php?action=getReport&report_date=${encodeURIComponent(date)}&store_id=${storeId}`, {
@@ -441,12 +449,25 @@ async function saveReportToDatabase(reportData) {
             throw new Error('ユーザーセッションが見つかりません。再度ログインしてください。');
         }
 
-        const storeId = userSession.store_id || 8;
+        // 店舗名から店舗IDを取得
+        const storeName = reportData.storeName || document.getElementById('storeName')?.value.trim();
+        if (!storeName) {
+            throw new Error('店舗名が入力されていません。');
+        }
+        
+        let storeId = await getStoreIdByName(storeName);
+        if (!storeId) {
+            console.log(`店舗「${storeName}」が見つからないため、新規作成します`);
+            storeId = await createNewStore(storeName);
+        }
+        
         const userId = reportData.inputBy || userSession.username; 
         
-        console.log('保存用ユーザー情報:', {
+        console.log('保存用情報:', {
             userId: userId,
             storeId: storeId,
+            storeName: storeName,
+            date: reportData.date,
             session: userSession
         });
 
@@ -1258,3 +1279,81 @@ function showLoadingIndicator(show) {
         console.error('ローディング表示でエラー:', error);
     }
 }
+
+/**
+ * 店舗名から店舗IDを取得
+ * @param {string} storeName 店舗名
+ * @returns {Promise<number|null>} 店舗ID（見つからない場合はnull）
+ */
+async function getStoreIdByName(storeName) {
+    try {
+        console.log(`店舗名「${storeName}」の店舗IDを検索中...`);
+        
+        const response = await fetch(`api.php?action=getStoreByName&store_name=${encodeURIComponent(storeName)}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+            console.log(`店舗「${storeName}」の店舗ID: ${result.data.id}`);
+            return result.data.id;
+        } else {
+            console.log(`店舗「${storeName}」が見つかりませんでした`);
+            return null;
+        }
+        
+    } catch (error) {
+        console.error('店舗ID取得でエラー:', error);
+        return null;
+    }
+}
+
+/**
+ * 新規店舗を作成
+ * @param {string} storeName 店舗名
+ * @returns {Promise<number>} 新しく作成された店舗ID
+ */
+async function createNewStore(storeName) {
+    try {
+        console.log(`新規店舗「${storeName}」を作成中...`);
+        
+        const response = await fetch('api.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                action: 'createStore',
+                store_name: storeName
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+            console.log(`新規店舗「${storeName}」を作成しました。店舗ID: ${result.data.id}`);
+            return result.data.id;
+        } else {
+            throw new Error(result.message || '店舗の作成に失敗しました');
+        }
+        
+    } catch (error) {
+        console.error('新規店舗作成でエラー:', error);
+        throw error;
+    }
+}
+
+// グローバル関数として公開
+window.getStoreIdByName = getStoreIdByName;

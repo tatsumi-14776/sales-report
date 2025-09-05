@@ -90,7 +90,19 @@ const ConfigLoader = {
 
             console.log('ユーザーセッション情報:', userSession); // デバッグ用
 
-            // store_idの確認
+            // 管理者の場合の処理
+            if (userSession.role === 'admin') {
+                console.log('管理者ユーザーです。店舗選択待機またはフォールバック設定を使用します');
+                
+                // 管理者で店舗IDがない場合はフォールバック設定を適用
+                if (!userSession.store_id && userSession.store_id !== 0) {
+                    console.log('管理者：店舗未選択のためフォールバック設定を適用');
+                    this.applyFallbackConfig();
+                    this.hideLoading();
+                    return { success: true, message: '管理者モード：フォールバック設定適用' };
+                }
+            }
+
             // store_idの確認（デバッグ強化）
             console.log('🔍 セッション全体:', userSession);
             console.log('🔍 store_id詳細:', {
@@ -104,7 +116,7 @@ const ConfigLoader = {
                 console.error('❌ store_id取得失敗 - フォールバック設定を使用');
                 this.applyFallbackConfig();
                 this.hideLoading();
-                return;
+                return { success: false, message: '店舗IDが設定されていません' };
             }
 
 console.log('✅ store_id取得成功:', userSession.store_id);
@@ -428,3 +440,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         }));
     }
 });
+
+// ConfigLoaderをグローバルに公開
+window.ConfigLoader = ConfigLoader;

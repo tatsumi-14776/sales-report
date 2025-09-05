@@ -110,6 +110,12 @@ class APIController {
                     return $this->deletePaymentMethod($input);
                 case 'savePaymentMethods':
                     return $this->savePaymentMethods($input);
+                case 'getStoreByName':
+                    return $this->getStoreByName($input);
+                case 'createStore':
+                    return $this->createStore($input);
+                case 'getAllStores':
+                    return $this->getAllStores($input);
                 default:
                     throw new Exception('無効なアクション: ' . $action);
             }
@@ -620,6 +626,109 @@ private function addPaymentMethod($data) {
         } catch (Exception $e) {
             $this->db->rollBack();
             throw new Exception('支払方法の保存に失敗しました: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * 店舗名から店舗情報を取得
+     */
+    private function getStoreByName($input) {
+        try {
+            $storeName = $input['store_name'] ?? '';
+            
+            if (empty($storeName)) {
+                throw new Exception('店舗名が指定されていません');
+            }
+            
+            $stmt = $this->db->prepare("
+                SELECT id, store_name, created_at 
+                FROM stores 
+                WHERE store_name = ? 
+                LIMIT 1
+            ");
+            $stmt->execute([$storeName]);
+            $store = $stmt->fetch();
+            
+            if ($store) {
+                return [
+                    'success' => true,
+                    'data' => $store
+                ];
+            } else {
+                return [
+                    'success' => false,
+                    'message' => '指定された店舗が見つかりません'
+                ];
+            }
+            
+        } catch (Exception $e) {
+            throw new Exception('店舗情報の取得に失敗しました: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * 新規店舗を作成
+     */
+    private function createStore($input) {
+        try {
+            $storeName = $input['store_name'] ?? '';
+            
+            if (empty($storeName)) {
+                throw new Exception('店舗名が指定されていません');
+            }
+            
+            // 既存店舗の重複チェック
+            $stmt = $this->db->prepare("SELECT id FROM stores WHERE store_name = ?");
+            $stmt->execute([$storeName]);
+            if ($stmt->fetch()) {
+                throw new Exception('同名の店舗が既に存在します');
+            }
+            
+            // 新規店舗作成
+            $stmt = $this->db->prepare("
+                INSERT INTO stores (store_name, created_at) 
+                VALUES (?, NOW())
+            ");
+            $stmt->execute([$storeName]);
+            
+            $newStoreId = $this->db->lastInsertId();
+            
+            return [
+                'success' => true,
+                'data' => [
+                    'id' => $newStoreId,
+                    'store_name' => $storeName
+                ],
+                'message' => '新規店舗を作成しました'
+            ];
+            
+        } catch (Exception $e) {
+            throw new Exception('店舗の作成に失敗しました: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * 全店舗一覧を取得
+     */
+    private function getAllStores($input) {
+        try {
+            $stmt = $this->db->prepare("
+                SELECT id, store_name, store_code, created_at 
+                FROM stores 
+                WHERE is_deleted = 0 
+                ORDER BY store_name ASC
+            ");
+            $stmt->execute();
+            $stores = $stmt->fetchAll();
+            
+            return [
+                'success' => true,
+                'data' => $stores,
+                'message' => count($stores) . '件の店舗を取得しました'
+            ];
+            
+        } catch (Exception $e) {
+            throw new Exception('店舗一覧の取得に失敗しました: ' . $e->getMessage());
         }
     }
 }
