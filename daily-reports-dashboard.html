@@ -959,100 +959,78 @@
         }
 
         /**
-         * 日報データ読み込み（status対応版・修正版）
+         * 日報データ読み込み（並列処理版）
          */
         async function loadReports() {
+            const startDate = document.getElementById('filterStartDate').value;
+            const endDate = document.getElementById('filterEndDate').value;
+            
+            if (!startDate || !endDate) {
+                showInitialMessage();
+                return;
+            }
+            
             showLoading(true);
             
             try {
-                const startDate = document.getElementById('filterStartDate').value;
-                const endDate = document.getElementById('filterEndDate').value;
-                
-                if (!startDate || !endDate) {
-                    showAlert('開始日と終了日を指定してください', 'error');
-                    return;
-                }
-                
                 if (startDate > endDate) {
                     showAlert('開始日は終了日より前の日付を指定してください', 'error');
                     return;
                 }
                 
-                console.log(`期間データ読み込み: ${startDate} ～ ${endDate}`);
-                
-                // 期間内の全日付を生成
                 const dateRange = getDateRange(startDate, endDate);
-                console.log(`対象日数: ${dateRange.length}日`);
+                console.log(`並列データ読み込み: ${startDate} ～ ${endDate} (${dateRange.length}日)`);
                 
-                const reports = [];
+                if (!allStores || allStores.length === 0) {
+                    throw new Error('店舗一覧が読み込まれていません。ページを再読み込みしてください。');
+                }
                 
-                // 各店舗・各日付の日報を取得
+                // 並列リクエスト配列を準備
+                const requestPromises = [];
+                
+                // 各店舗・各日付の組み合わせでPromiseを作成
                 for (const store of allStores) {
                     for (const date of dateRange) {
-                        try {
-                            const response = await fetch(`api.php?action=getReport&report_date=${date}&store_id=${store.id}`);
-                            const result = await response.json();
-                            
-                            if (result.success) {
-                                // 提出済み - statusを確実に設定
-                                const reportData = result.data;
-                                const status = reportData.status || 'submitted'; // デフォルトは submitted
-                                
-                                console.log(`Store: ${store.store_name}, Date: ${date}, Status: ${status}, Raw Status: ${reportData.status}`);
-                                
-                                reports.push({
-                                    ...reportData,
-                                    store_name: store.store_name,
-                                    status: status, // statusを明示的に設定
-                                    total_sales: calculateTotalSales(reportData)
-                                });
-                            } else {
-                                // 未提出
-                                reports.push({
-                                    id: null,
-                                    report_date: date,
-                                    store_id: store.id,
-                                    store_name: store.store_name,
-                                    user_id: '-',
-                                    status: 'pending', // 未提出状態
-                                    total_sales: 0,
-                                    cash_difference: 0,
-                                    created_at: null,
-                                    updated_at: null
-                                });
-                            }
-                        } catch (error) {
-                            console.error(`店舗 ${store.store_name} - ${date} のデータ取得エラー:`, error);
-                            // エラーの場合も未提出として扱う
-                            reports.push({
-                                id: null,
-                                report_date: date,
-                                store_id: store.id,
-                                store_name: store.store_name,
-                                user_id: '-',
-                                status: 'pending',
-                                total_sales: 0,
-                                cash_difference: 0,
-                                created_at: null,
-                                updated_at: null
-                            });
-                        }
+                        const promise = fetchReportData(store, date);
+                        requestPromises.push(promise);
                     }
                 }
                 
-                console.log(`期間データ読み込み完了: ${reports.length}件`);
-                console.log('Status distribution:', reports.reduce((acc, r) => {
-                    acc[r.status] = (acc[r.status] || 0) + 1;
-                    return acc;
-                }, {}));
+                console.log(`並列リクエスト数: ${requestPromises.length}`);
+                
+                // すべてのリクエストを並列実行
+                const results = await Promise.allSettled(requestPromises);
+                
+                // 結果を処理
+                const reports = [];
+                let successCount = 0;
+                let errorCount = 0;
+                
+                results.forEach(result => {
+                    if (result.status === 'fulfilled') {
+                        reports.push(result.value);
+                        successCount++;
+                    } else {
+                        console.error('リクエストエラー:', result.reason);
+                        errorCount++;
+                    }
+                });
+                
+                console.log(`並列データ読み込み完了: ${reports.length}件 (成功: ${successCount}, エラー: ${errorCount})`);
                 
                 allReports = reports;
                 applyFilters();
                 updateStats();
                 
+                if (errorCount > 0) {
+                    showAlert(`データを読み込みました（${reports.length}件）\n一部取得できないデータがありました（${errorCount}件）`, 'warning');
+                }
+                
             } catch (error) {
-                console.error('日報読み込みエラー:', error);
-                showAlert('日報データの読み込みに失敗しました', 'error');
+                console.error('並列データ読み込みエラー:', error);
+                showAlert('日報データの読み込みに失敗しました: ' + error.message, 'error');
+                allReports = [];
+                showInitialMessage();
             } finally {
                 showLoading(false);
             }
@@ -1567,10 +1545,10 @@ function resetStats() {
 }
 
 /**
- * 検索処理（新規追加）
+ * 検索処理（バッチAPI使用版）
  */
 async function performSearch() {
-    console.log('検索処理開始');
+    console.log('高速検索処理開始');
     
     try {
         const startDate = document.getElementById('filterStartDate').value;
@@ -1596,13 +1574,13 @@ async function performSearch() {
             }
         }
         
-        console.log(`検索実行: ${startDate} ～ ${endDate} (${daysDiff + 1}日間)`);
+        console.log(`高速検索実行: ${startDate} ～ ${endDate} (${daysDiff + 1}日間)`);
         
-        // データ読み込み実行
-        await loadReports();
+        // バッチAPI版のデータ読み込み実行
+        await loadReportsFast();
         
     } catch (error) {
-        console.error('検索エラー:', error);
+        console.error('高速検索エラー:', error);
         showAlert('検索中にエラーが発生しました: ' + error.message, 'error');
     }
 }
@@ -1713,6 +1691,198 @@ async function performSearch() {
         showInitialMessage();
         
         console.log('日付範囲とフィルターをクリア');
+    }
+    /**
+     * 個別レポートデータ取得（Promise対応）
+     */
+    async function fetchReportData(store, date) {
+        try {
+            const response = await fetch(`api.php?action=getReport&report_date=${date}&store_id=${store.id}`);
+            const result = await response.json();
+            
+            if (result.success) {
+                // 提出済み
+                const reportData = result.data;
+                const status = reportData.status || 'submitted';
+                
+                return {
+                    ...reportData,
+                    store_name: store.store_name,
+                    status: status,
+                    total_sales: calculateTotalSales(reportData)
+                };
+            } else {
+                // 未提出
+                return {
+                    id: null,
+                    report_date: date,
+                    store_id: store.id,
+                    store_name: store.store_name,
+                    user_id: '-',
+                    status: 'pending',
+                    total_sales: 0,
+                    cash_difference: 0,
+                    created_at: null,
+                    updated_at: null
+                };
+            }
+        } catch (error) {
+            console.error(`店舗 ${store.store_name} - ${date} のデータ取得エラー:`, error);
+            // エラー時も未提出として返す
+            return {
+                id: null,
+                report_date: date,
+                store_id: store.id,
+                store_name: store.store_name,
+                user_id: '-',
+                status: 'pending',
+                total_sales: 0,
+                cash_difference: 0,
+                created_at: null,
+                updated_at: null
+            };
+        }
+    }
+
+    /**
+     * バッチAPI使用版の高速データ読み込み
+     */
+    async function loadReportsFast() {
+        const startDate = document.getElementById('filterStartDate').value;
+        const endDate = document.getElementById('filterEndDate').value;
+        
+        if (!startDate || !endDate) {
+            showInitialMessage();
+            return;
+        }
+        
+        showLoading(true);
+        
+        try {
+            if (!allStores || allStores.length === 0) {
+                throw new Error('店舗一覧が読み込まれていません。');
+            }
+            
+            // 店舗IDの配列を作成
+            const storeIds = allStores.map(store => store.id);
+            
+            console.log(`バッチAPI呼び出し: ${startDate} ～ ${endDate}, 店舗数: ${storeIds.length}`);
+            
+            // バッチAPIを呼び出し
+            const response = await fetch('api.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    action: 'getBatchReports',
+                    start_date: startDate,
+                    end_date: endDate,
+                    store_ids: storeIds
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                const existingReports = result.data;
+                console.log(`バッチAPI取得完了: ${existingReports.length}件の既存レポート`);
+                
+                // 全組み合わせを生成して未提出データを補完
+                const allReports = generateCompleteReportSet(startDate, endDate, allStores, existingReports);
+                
+                console.log(`データ補完完了: ${allReports.length}件の全レポート`);
+                
+                window.allReports = allReports;
+                applyFilters();
+                updateStats();
+                
+            } else {
+                throw new Error(result.message || 'バッチAPI呼び出しに失敗しました');
+            }
+            
+        } catch (error) {
+            console.error('高速データ読み込みエラー:', error);
+            showAlert('日報データの読み込みに失敗しました: ' + error.message, 'error');
+            window.allReports = [];
+            showInitialMessage();
+        } finally {
+            showLoading(false);
+        }
+    }
+
+    /**
+     * 完全なレポートセットを生成（未提出データを補完）
+     */
+    function generateCompleteReportSet(startDate, endDate, stores, existingReports) {
+        const dateRange = getDateRange(startDate, endDate);
+        const completeReports = [];
+        
+        // 既存レポートをマップ化（高速検索用）
+        const existingMap = new Map();
+        existingReports.forEach(report => {
+            const key = `${report.store_id}-${report.report_date}`;
+            // 売上合計を計算
+            report.total_sales = calculateTotalSalesFromData(report);
+            existingMap.set(key, report);
+        });
+        
+        // 全組み合わせをチェック
+        stores.forEach(store => {
+            dateRange.forEach(date => {
+                const key = `${store.id}-${date}`;
+                
+                if (existingMap.has(key)) {
+                    // 既存レポートがある場合
+                    const existingReport = existingMap.get(key);
+                    completeReports.push({
+                        ...existingReport,
+                        store_name: store.store_name
+                    });
+                } else {
+                    // 未提出の場合
+                    completeReports.push({
+                        id: null,
+                        report_date: date,
+                        store_id: store.id,
+                        store_name: store.store_name,
+                        user_id: '-',
+                        status: 'pending',
+                        total_sales: 0,
+                        cash_difference: 0,
+                        created_at: null,
+                        updated_at: null
+                    });
+                }
+            });
+        });
+        
+        return completeReports;
+    }
+
+    /**
+     * レポートデータから売上合計を計算
+     */
+    function calculateTotalSalesFromData(reportData) {
+        try {
+            let total = 0;
+            
+            if (reportData.sales_data) {
+                Object.values(reportData.sales_data).forEach(amount => {
+                    total += parseFloat(amount) || 0;
+                });
+            }
+            
+            if (reportData.point_payments_data) {
+                Object.values(reportData.point_payments_data).forEach(amount => {
+                    total += parseFloat(amount) || 0;
+                });
+            }
+            
+            return total;
+        } catch (error) {
+            return 0;
+        }
     }
         
     </script>

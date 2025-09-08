@@ -125,6 +125,8 @@ class APIController {
                     return $this->unconfirmReport($input);
                 case 'checkReportStatus':
                     return $this->checkReportStatus($input);
+                case 'getBatchReports':
+                    return $this->getBatchReports($input);
                 default:
                     throw new Exception('無効なアクション: ' . $action);
             }
@@ -435,6 +437,72 @@ class APIController {
             'user_id' => $report['user_id'] ?? null,
             'created_at' => $report['created_at'] ?? null,
             'updated_at' => $report['updated_at'] ?? null
+        ];
+    }
+
+    /**
+     * 複数日報の一括取得（高速化版）
+     */
+    private function getBatchReports($data) {
+        $startDate = $data['start_date'] ?? '';
+        $endDate = $data['end_date'] ?? '';
+        $storeIds = $data['store_ids'] ?? [];
+        
+        // 入力値検証
+        if (empty($startDate) || empty($endDate)) {
+            throw new Exception('開始日と終了日が必要です');
+        }
+        
+        if (empty($storeIds)) {
+            throw new Exception('店舗IDが必要です');
+        }
+        
+        // IN句用のプレースホルダーを作成
+        $placeholders = str_repeat('?,', count($storeIds) - 1) . '?';
+        
+        // 日報データを取得
+        $stmt = $this->db->prepare("
+            SELECT dr.*, s.store_name 
+            FROM daily_reports dr
+            LEFT JOIN stores s ON dr.store_id = s.id 
+            WHERE dr.report_date BETWEEN ? AND ? 
+            AND dr.store_id IN ($placeholders)
+            ORDER BY dr.report_date DESC, s.store_name ASC
+        ");
+        
+        $params = array_merge([$startDate, $endDate], $storeIds);
+        $stmt->execute($params);
+        $reports = $stmt->fetchAll();
+        
+        // データを整形
+        $formattedReports = [];
+        foreach ($reports as $report) {
+            $formattedReports[] = [
+                'id' => $report['id'],
+                'report_date' => $report['report_date'],
+                'store_id' => $report['store_id'],
+                'store_name' => $report['store_name'],
+                'user_id' => $report['user_id'],
+                'status' => $report['status'] ?? 'submitted',
+                'sales_data' => $report['sales_data'] ? json_decode($report['sales_data'], true) : [],
+                'point_payments_data' => $report['point_payments_data'] ? json_decode($report['point_payments_data'], true) : [],
+                'income_data' => $report['income_data'] ? json_decode($report['income_data'], true) : [],
+                'expense_data' => $report['expense_data'] ? json_decode($report['expense_data'], true) : [],
+                'cash_data' => $report['cash_data'] ? json_decode($report['cash_data'], true) : [],
+                'previous_cash_balance' => floatval($report['previous_cash_balance'] ?? 0),
+                'cash_difference' => floatval($report['cash_difference'] ?? 0),
+                'remarks' => $report['remarks'] ?? '',
+                'attached_files' => $report['attached_files'] ? json_decode($report['attached_files'], true) : [],
+                'created_at' => $report['created_at'],
+                'updated_at' => $report['updated_at']
+            ];
+        }
+        
+        return [
+            'success' => true,
+            'data' => $formattedReports,
+            'count' => count($formattedReports),
+            'message' => count($formattedReports) . '件のレポートを取得しました'
         ];
     }
     
