@@ -464,12 +464,21 @@ private function getReport($data) {
     }
     
     // デバッグログ追加
-    error_log("=== 添付ファイル取得デバッグ ===");
-    error_log("データベースの添付ファイル (生): " . $report['attached_files']);
+    error_log("=== getReport デバッグ ===");
+    error_log("Report ID: " . $report['id']);
+    error_log("Raw Status: " . ($report['status'] ?? 'NULL'));
+    error_log("Report Date: " . $report['report_date']);
     
     $attachedFilesData = $report['attached_files'] ? json_decode($report['attached_files'], true) : [];
-    error_log("デコード後の添付ファイル: " . json_encode($attachedFilesData));
     error_log("添付ファイル数: " . count($attachedFilesData));
+    
+    // statusが確実に設定されるようにする
+    $status = $report['status'] ?? 'submitted'; // デフォルトはsubmitted
+    if (empty($status) || !in_array($status, ['draft', 'submitted', 'approved', 'rejected'])) {
+        $status = 'submitted'; // 不正な値の場合はsubmittedに設定
+    }
+    
+    error_log("Final Status: " . $status);
     
     return [
         'success' => true,
@@ -488,7 +497,9 @@ private function getReport($data) {
             'previous_cash_balance' => floatval($report['previous_cash_balance'] ?? 0),
             'cash_difference' => floatval($report['cash_difference'] ?? 0),
             'remarks' => $report['remarks'] ?? '',
-            'attached_files' => $attachedFilesData, // デバッグ済みデータを使用
+            'attached_files' => $attachedFilesData,
+            'status' => $status, // statusを確実に返す
+            'submitted_at' => $report['submitted_at'],
             'created_at' => $report['created_at'],
             'updated_at' => $report['updated_at']
         ]

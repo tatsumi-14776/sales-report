@@ -844,7 +844,7 @@
         }
 
         /**
-         * 日報データ読み込み（status対応版）
+         * 日報データ読み込み（status対応版・修正版）
          */
         async function loadReports() {
             showLoading(true);
@@ -879,12 +879,17 @@
                             const result = await response.json();
                             
                             if (result.success) {
-                                // 提出済み
+                                // 提出済み - statusを確実に設定
+                                const reportData = result.data;
+                                const status = reportData.status || 'submitted'; // デフォルトは submitted
+                                
+                                console.log(`Store: ${store.store_name}, Date: ${date}, Status: ${status}, Raw Status: ${reportData.status}`);
+                                
                                 reports.push({
-                                    ...result.data,
+                                    ...reportData,
                                     store_name: store.store_name,
-                                    status: result.data.status || 'submitted', // statusを保持
-                                    total_sales: calculateTotalSales(result.data)
+                                    status: status, // statusを明示的に設定
+                                    total_sales: calculateTotalSales(reportData)
                                 });
                             } else {
                                 // 未提出
@@ -903,11 +908,28 @@
                             }
                         } catch (error) {
                             console.error(`店舗 ${store.store_name} - ${date} のデータ取得エラー:`, error);
+                            // エラーの場合も未提出として扱う
+                            reports.push({
+                                id: null,
+                                report_date: date,
+                                store_id: store.id,
+                                store_name: store.store_name,
+                                user_id: '-',
+                                status: 'pending',
+                                total_sales: 0,
+                                cash_difference: 0,
+                                created_at: null,
+                                updated_at: null
+                            });
                         }
                     }
                 }
                 
                 console.log(`期間データ読み込み完了: ${reports.length}件`);
+                console.log('Status distribution:', reports.reduce((acc, r) => {
+                    acc[r.status] = (acc[r.status] || 0) + 1;
+                    return acc;
+                }, {}));
                 
                 allReports = reports;
                 applyFilters();
@@ -1059,7 +1081,7 @@
         function getStatusBadge(status) {
             const badges = {
                 'submitted': '<span class="status-badge status-submitted">✅ 提出済み</span>',
-                'approved': '<span class="status-badge status-confirmed">🔒 確定済み</span>',
+                'approved': '<span class="status-badge status-confirmed"> 確定済み</span>',
                 'draft': '<span class="status-badge status-draft">📝 下書き</span>',
                 'rejected': '<span class="status-badge status-rejected">❌ 却下</span>',
                 'pending': '<span class="status-badge status-pending">⏳ 未提出</span>'
@@ -1068,7 +1090,7 @@
         }
 
         /**
-         * アクションボタン生成（status対応版）
+         * アクションボタン生成（status対応版・修正版）
          */
         function getActionButtons(report) {
             if (!report.id) {
@@ -1076,26 +1098,48 @@
                 return `<button class="btn-small btn-edit" onclick="createReport(${report.store_id}, '${report.report_date}')">✏️ 作成</button>`;
             }
             
-            // 提出済みの場合
+            // デバッグ用ログ
+            console.log(`Report ID: ${report.id}, Status: ${report.status}, Date: ${report.report_date}`);
+            
+            // 提出済みの場合（statusの確認を強化）
             if (report.status === 'approved') {
-                // 確定済みの場合
+                // 確定済みの場合（クリック可能）
                 return `
-                    <button class="btn-small btn-confirmed" onclick="viewReportInForm(${report.store_id}, '${report.report_date}')">🔒 確定済み</button>
+                    <button class="btn-small btn-confirmed" onclick="viewReportInForm(${report.store_id}, '${report.report_date}')" title="この日報は確定済みです">🔒 確定済み</button>
                     <button class="btn-small btn-view" onclick="viewReportDetail(${report.id})">👁️ 詳細</button>
                     <button class="btn-small btn-download" onclick="downloadReport(${report.id})">📄 PDF</button>
                 `;
-            } else {
-                // 未確定の場合
+            } else if (report.status === 'submitted') {
+                // 提出済み・未確定の場合
                 return `
                     <button class="btn-small btn-confirm" onclick="viewReportInForm(${report.store_id}, '${report.report_date}')">📋 確認</button>
                     <button class="btn-small btn-view" onclick="viewReportDetail(${report.id})">👁️ 詳細</button>
                     <button class="btn-small btn-download" onclick="downloadReport(${report.id})">📄 PDF</button>
                 `;
+            } else if (report.status === 'draft') {
+                // 下書きの場合
+                return `
+                    <button class="btn-small btn-edit" onclick="viewReportInForm(${report.store_id}, '${report.report_date}')">✏️ 編集</button>
+                    <button class="btn-small btn-view" onclick="viewReportDetail(${report.id})">👁️ 詳細</button>
+                    <button class="btn-small btn-download" onclick="downloadReport(${report.id})">📄 PDF</button>
+                `;
+            } else if (report.status === 'rejected') {
+                // 却下の場合
+                return `
+                    <button class="btn-small btn-edit" onclick="viewReportInForm(${report.store_id}, '${report.report_date}')">🔄 再編集</button>
+                    <button class="btn-small btn-view" onclick="viewReportDetail(${report.id})">👁️ 詳細</button>
+                    <button class="btn-small btn-download" onclick="downloadReport(${report.id})">📄 PDF</button>
+                `;
+            } else {
+                // その他・不明なステータスの場合（フォールバック）
+                console.warn(`Unknown status: ${report.status} for report ID: ${report.id}`);
+                return `
+                    <button class="btn-small btn-view" onclick="viewReportInForm(${report.store_id}, '${report.report_date}')">📋 確認</button>
+                    <button class="btn-small btn-view" onclick="viewReportDetail(${report.id})">👁️ 詳細</button>
+                    <button class="btn-small btn-download" onclick="downloadReport(${report.id})">📄 PDF</button>
+                `;
             }
         }
-
-
-        
 
         // 日報詳細表示
         async function viewReportDetail(reportId) {
