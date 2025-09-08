@@ -1,14 +1,10 @@
 /**
- * UI操作処理
- * 動的要素生成、DOM操作、イベントハンドリング
+ * UI操作�E琁E * 動的要素生�E、DOM操作、イベントハンドリング
  */
 
 /**
- * 支払い方法セクションを動的生成
- */
+ * 支払い方法セクションを動皁E��戁E */
 function generatePaymentMethods() {
-    console.log('支払い方法セクションの生成を開始');
-    
     const salesSection = document.querySelector('.section-green');
     if (!salesSection) {
         console.error('.section-green要素が見つかりません');
@@ -28,13 +24,12 @@ function generatePaymentMethods() {
         throw new Error('売上合計セクションが見つかりません');
     }
     
-    // 既存の支払い方法をクリア
+    // 既存�E支払い方法をクリア
     const existingMethods = salesSection.querySelectorAll('.payment-method');
     existingMethods.forEach(method => method.remove());
-    console.log(`既存の支払い方法 ${existingMethods.length} 件をクリアしました`);
     
     if (!paymentMethodConfig || !Array.isArray(paymentMethodConfig)) {
-        throw new Error('paymentMethodConfig が正しく定義されていません');
+        throw new Error('paymentMethodConfig が正しく定義されてぁE��せん');
     }
     
     paymentMethodConfig.forEach((method, index) => {
@@ -46,7 +41,7 @@ function generatePaymentMethods() {
                     <div class="method-title">${method.label}</div>
                     <div class="tax-header">税率10%</div>
                     <div class="tax-header">税率8%</div>
-                    <div class="tax-header">合計</div>
+                    <div class="tax-header">合訁E/div>
                     <div></div>
                     <div><input type="number" id="${method.id}10" class="tax-input" placeholder="0"></div>
                     <div><input type="number" id="${method.id}8" class="tax-input" placeholder="0"></div>
@@ -54,51 +49,50 @@ function generatePaymentMethods() {
                 </div>
             `;
             
-            // セクションタイトルの後、売上合計の前に挿入
+            // セクションタイトルの後、売上合計�E前に挿入
             salesSection.insertBefore(methodDiv, salesTotalSection);
-            console.log(`支払い方法「${method.label}」を生成しました`);
+            console.log(`支払い方法、E{method.label}」を生�Eしました`);
             
         } catch (error) {
-            console.error(`支払い方法「${method.label}」の生成でエラー:`, error);
-            throw new Error(`支払い方法「${method.label}」の生成に失敗しました`);
+            console.error(`支払い方法、E{method.label}」�E生�Eでエラー:`, error);
+            throw new Error(`支払い方法、E{method.label}」�E生�Eに失敗しました`);
         }
     });
     
-    console.log(`支払い方法セクションの生成完了（${paymentMethodConfig.length}件）`);
+    console.log(`支払い方法セクションの生�E完亁E��E{paymentMethodConfig.length}件�E�`);
 }
 
 /**
- * ポイント・クーポン支払セクションを動的生成（税率対応版）
- */
+ * ポイント�Eクーポン支払セクションを動皁E��成（税率対応版�E�E */
 function generateDiscountSection() {
-    console.log('ポイント・クーポン支払セクションの生成を開始');
+    
     
     const container = document.querySelector('.section-orange');
     if (!container) {
         console.error('.section-orange要素が見つかりません');
-        throw new Error('ポイント・クーポン支払セクションが見つかりません');
+        throw new Error('ポイント�Eクーポン支払セクションが見つかりません');
     }
     
     const sectionTitle = container.querySelector('.section-title');
     const totalSection = container.querySelector('.section-total');
     
     if (!sectionTitle) {
-        console.error('ポイント・クーポン支払セクションのタイトルが見つかりません');
-        throw new Error('ポイント・クーポン支払セクションのタイトルが見つかりません');
+        console.error('ポイント�Eクーポン支払セクションのタイトルが見つかりません');
+        throw new Error('ポイント�Eクーポン支払セクションのタイトルが見つかりません');
     }
     
     if (!totalSection) {
-        console.error('ポイント・クーポン支払合計セクションが見つかりません');
-        throw new Error('ポイント・クーポン支払合計セクションが見つかりません');
+        console.error('ポイント�Eクーポン支払合計セクションが見つかりません');
+        throw new Error('ポイント�Eクーポン支払合計セクションが見つかりません');
     }
     
-    // 既存の項目をクリア
+    // 既存�E頁E��をクリア
     const existingMethods = container.querySelectorAll('.payment-method');
     existingMethods.forEach(method => method.remove());
-    console.log(`既存のポイント・クーポン支払 ${existingMethods.length} 件をクリアしました`);
+    console.log(`既存�Eポイント�Eクーポン支扁E${existingMethods.length} 件をクリアしました`);
     
     if (!pointPaymentConfig || !Array.isArray(pointPaymentConfig)) {
-        throw new Error('pointPaymentConfig が正しく定義されていません');
+        throw new Error('pointPaymentConfig が正しく定義されてぁE��せん');
     }
     
     pointPaymentConfig.forEach((payment, index) => {
@@ -110,7 +104,7 @@ function generateDiscountSection() {
                     <div class="method-title">${payment.label}</div>
                     <div class="tax-header">税率10%</div>
                     <div class="tax-header">税率8%</div>
-                    <div class="tax-header">合計</div>
+                    <div class="tax-header">合訁E/div>
                     <div></div>
                     <div><input type="number" id="${payment.id}10" class="tax-input" placeholder="0"></div>
                     <div><input type="number" id="${payment.id}8" class="tax-input" placeholder="0"></div>
@@ -118,35 +112,34 @@ function generateDiscountSection() {
                 </div>
             `;
             
-            // セクションタイトルの後、合計の前に挿入
+            // セクションタイトルの後、合計�E前に挿入
             container.insertBefore(paymentDiv, totalSection);
-            console.log(`ポイント・クーポン支払「${payment.label}」を生成しました`);
+            console.log(`ポイント�Eクーポン支払、E{payment.label}」を生�Eしました`);
             
         } catch (error) {
-            console.error(`ポイント・クーポン支払「${payment.label}」の生成でエラー:`, error);
-            throw new Error(`ポイント・クーポン支払「${payment.label}」の生成に失敗しました`);
+            console.error(`ポイント�Eクーポン支払、E{payment.label}」�E生�Eでエラー:`, error);
+            throw new Error(`ポイント�Eクーポン支払、E{payment.label}」�E生�Eに失敗しました`);
         }
     });
     
-    console.log(`ポイント・クーポン支払セクションの生成完了（${pointPaymentConfig.length}件）`);
+    console.log(`ポイント�Eクーポン支払セクションの生�E完亁E��E{pointPaymentConfig.length}件�E�`);
 }
 
 /**
- * 金種行生成
- */
+ * 金種行生戁E */
 function generateDenominationRows() {
-    console.log('金種行の生成を開始');
+    
     
     const container = document.getElementById('denominationRows');
     if (!container) {
         console.error('denominationRows要素が見つかりません');
-        throw new Error('金種行のコンテナが見つかりません');
+        throw new Error('金種行�EコンチE��が見つかりません');
     }
     
     container.innerHTML = '';
     
     if (!denominations || !Array.isArray(denominations)) {
-        throw new Error('denominations が正しく定義されていません');
+        throw new Error('denominations が正しく定義されてぁE��せん');
     }
 
     denominations.forEach((denom, index) => {
@@ -163,36 +156,36 @@ function generateDenominationRows() {
                     <input type="number" class="count-input" placeholder="0" 
                            data-type="safe" data-denom="${denom.key}" onchange="updateCashCalculation()">
                 </div>
-                <div class="count-display" id="count_${denom.key}">0枚</div>
+                <div class="count-display" id="count_${denom.key}">0极E/div>
                 <div class="amount-display" id="amount_${denom.key}">¥0</div>
             `;
             container.appendChild(row);
-            console.log(`金種「${denom.label}」の行を生成しました`);
+            console.log(`金種、E{denom.label}」�E行を生�Eしました`);
             
         } catch (error) {
-            console.error(`金種「${denom.label}」の行生成でエラー:`, error);
-            throw new Error(`金種「${denom.label}」の行生成に失敗しました`);
+            console.error(`金種、E{denom.label}」�E行生成でエラー:`, error);
+            throw new Error(`金種、E{denom.label}」�E行生成に失敗しました`);
         }
     });
     
-    console.log(`金種行の生成完了（${denominations.length}件）`);
+    console.log(`金種行�E生�E完亁E��E{denominations.length}件�E�`);
 }
 
 /**
  * 経費レコード追加
  */
 function addExpenseRecord() {
-    console.log('経費レコードを追加中');
+    
     
     const container = document.getElementById('expenseRecords');
     if (!container) {
         console.error('expenseRecords要素が見つかりません');
-        showError('経費レコードのコンテナが見つかりません');
+        showError('経費レコード�EコンチE��が見つかりません');
         return;
     }
     
     if (!accountCategories || !Array.isArray(accountCategories)) {
-        console.error('accountCategories が正しく定義されていません');
+        console.error('accountCategories が正しく定義されてぁE��せん');
         showError('勘定科目の設定が正しくありません');
         return;
     }
@@ -201,17 +194,16 @@ function addExpenseRecord() {
         const newRecord = document.createElement('div');
         newRecord.className = 'expense-record';
         
-        // 勘定科目のオプションを生成
-        const accountOptions = accountCategories.map(category => 
+        // 勘定科目のオプションを生戁E        const accountOptions = accountCategories.map(category => 
             `<option value="${category.value}">${category.label}</option>`
         ).join('');
         
         newRecord.innerHTML = `
-            <input type="text" class="expense-input" placeholder="購入先" data-field="vendor" data-id="${nextExpenseId}">
+            <input type="text" class="expense-input" placeholder="購入允E data-field="vendor" data-id="${nextExpenseId}">
             <select class="expense-select" data-field="account" data-id="${nextExpenseId}">
                 ${accountOptions}
             </select>
-            <input type="text" class="expense-input" placeholder="品物・内容" data-field="item" data-id="${nextExpenseId}">
+            <input type="text" class="expense-input" placeholder="品物・冁E��" data-field="item" data-id="${nextExpenseId}">
             <div class="expense-amount-wrapper">
                 <span class="expense-amount-symbol">¥</span>
                 <input type="number" class="expense-amount-input" placeholder="0" data-field="amount" data-id="${nextExpenseId}">
@@ -225,27 +217,27 @@ function addExpenseRecord() {
         container.appendChild(newRecord);
         
         expenseRecords.push({id: nextExpenseId, vendor: '', account: '', item: '', amount: ''});
-        console.log(`経費レコード ID:${nextExpenseId} を追加しました`);
+        console.log(`経費レコーチEID:${nextExpenseId} を追加しました`);
         nextExpenseId++;
         
         updateDeleteButtonStates();
         
     } catch (error) {
         console.error('経費レコード追加でエラー:', error);
-        showError('経費レコードの追加に失敗しました');
+        showError('経費レコード�E追加に失敗しました');
     }
 }
 
 /**
  * 経費レコード削除
- * @param {number} id 削除するレコードのID
+ * @param {number} id 削除するレコード�EID
  */
 function removeExpenseRecord(id) {
-    console.log(`経費レコード ID:${id} の削除を試行中`);
+    console.log(`経費レコーチEID:${id} の削除を試行中`);
     
     if (expenseRecords.length <= 1) {
-        console.warn('最後の経費レコードは削除できません');
-        showError('最低1つの経費レコードは必要です');
+        console.warn('最後�E経費レコード�E削除できません');
+        showError('最佁Eつの経費レコード�E忁E��でぁE);
         return;
     }
     
@@ -253,20 +245,20 @@ function removeExpenseRecord(id) {
         const recordElement = document.querySelector(`[data-id="${id}"]`)?.closest('.expense-record');
         if (recordElement) {
             recordElement.remove();
-            console.log(`経費レコード ID:${id} のDOM要素を削除しました`);
+            console.log(`経費レコーチEID:${id} のDOM要素を削除しました`);
         } else {
-            console.warn(`経費レコード ID:${id} のDOM要素が見つかりません`);
+            console.warn(`経費レコーチEID:${id} のDOM要素が見つかりません`);
         }
         
         expenseRecords = expenseRecords.filter(record => record.id !== id);
-        console.log(`経費レコード ID:${id} をデータから削除しました`);
+        console.log(`経費レコーチEID:${id} をデータから削除しました`);
         
         updateDeleteButtonStates();
         updateAllCalculations();
         
     } catch (error) {
-        console.error(`経費レコード ID:${id} の削除でエラー:`, error);
-        showError('経費レコードの削除に失敗しました');
+        console.error(`経費レコーチEID:${id} の削除でエラー:`, error);
+        showError('経費レコード�E削除に失敗しました');
     }
 }
 
@@ -279,105 +271,98 @@ function updateDeleteButtonStates() {
         deleteButtons.forEach(button => {
             button.disabled = expenseRecords.length <= 1;
         });
-        console.log(`削除ボタンの状態を更新しました（${deleteButtons.length}個）`);
+        console.log(`削除ボタンの状態を更新しました�E�E{deleteButtons.length}個）`);
     } catch (error) {
         console.error('削除ボタン状態更新でエラー:', error);
     }
 }
 
 /**
- * イベントリスナー設定
- */
+ * イベントリスナ�E設宁E */
 function setupEventListeners() {
-    console.log('イベントリスナーの設定を開始');
+    
     
     try {
-        // 売上項目の計算（動的に生成されたIDに対応）
-        if (paymentMethodConfig && Array.isArray(paymentMethodConfig)) {
+        // 売上頁E��の計算（動皁E��生�EされたIDに対応！E        if (paymentMethodConfig && Array.isArray(paymentMethodConfig)) {
             paymentMethodConfig.forEach(method => {
                 const element10 = document.getElementById(`${method.id}10`);
                 const element8 = document.getElementById(`${method.id}8`);
                 
                 if (element10) {
                     element10.addEventListener('input', updateAllCalculations);
-                    console.log(`売上項目 ${method.id}10 にリスナーを設定`);
+                    console.log(`売上頁E�� ${method.id}10 にリスナ�Eを設定`);
                 } else {
-                    console.warn(`売上項目 ${method.id}10 の要素が見つかりません`);
+                    console.warn(`売上頁E�� ${method.id}10 の要素が見つかりません`);
                 }
                 
                 if (element8) {
                     element8.addEventListener('input', updateAllCalculations);
-                    console.log(`売上項目 ${method.id}8 にリスナーを設定`);
+                    console.log(`売上頁E�� ${method.id}8 にリスナ�Eを設定`);
                 } else {
-                    console.warn(`売上項目 ${method.id}8 の要素が見つかりません`);
+                    console.warn(`売上頁E�� ${method.id}8 の要素が見つかりません`);
                 }
             });
         }
 
-        // ポイント・クーポン支払の計算（税率対応版）
-        if (pointPaymentConfig && Array.isArray(pointPaymentConfig)) {
+        // ポイント�Eクーポン支払�E計算（税率対応版�E�E        if (pointPaymentConfig && Array.isArray(pointPaymentConfig)) {
             pointPaymentConfig.forEach(payment => {
                 const element10 = document.getElementById(`${payment.id}10`);
                 const element8 = document.getElementById(`${payment.id}8`);
                 
                 if (element10) {
                     element10.addEventListener('input', updateAllCalculations);
-                    console.log(`ポイント・クーポン支払 ${payment.id}10 にリスナーを設定`);
+                    console.log(`ポイント�Eクーポン支扁E${payment.id}10 にリスナ�Eを設定`);
                 } else {
-                    console.warn(`ポイント・クーポン支払 ${payment.id}10 の要素が見つかりません`);
+                    console.warn(`ポイント�Eクーポン支扁E${payment.id}10 の要素が見つかりません`);
                 }
                 
                 if (element8) {
                     element8.addEventListener('input', updateAllCalculations);
-                    console.log(`ポイント・クーポン支払 ${payment.id}8 にリスナーを設定`);
+                    console.log(`ポイント�Eクーポン支扁E${payment.id}8 にリスナ�Eを設定`);
                 } else {
-                    console.warn(`ポイント・クーポン支払 ${payment.id}8 の要素が見つかりません`);
+                    console.warn(`ポイント�Eクーポン支扁E${payment.id}8 の要素が見つかりません`);
                 }
             });
         }
 
-        // 入金・雑収入の計算
-        const incomeFields = ['nyukin', 'miscIncome', 'foundMoney'];
+        // 入金�E雑収入の計箁E        const incomeFields = ['nyukin', 'miscIncome', 'foundMoney'];
         incomeFields.forEach(id => {
             const element = document.getElementById(id);
             if (element) {
                 element.addEventListener('input', updateAllCalculations);
-                console.log(`入金・雑収入 ${id} にリスナーを設定`);
+                console.log(`入金�E雑収入 ${id} にリスナ�Eを設定`);
             } else {
-                console.warn(`入金・雑収入 ${id} の要素が見つかりません`);
+                console.warn(`入金�E雑収入 ${id} の要素が見つかりません`);
             }
         });
 
-        // 前日現金残の計算
-        const previousCashElement = document.getElementById('previousCashBalance');
+        // 前日現金残�E計箁E        const previousCashElement = document.getElementById('previousCashBalance');
         if (previousCashElement) {
             previousCashElement.addEventListener('input', updateAllCalculations);
-            console.log('前日現金残にリスナーを設定');
+            
         } else {
-            console.warn('前日現金残の要素が見つかりません');
+            console.warn('前日現金残�E要素が見つかりません');
         }
 
-        // 経費の計算（動的要素に対応）
-        document.addEventListener('input', function(e) {
+        // 経費の計算（動皁E��素に対応！E        document.addEventListener('input', function(e) {
             if (e.target.dataset.field === 'amount') {
                 updateAllCalculations();
             }
         });
-        console.log('経費項目の動的リスナーを設定');
         
-        console.log('イベントリスナーの設定完了');
+        
+        
         
     } catch (error) {
-        console.error('イベントリスナー設定でエラー:', error);
-        throw new Error('イベントリスナーの設定に失敗しました');
+        console.error('イベントリスナ�E設定でエラー:', error);
+        throw new Error('イベントリスナ�Eの設定に失敗しました');
     }
 }
 
 /**
- * 備考・報告事項のイベントリスナー設定
- */
+ * 備老E�E報告事頁E�Eイベントリスナ�E設宁E */
 function setupRemarksListeners() {
-    console.log('備考・報告事項リスナーの設定を開始');
+    
     
     try {
         const remarksTextarea = document.getElementById('remarks');
@@ -398,7 +383,7 @@ function setupRemarksListeners() {
                 const currentLength = remarksTextarea.value.length;
                 charCount.textContent = currentLength;
                 
-                // 文字数による色分け
+                // 斁E��数による色刁E��
                 const charCountElement = charCount.parentElement;
                 if (charCountElement) {
                     charCountElement.classList.remove('warning', 'error');
@@ -411,140 +396,76 @@ function setupRemarksListeners() {
                 }
                 
             } catch (error) {
-                console.error('備考文字数カウント処理でエラー:', error);
+                console.error('備老E��字数カウント�E琁E��エラー:', error);
             }
         });
         
-        console.log('備考・報告事項リスナーの設定完了');
+        
         
     } catch (error) {
-        console.error('備考・報告事項リスナー設定でエラー:', error);
-        console.warn('備考・報告事項の機能が制限される可能性があります');
+        console.error('備老E�E報告事頁E��スナ�E設定でエラー:', error);
+        console.warn('備老E�E報告事頁E�E機�Eが制限される可能性がありまぁE);
     }
 }
 
 /**
- * フォームにデータを読み込む（税率対応版）
- * @param {Object} data 読み込むデータ
+ * フォームにチE�Eタを読み込む�E�税率対応版�E�E * @param {Object} data 読み込むチE�Eタ
  */
 function loadDataIntoForm(data) {
-    console.log('フォームへのデータ読み込みを開始');
+    
     
     try {
-        // 基本情報
+        // 基本惁E��
         const dateElement = document.getElementById('date');
         const storeNameElement = document.getElementById('storeName');
         const inputByElement = document.getElementById('inputBy');
         
         if (dateElement && data.date) {
             dateElement.value = data.date;
-            console.log('日付を設定しました:', data.date);
+            
         }
         if (storeNameElement && data.storeName) {
-            console.log('=== 店舗名設定処理詳細ログ ===');
-            console.log('店舗名設定処理開始');
-            console.log('storeNameElement:', storeNameElement);
-            console.log('data.storeName:', data.storeName);
-            console.log('現在のstoreNameElement.value:', storeNameElement.value);
-            console.log('storeNameElement.readOnly:', storeNameElement.readOnly);
-            console.log('storeNameElement.disabled:', storeNameElement.disabled);
-            console.log('storeNameElement.style.display:', storeNameElement.style.display);
+            storeNameElement.value = data.storeName;
             
-            // 管理者モードでも店舗名を強制設定
-            const isAdminMode = storeNameElement.getAttribute('data-admin-mode') === 'true';
-            console.log('管理者モード:', isAdminMode);
-            console.log('data-admin-mode属性値:', storeNameElement.getAttribute('data-admin-mode'));
-            
-            if (isAdminMode) {
-                // 管理者モードの場合は、読み取り専用を一時的に解除して設定
-                console.log('💼 管理者モードでの設定開始');
-                const wasReadOnly = storeNameElement.readOnly;
-                const wasDisabled = storeNameElement.disabled;
-                console.log('設定前 - readOnly:', wasReadOnly, 'disabled:', wasDisabled);
-                
-                storeNameElement.readOnly = false;
-                storeNameElement.disabled = false;
-                console.log('一時的に編集可能に変更');
-                
-                storeNameElement.value = data.storeName;
-                console.log('店舗名を設定:', data.storeName);
-                console.log('設定直後のvalue:', storeNameElement.value);
-                
-                // 属性を元に戻す
-                storeNameElement.readOnly = wasReadOnly;
-                storeNameElement.disabled = wasDisabled;
-                console.log('属性を復元 - readOnly:', storeNameElement.readOnly, 'disabled:', storeNameElement.disabled);
-                
-                // 再度確認
-                console.log('最終確認 - value:', storeNameElement.value);
-                console.log('管理者モードで店舗名を設定しました:', data.storeName);
-                
-                // さらに1秒後に確認
-                setTimeout(() => {
-                    console.log('🔍 1秒後の最終確認:');
-                    console.log('value:', storeNameElement.value);
-                    console.log('readOnly:', storeNameElement.readOnly);
-                    console.log('disabled:', storeNameElement.disabled);
-                }, 1000);
-                
-            } else {
-                console.log('💼 一般モードでの設定');
-                storeNameElement.value = data.storeName;
-                console.log('店舗名を設定しました:', data.storeName);
-            }
-            console.log('設定後のstoreNameElement.value:', storeNameElement.value);
-            console.log('=== 店舗名設定処理完了 ===');
-        } else {
-            console.log('=== 店舗名設定スキップ ===');
-            if (!storeNameElement) {
-                console.error('❌ storeNameElement が見つかりません');
-            }
-            if (!data.storeName) {
-                console.error('❌ data.storeName が設定されていません:', data);
-                console.log('受信データ全体:', JSON.stringify(data, null, 2));
-            }
-            console.log('=== 店舗名設定スキップ完了 ===');
         }
         if (inputByElement && data.inputBy) {
             inputByElement.value = data.inputBy;
-            console.log('担当者を設定しました:', data.inputBy);
+            
         }
         
-        // 売上情報（動的に対応）
-        if (data.sales && paymentMethodConfig) {
+        // 売上情報�E�動皁E��対応！E        if (data.sales && paymentMethodConfig) {
             paymentMethodConfig.forEach(method => {
                 const element10 = document.getElementById(`${method.id}10`);
                 const element8 = document.getElementById(`${method.id}8`);
                 
                 if (element10 && data.sales[`${method.id}10`] !== undefined) {
                     element10.value = data.sales[`${method.id}10`] || 0;
-                    console.log(`売上 ${method.id}10 を設定:`, data.sales[`${method.id}10`]);
+                    console.log(`売丁E${method.id}10 を設宁E`, data.sales[`${method.id}10`]);
                 }
                 if (element8 && data.sales[`${method.id}8`] !== undefined) {
                     element8.value = data.sales[`${method.id}8`] || 0;
-                    console.log(`売上 ${method.id}8 を設定:`, data.sales[`${method.id}8`]);
+                    console.log(`売丁E${method.id}8 を設宁E`, data.sales[`${method.id}8`]);
                 }
             });
         }
         
-        // ポイント・クーポン支払情報（税率対応版）
-        if (data.pointPayments && pointPaymentConfig) {
+        // ポイント�Eクーポン支払情報�E�税率対応版�E�E        if (data.pointPayments && pointPaymentConfig) {
             pointPaymentConfig.forEach(payment => {
                 const element10 = document.getElementById(`${payment.id}10`);
                 const element8 = document.getElementById(`${payment.id}8`);
                 
                 if (element10 && data.pointPayments[`${payment.id}10`] !== undefined) {
                     element10.value = data.pointPayments[`${payment.id}10`] || 0;
-                    console.log(`ポイント・クーポン支払 ${payment.id}10 を設定:`, data.pointPayments[`${payment.id}10`]);
+                    console.log(`ポイント�Eクーポン支扁E${payment.id}10 を設宁E`, data.pointPayments[`${payment.id}10`]);
                 }
                 if (element8 && data.pointPayments[`${payment.id}8`] !== undefined) {
                     element8.value = data.pointPayments[`${payment.id}8`] || 0;
-                    console.log(`ポイント・クーポン支払 ${payment.id}8 を設定:`, data.pointPayments[`${payment.id}8`]);
+                    console.log(`ポイント�Eクーポン支扁E${payment.id}8 を設宁E`, data.pointPayments[`${payment.id}8`]);
                 }
             });
         }
         
-        // 入金・雑収入
+        // 入金�E雑収入
         if (data.income) {
             const nyukinElement = document.getElementById('nyukin');
             const miscIncomeElement = document.getElementById('miscIncome');
@@ -552,28 +473,27 @@ function loadDataIntoForm(data) {
             
             if (nyukinElement && data.income.nyukin !== undefined) {
                 nyukinElement.value = data.income.nyukin || 0;
-                console.log('入金を設定:', data.income.nyukin);
+                
             }
             if (miscIncomeElement && data.income.miscIncome !== undefined) {
                 miscIncomeElement.value = data.income.miscIncome || 0;
-                console.log('雑収入を設定:', data.income.miscIncome);
+                
             }
             if (foundMoneyElement && data.income.foundMoney !== undefined) {
                 foundMoneyElement.value = data.income.foundMoney || 0;
-                console.log('拾得金を設定:', data.income.foundMoney);
+                
             }
         }
         
-        // 前日現金残
-        if (data.previousCashBalance !== undefined) {
+        // 前日現金殁E        if (data.previousCashBalance !== undefined) {
             const previousCashElement = document.getElementById('previousCashBalance');
             if (previousCashElement) {
                 previousCashElement.value = data.previousCashBalance || 0;
-                console.log('前日現金残を設定:', data.previousCashBalance);
+                
             }
         }
         
-        // 現金管理データ
+        // 現金管琁E��ータ
         if (data.cash && denominations) {
             denominations.forEach(denom => {
                 const registerInput = document.querySelector(`[data-type="register"][data-denom="${denom.key}"]`);
@@ -581,20 +501,20 @@ function loadDataIntoForm(data) {
                 
                 if (registerInput && data.cash[denom.key]?.register !== undefined) {
                     registerInput.value = data.cash[denom.key].register || 0;
-                    console.log(`レジ ${denom.key} を設定:`, data.cash[denom.key].register);
+                    console.log(`レジ ${denom.key} を設宁E`, data.cash[denom.key].register);
                 }
                 if (safeInput && data.cash[denom.key]?.safe !== undefined) {
                     safeInput.value = data.cash[denom.key].safe || 0;
-                    console.log(`金庫 ${denom.key} を設定:`, data.cash[denom.key].safe);
+                    console.log(`金庫 ${denom.key} を設宁E`, data.cash[denom.key].safe);
                 }
             });
         }
         
-        // 経費データ
+        // 経費チE�Eタ
         if (data.expenses && Array.isArray(data.expenses) && data.expenses.length > 0) {
-            console.log('経費データを復元中...');
             
-            // 既存の経費レコードをクリア
+            
+            // 既存�E経費レコードをクリア
             expenseRecords = [];
             nextExpenseId = 1;
             const expenseContainer = document.getElementById('expenseRecords');
@@ -602,8 +522,7 @@ function loadDataIntoForm(data) {
                 expenseContainer.innerHTML = '';
             }
             
-            // 経費データを復元
-            data.expenses.forEach((expense, index) => {
+            // 経費チE�Eタを復允E            data.expenses.forEach((expense, index) => {
                 addExpenseRecord();
                 const currentId = nextExpenseId - 1;
                 
@@ -617,18 +536,17 @@ function loadDataIntoForm(data) {
                 if (itemInput) itemInput.value = expense.item || '';
                 if (amountInput) amountInput.value = expense.amount || 0;
                 
-                console.log(`経費レコード ${index + 1} を復元しました`);
+                console.log(`経費レコーチE${index + 1} を復允E��ました`);
             });
         }
         
-        // 備考・報告事項
-        if (data.remarks) {
+        // 備老E�E報告事頁E        if (data.remarks) {
             const remarksElement = document.getElementById('remarks');
             if (remarksElement) {
                 remarksElement.value = data.remarks;
-                console.log('備考を設定しました');
                 
-                // 文字数カウントを更新
+                
+                // 斁E��数カウントを更新
                 const charCount = document.getElementById('charCount');
                 if (charCount) {
                     charCount.textContent = data.remarks.length;
@@ -636,33 +554,31 @@ function loadDataIntoForm(data) {
             }
         }
 
-        // 添付ファイル復元の詳細ログ追加
-        console.log('=== loadDataIntoForm - 添付ファイルチェック ===');
-        console.log('data.attachedFiles:', data.attachedFiles);
-        console.log('data.attachedFiles のタイプ:', typeof data.attachedFiles);
-        console.log('data.attachedFiles は配列か:', Array.isArray(data.attachedFiles));
+        // 添付ファイル復允E�E詳細ログ追加
+        
+        
+        
+        
         if (data.attachedFiles) {
-            console.log('data.attachedFiles の長さ:', data.attachedFiles.length);
+            
         }
         
-        console.log('添付ファイル処理の条件チェック中...');
-        console.log('条件1 - data.attachedFiles が存在:', !!data.attachedFiles);
-        console.log('条件2 - Array.isArray(data.attachedFiles):', Array.isArray(data.attachedFiles));
-        console.log('条件3 - data.attachedFiles.length > 0:', data.attachedFiles ? data.attachedFiles.length > 0 : false);
+        
+        
+        
+        
 
         if (data.attachedFiles && Array.isArray(data.attachedFiles) && data.attachedFiles.length > 0) {
-            console.log('添付ファイルデータを復元中:', data.attachedFiles);
             
-            // ファイル入力欄をリセット
+            
+            // ファイル入力欁E��リセチE��
             generateFileInputs();
             
-            // 添付ファイルデータをグローバル変数に復元
-            data.attachedFiles.forEach((fileData, index) => {
+            // 添付ファイルチE�Eタをグローバル変数に復允E            data.attachedFiles.forEach((fileData, index) => {
                 if (fileData && fileData.attachmentNumber && fileData.fileName) {
                     const attachmentIndex = fileData.attachmentNumber - 1;
                     if (attachmentIndex >= 0 && attachmentIndex < attachedFiles.length) {
-                        // ファイルデータを復元（Base64から擬似Fileオブジェクトを作成）
-                        const restoredFile = createFileFromBase64(fileData);
+                        // ファイルチE�Eタを復允E��Ease64から擬似Fileオブジェクトを作�E�E�E                        const restoredFile = createFileFromBase64(fileData);
                         
                         if (restoredFile) {
                             attachedFiles[attachmentIndex] = {
@@ -675,37 +591,36 @@ function loadDataIntoForm(data) {
                             
                             // UIに表示
                             updateFileDisplayFromData(fileData.attachmentNumber, fileData);
-                            console.log(`添付ファイル ${fileData.attachmentNumber} を復元しました:`, fileData.fileName);
+                            console.log(`添付ファイル ${fileData.attachmentNumber} を復允E��ました:`, fileData.fileName);
                         }
                     }
                 }
             });
         } else {
-            console.log('=== 添付ファイル復元をスキップ ===');
-            console.log('理由: data.attachedFiles =', data.attachedFiles);
-            console.log('Array.isArray:', Array.isArray(data.attachedFiles));
-            console.log('length:', data.attachedFiles ? data.attachedFiles.length : 'undefined');
+            
+            
+            
+            
         }
         
-        console.log('=== 添付ファイル処理完了、計算更新開始 ===');
+        
         
         // 計算を更新
         updateAllCalculations();
     
-        // 確定状態を反映（追加）
-        if (data.status) {
+        // 確定状態を反映�E�追加�E�E        if (data.status) {
             updateConfirmButtonState(data.status);
             
-            // 確定済みの場合は全入力フィールドを読み取り専用にする
+            // 確定済みの場合�E全入力フィールドを読み取り専用にする
             if (data.status === 'confirmed' && !window.isAdminUser) {
                 setFormReadOnly(true);
             }
         }
         
-        console.log('フォームへのデータ読み込み完了');
+        
         
     } catch (error) {
-        console.error('フォームデータ読み込みでエラー:', error);
+        console.error('フォームチE�Eタ読み込みでエラー:', error);
         throw error;
     }
 }
@@ -715,8 +630,7 @@ function loadDataIntoForm(data) {
  */
 function setFormReadOnly(readOnly) {
     try {
-        // 全ての入力フィールドを取得
-        const inputs = document.querySelectorAll('input[type="number"], input[type="text"], input[type="date"], textarea, select');
+        // 全ての入力フィールドを取征E        const inputs = document.querySelectorAll('input[type="number"], input[type="text"], input[type="date"], textarea, select');
         
         inputs.forEach(input => {
             if (readOnly) {
@@ -730,14 +644,12 @@ function setFormReadOnly(readOnly) {
             }
         });
         
-        // ファイル入力も無効化
-        const fileInputs = document.querySelectorAll('input[type="file"]');
+        // ファイル入力も無効匁E        const fileInputs = document.querySelectorAll('input[type="file"]');
         fileInputs.forEach(input => {
             input.disabled = readOnly;
         });
         
-        // 経費追加ボタンなどの操作ボタンも無効化
-        const actionButtons = document.querySelectorAll('.add-button, .delete-button, .clear-file-button');
+        // 経費追加ボタンなどの操作�Eタンも無効匁E        const actionButtons = document.querySelectorAll('.add-button, .delete-button, .clear-file-button');
         actionButtons.forEach(button => {
             button.disabled = readOnly;
             if (readOnly) {
@@ -749,7 +661,7 @@ function setFormReadOnly(readOnly) {
             }
         });
         
-        console.log(`フォームを${readOnly ? '読み取り専用' : '編集可能'}に設定しました`);
+        console.log(`フォームめE{readOnly ? '読み取り専用' : '編雁E��能'}に設定しました`);
         
     } catch (error) {
         console.error('フォーム読み取り専用設定でエラー:', error);
@@ -757,22 +669,19 @@ function setFormReadOnly(readOnly) {
 }
 
 /**
- * 印刷処理
- */
+ * 印刷処琁E */
 function handlePrint() {
     try {
-        console.log('印刷処理を開始');
+        
         window.print();
     } catch (error) {
-        console.error('印刷処理でエラー:', error);
-        showError('印刷処理でエラーが発生しました');
+        console.error('印刷処琁E��エラー:', error);
+        showError('印刷処琁E��エラーが発生しました');
     }
 }
 
 /**
- * 現在の日付を取得してフォーマット
- * @returns {string} YYYY-MM-DD形式の日付
- */
+ * 現在の日付を取得してフォーマッチE * @returns {string} YYYY-MM-DD形式�E日仁E */
 function getCurrentDate() {
     try {
         return new Date().toISOString().split('T')[0];
@@ -783,59 +692,54 @@ function getCurrentDate() {
 }
 
 /**
- * 数値入力フィールドのフォーカス時に全選択
- */
+ * 数値入力フィールド�Eフォーカス時に全選抁E */
 function setupNumberInputFocus() {
     try {
-        console.log('数値入力フォーカス設定を開始');
+        
         
         document.addEventListener('focus', function(e) {
             if (e.target.type === 'number') {
                 try {
                     e.target.select();
                 } catch (selectError) {
-                    // select()が失敗しても処理を継続
-                    console.warn('入力フィールドの選択でエラー:', selectError);
+                    // select()が失敗しても�E琁E��継綁E                    console.warn('入力フィールド�E選択でエラー:', selectError);
                 }
             }
         }, true);
         
-        console.log('数値入力フォーカス設定完了');
+        
         
     } catch (error) {
         console.error('数値入力フォーカス設定でエラー:', error);
-        console.warn('数値入力の自動選択機能が無効になります');
+        console.warn('数値入力�E自動選択機�Eが無効になりまぁE);
     }
 }
 
 /**
- * エラーメッセージを表示
- * @param {string} message エラーメッセージ
+ * エラーメチE��ージを表示
+ * @param {string} message エラーメチE��ージ
  */
 function showError(message) {
     try {
-        console.error('エラーメッセージ:', message);
-        alert(message); // 後でより良いUI（モーダル等）に置き換え予定
-    } catch (error) {
-        console.error('エラーメッセージ表示でエラー:', error);
+        console.error('エラーメチE��ージ:', message);
+        alert(message); // 後でより良いUI�E�モーダル等）に置き換え予宁E    } catch (error) {
+        console.error('エラーメチE��ージ表示でエラー:', error);
     }
 }
 
 /**
- * 成功メッセージを表示
- * @param {string} message 成功メッセージ
+ * 成功メチE��ージを表示
+ * @param {string} message 成功メチE��ージ
  */
 function showSuccess(message) {
     try {
-        console.log('成功メッセージ:', message);
-        alert(message); // 後でより良いUI（トースト等）に置き換え予定
-    } catch (error) {
-        console.error('成功メッセージ表示でエラー:', error);
+        
+        alert(message); // 後でより良いUI�E�トースト等）に置き換え予宁E    } catch (error) {
+        console.error('成功メチE��ージ表示でエラー:', error);
     }
 }
 
-// 関数をグローバルスコープに明示的に公開
-window.generatePaymentMethods = generatePaymentMethods;
+// 関数をグローバルスコープに明示皁E��公閁Ewindow.generatePaymentMethods = generatePaymentMethods;
 window.generateDiscountSection = generateDiscountSection;
 window.generateDenominationRows = generateDenominationRows;
 window.setupEventListeners = setupEventListeners;
@@ -845,4 +749,4 @@ window.setFormReadOnly = setFormReadOnly;
 window.showError = showError;
 window.showSuccess = showSuccess;
 
-console.log('✅ ui.js: 関数をグローバルスコープに公開しました');
+

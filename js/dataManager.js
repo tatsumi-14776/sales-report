@@ -72,7 +72,8 @@ function handleLoadData() {
             return;
         }
 
-        if (!storeName) {
+        // URLパラメータで店舗IDが指定されている場合は店舗名チェックをスキップ
+        if (!urlStoreId && !storeName) {
             showError('店舗名を入力してください');
             return;
         }
@@ -80,10 +81,11 @@ function handleLoadData() {
         // ローディング表示を開始
         showLoadingIndicator(true);
 
-        console.log(`データ読み込み対象: ${selectedDate} - ${storeName}`);
+        console.log(`データ読み込み対象: ${selectedDate} - ${storeName || 'URLパラメータ店舗ID:' + urlStoreId}`);
 
         // URLパラメータで店舗IDが指定されている場合は直接使用
         if (urlStoreId && viewMode) {
+            console.log('URLパラメータからの店舗ID指定読み込み実行');
             loadSampleDataByStoreId(selectedDate, parseInt(urlStoreId), storeName);
         } else {
             loadSampleData(selectedDate, storeName);
@@ -465,6 +467,49 @@ async function loadSampleDataByStoreId(date, storeId, storeName) {
     console.log(`店舗ID指定でデータ読込を開始: ${date} - 店舗ID:${storeId} (${storeName})`);
     
     try {
+        // 店舗名が提供されていない場合は、店舗IDから取得
+        if (!storeName || storeName === '店舗未設定') {
+            console.log('店舗名が不明または未設定です。店舗IDから店舗名を取得します...');
+            try {
+                const storeResponse = await fetch('user-management.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ action: 'get_stores' })
+                });
+                
+                if (storeResponse.ok) {
+                    const storeResult = await storeResponse.json();
+                    console.log('店舗情報API レスポンス:', storeResult);
+                    if (storeResult.success && (storeResult.data || storeResult.stores)) {
+                        // dataまたはstoresプロパティから店舗一覧を取得
+                        const storeList = storeResult.data || storeResult.stores;
+                        console.log('取得した店舗一覧:', storeList);
+                        const store = storeList.find(s => s.id == storeId);
+                        console.log(`店舗ID ${storeId} での検索結果:`, store);
+                        if (store) {
+                            storeName = store.name || store.store_name;
+                            console.log(`✅ 店舗名を取得しました: "${storeName}"`);
+                        } else {
+                            console.warn(`❌ 店舗ID ${storeId} に対応する店舗が見つかりません`);
+                            console.log('利用可能な店舗:', storeList.map(s => `ID:${s.id} - ${s.name || s.store_name}`));
+                            storeName = `店舗ID: ${storeId}`;
+                        }
+                    } else {
+                        console.warn('店舗一覧の取得に失敗しました:', storeResult);
+                        storeName = `店舗ID: ${storeId}`;
+                    }
+                } else {
+                    console.warn('店舗情報APIの呼び出しに失敗しました:', storeResponse.status);
+                    storeName = `店舗ID: ${storeId}`;
+                }
+            } catch (storeError) {
+                console.error('店舗名取得でエラー:', storeError);
+                storeName = `店舗ID: ${storeId}`;
+            }
+        }
+        
         console.log(`対象店舗ID: ${storeId}, 店舗名: ${storeName}, 日付: ${date}`);
         
         // APIからデータを取得
@@ -488,9 +533,20 @@ async function loadSampleDataByStoreId(date, storeId, storeName) {
             if (typeof loadDataIntoForm === 'function') {
                 // データベースから取得したデータをフォーム用に変換
                 const formData = convertDatabaseToFormData(result.data);
+                console.log('変換後のformData:', formData);
+                console.log('変換前のstoreName値:', formData.storeName);
                 
                 // 店舗名を正しく設定
+                console.log('🏪 店舗名設定: 変更前:', formData.storeName);
                 formData.storeName = storeName;
+                console.log('🏪 店舗名設定: 変更後:', formData.storeName);
+                console.log('🏪 設定に使用した storeName パラメータ:', storeName);
+                
+                // 最終確認
+                console.log('=== loadDataIntoForm呼び出し前の最終データ ===');
+                console.log('formData.storeName:', formData.storeName);
+                console.log('typeof formData.storeName:', typeof formData.storeName);
+                console.log('formData.storeName length:', formData.storeName ? formData.storeName.length : 'null/undefined');
                 
                 // 保存時の設定がある場合は、それを使用してUIを再構築
                 if (formData.savedPaymentMethodConfig || formData.savedPointPaymentConfig) {
@@ -498,6 +554,7 @@ async function loadSampleDataByStoreId(date, storeId, storeName) {
                     await rebuildUIWithSavedConfig(formData.savedPaymentMethodConfig, formData.savedPointPaymentConfig);
                 }
                 
+                console.log('📝 loadDataIntoForm を呼び出します');
                 loadDataIntoForm(formData);
                 
                 // データ読み込み完了後にローディングを非表示

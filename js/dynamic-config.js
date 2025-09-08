@@ -173,7 +173,7 @@ const ConfigLoader = {
             console.log('API応答:', response); // デバッグ用
             
             // グローバル変数に設定
-            this.applyStoreConfig(response);
+            await this.applyStoreConfig(response);
             
             console.log('店舗設定の読み込み完了:', {
                 store: storeInfo,
@@ -200,7 +200,7 @@ const ConfigLoader = {
     /**
      * 設定をグローバル変数に適用
      */
-    applyStoreConfig(response) {
+    async applyStoreConfig(response) {
         try {
             // レスポンス構造を確認
             if (!response) {
@@ -217,16 +217,70 @@ const ConfigLoader = {
             const urlParams = new URLSearchParams(window.location.search);
             const urlStoreId = urlParams.get('store_id');
 
-            // 店舗情報の設定を修正
+            // 店舗情報の設定を修正 - APIレスポンス構造に対応
             const userSession = this.getUserSession();
+            
+            // APIレスポンスから店舗名を抽出（複数のパターンに対応）
+            let storeName = '店舗未設定';
+            if (data.store_info && data.store_info.store_name) {
+                // getStoreSettings API の場合
+                storeName = data.store_info.store_name;
+                console.log('🏪 store_info.store_name から店舗名を取得:', storeName);
+            } else if (data.store_name) {
+                // 直接 store_name が含まれている場合
+                storeName = data.store_name;
+                console.log('🏪 store_name から店舗名を取得:', storeName);
+            } else if (!urlStoreId && userSession?.storeName) {
+                // URLパラメータがなく、ユーザーセッションに店舗名がある場合
+                storeName = userSession.storeName;
+                console.log('🏪 ユーザーセッションから店舗名を取得:', storeName);
+            } else if (urlStoreId) {
+                // URLパラメータで店舗IDが指定されているが店舗名が取得できない場合
+                console.log('🏪 URLパラメータ指定店舗の店舗名を別途取得します...');
+                try {
+                    const storeResponse = await fetch('user-management.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ action: 'get_stores' })
+                    });
+                    
+                    if (storeResponse.ok) {
+                        const storeResult = await storeResponse.json();
+                        if (storeResult.success && (storeResult.data || storeResult.stores)) {
+                            // dataまたはstoresプロパティから店舗一覧を取得
+                            const storeList = storeResult.data || storeResult.stores;
+                            const store = storeList.find(s => s.id == urlStoreId);
+                            if (store) {
+                                storeName = store.name || store.store_name;
+                                console.log(`🏪 URLパラメータ店舗の店舗名を取得: "${storeName}"`);
+                            } else {
+                                console.warn(`店舗ID ${urlStoreId} が見つかりません`);
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('店舗名取得エラー:', error);
+                }
+            }
+            
             storeInfo = {
                 id: data.store_id,
-                // URLパラメータがある場合はAPIから取得した店舗名を優先
-                name: urlStoreId ? (data.store_name || '店舗未設定') : (userSession?.storeName || data.store_name || '店舗未設定'),
-                code: data.store_code || ''
+                name: storeName,
+                code: (data.store_info && data.store_info.store_code) || data.store_code || ''
             };
 
             // デバッグログ追加
+            console.log('🏪 最終的な店舗情報:', storeInfo);
+            console.log('🏪 APIレスポンス詳細:', {
+                hasStoreInfo: !!data.store_info,
+                storeInfoStoreName: data.store_info?.store_name,
+                directStoreName: data.store_name,
+                urlStoreId: urlStoreId,
+                userSessionStoreName: userSession?.storeName
+            });
+            
             if (urlStoreId) {
                 console.log('🏪 URLパラメータ店舗の情報を適用:', storeInfo);
             }
