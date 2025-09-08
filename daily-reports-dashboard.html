@@ -762,24 +762,27 @@
                 <!-- 便利ボタン群 -->
                 <div class="quick-filters" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-                        <span style="font-size: 0.875rem; color: #666; margin-right: 0.5rem;">クイック設定:</span>
-                        <button class="quick-filter-btn" onclick="setTodayDate()" title="今日の日付を設定">
-                            📅 今日
-                        </button>
-                        <button class="quick-filter-btn" onclick="setThisWeekRange()" title="今週の範囲を設定">
-                            📅 今週
-                        </button>
-                        <button class="quick-filter-btn" onclick="setLastWeekRange()" title="先週の範囲を設定">
-                            📅 先週
-                        </button>
-                        <button class="quick-filter-btn" onclick="setThisMonthRange()" title="今月の範囲を設定">
-                            📅 今月
-                        </button>
-                        <div style="flex: 1;"></div>
-                        <button class="clear-filter-btn" onclick="clearDateRange()" title="すべてクリア">
-                            🗑️ クリア
-                        </button>
-                    </div>
+                    <span style="font-size: 0.875rem; color: #666; margin-right: 0.5rem;">クイック設定:</span>
+                    <button class="quick-filter-btn" onclick="setTodayDate()" title="今日の日付を設定">
+                        📅 今日
+                    </button>
+                    <button class="quick-filter-btn" onclick="setThisWeekRange()" title="今週の範囲を設定">
+                        📅 今週
+                    </button>
+                    <button class="quick-filter-btn" onclick="setLastWeekRange()" title="先週の範囲を設定">
+                        📅 先週
+                    </button>
+                    <button class="quick-filter-btn" onclick="setThisMonthRange()" title="今月の範囲を設定">
+                        📅 今月
+                    </button>
+                    <button class="quick-filter-btn" onclick="setLastMonthRange()" title="先月の範囲を設定">
+                        📅 先月
+                    </button>
+                    <div style="flex: 1;"></div>
+                    <button class="clear-filter-btn" onclick="clearDateRange()" title="すべてクリア">
+                        🗑️ クリア
+                    </button>
+                </div>
                 </div>
                 
                 <!-- 検索状態表示 -->
@@ -889,6 +892,7 @@
         async function initializePage() {
             try {
                 console.log('日報管理画面初期化開始（検索ボタン待機）');
+                disableSearchButton(true, '店舗一覧を読み込み中...');
                 
                 // 前日の日付を設定
                 const yesterday = new Date();
@@ -911,7 +915,8 @@
                 // 店舗一覧のみ読み込み（データは読み込まない）
                 await loadStores();
                 console.log('店舗一覧の読み込み完了');
-                
+                 disableSearchButton(false);
+
                 // 初期状態メッセージを表示
                 showInitialMessage();
                 
@@ -1717,6 +1722,39 @@ async function performSearch() {
     }
 
     /**
+ * 先月の日付範囲を設定
+ */
+function setLastMonthRange() {
+    const today = new Date();
+    
+    // 先月の1日
+    const firstDay = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    
+    // 先月の最終日
+    const lastDay = new Date(today.getFullYear(), today.getMonth(), 0);
+    
+    // ローカル時間で日付文字列を生成（YYYY-MM-DD形式）
+    const startDate = formatDateLocal(firstDay);
+    const endDate = formatDateLocal(lastDay);
+    
+    document.getElementById('filterStartDate').value = startDate;
+    document.getElementById('filterEndDate').value = endDate;
+    
+    // ガイダンス表示
+    const searchStatus = document.getElementById('searchStatus');
+    const searchStatusText = document.getElementById('searchStatusText');
+    if (searchStatus && searchStatusText) {
+        searchStatus.style.display = 'block';
+        searchStatus.className = '';
+        const dayCount = lastDay.getDate();
+        const monthName = lastDay.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long' });
+        searchStatusText.textContent = `${monthName}の範囲（${dayCount}日間）が設定されました。検索ボタンを押してデータを読み込んでください。`;
+    }
+    
+    console.log('先月の範囲を設定:', startDate, '～', endDate);
+}
+
+    /**
      * ローカル時間で日付をYYYY-MM-DD形式に変換
      * @param {Date} date 
      * @returns {string} YYYY-MM-DD形式の日付文字列
@@ -1940,6 +1978,68 @@ async function performSearch() {
         } catch (error) {
             return 0;
         }
+    }
+
+    /**
+ * 検索ボタンの有効/無効制御
+ * @param {boolean} disabled true=無効, false=有効
+ * @param {string} message 無効時に表示するメッセージ
+ */
+function disableSearchButton(disabled, message = '') {
+    const searchButton = document.getElementById('searchButton');
+    const searchStatus = document.getElementById('searchStatus');
+    const searchStatusText = document.getElementById('searchStatusText');
+    
+    if (!searchButton) return;
+    
+    if (disabled) {
+        // 無効化
+        searchButton.disabled = true;
+        searchButton.style.opacity = '0.6';
+        searchButton.style.cursor = 'not-allowed';
+        searchButton.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <div style="width: 16px; height: 16px; border: 2px solid #ffffff; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <span>${message || '処理中...'}</span>
+            </div>
+        `;
+        
+        // ステータス表示
+        if (searchStatus && searchStatusText) {
+            searchStatus.style.display = 'block';
+            searchStatus.className = 'search-status-loading';
+            searchStatusText.textContent = message || '初期化中です。しばらくお待ちください。';
+        }
+        
+    } else {
+        // 有効化
+        searchButton.disabled = false;
+        searchButton.style.opacity = '1';
+        searchButton.style.cursor = 'pointer';
+        searchButton.innerHTML = `
+            <span>🔍</span> 検索
+        `;
+        
+        // ステータス非表示
+        if (searchStatus) {
+            searchStatus.style.display = 'none';
+        }
+        
+        console.log('✅ 検索ボタンが有効になりました');
+    }
+}
+
+    // アニメーション用CSS追加（1回のみ）
+    if (!document.getElementById('searchButtonSpinCSS')) {
+        const style = document.createElement('style');
+        style.id = 'searchButtonSpinCSS';
+        style.textContent = `
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
     }
         
     </script>
