@@ -14,12 +14,17 @@ let appConfig = {};
 /**
  * API通信ユーティリティ
  */
+/**
+ * API通信ユーティリティ
+ */
 const API = {
     /**
      * APIリクエスト送信
      */
     async request(action, data = {}) {
         try {
+            console.log('🌐 API リクエスト開始:', action, data);
+            
             const response = await fetch('api.php', {
                 method: 'POST',
                 headers: {
@@ -34,31 +39,54 @@ const API = {
             // レスポンステキストを先に取得
             const responseText = await response.text();
             
+            console.log('📝 生レスポンス:', responseText.substring(0, 200) + (responseText.length > 200 ? '...' : ''));
+            
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}, response: ${responseText}`);
+                throw new Error(`HTTP error! status: ${response.status}, response: ${responseText.substring(0, 100)}`);
+            }
+            
+            // 空レスポンスチェック
+            if (!responseText.trim()) {
+                throw new Error('Empty response from server');
             }
             
             // JSONパース（デバッグ出力を除去）
             let result;
             try {
+                // HTMLタグや PHP エラーメッセージが混入していないかチェック
+                if (responseText.includes('<br') || responseText.includes('<b>') || responseText.includes('Fatal error') || responseText.includes('Warning:')) {
+                    console.error('❌ PHPエラーまたはHTMLタグが検出されました:', responseText);
+                    throw new Error('Server returned HTML/PHP error instead of JSON');
+                }
+                
                 // JSONの開始位置を見つける
                 const jsonStart = responseText.indexOf('{');
-                const cleanResponseText = jsonStart >= 0 ? responseText.substring(jsonStart) : responseText;
+                if (jsonStart === -1) {
+                    console.error('❌ JSONオブジェクトが見つかりません:', responseText);
+                    throw new Error('No JSON object found in response');
+                }
+                
+                const cleanResponseText = responseText.substring(jsonStart);
+                console.log('🧹 クリーンなレスポンス:', cleanResponseText.substring(0, 100) + '...');
                 
                 result = JSON.parse(cleanResponseText);
+                console.log('✅ JSON パース成功:', result);
+                
             } catch (parseError) {
-                console.error('JSON parse error:', parseError);
-                console.error('Response text:', responseText);
-                throw new Error(`Invalid JSON response: ${responseText.substring(0, 100)}`);
+                console.error('❌ JSON parse error:', parseError);
+                console.error('📄 Raw response text:', responseText);
+                console.error('🔤 Response length:', responseText.length);
+                console.error('🎯 First 500 chars:', responseText.substring(0, 500));
+                throw new Error(`Invalid JSON response: ${parseError.message}. Response: ${responseText.substring(0, 100)}`);
             }
             
-            if (!result.success) {
-                throw new Error(result.message || 'APIエラーが発生しました');
+            if (!result.success && result.message) {
+                console.warn('⚠️ API returned error:', result.message);
             }
             
             return result;
         } catch (error) {
-            console.error('API request error:', error);
+            console.error('💥 API request error:', error);
             throw error;
         }
     }
@@ -439,9 +467,9 @@ function waitForConfig() {
 }
 
 /**
- * 初期化（ページ読み込み完了後に自動実行）
+ * 手動初期化関数（main.jsから呼び出される）
  */
-document.addEventListener('DOMContentLoaded', async function() {
+async function initializeDynamicConfig() {
     try {
         console.log('動的設定システム初期化開始');
         await ConfigLoader.loadStoreConfig();
@@ -456,6 +484,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         }));
         
+        return true;
+        
     } catch (error) {
         console.error('動的設定システム初期化エラー:', error);
         
@@ -468,8 +498,18 @@ document.addEventListener('DOMContentLoaded', async function() {
                 error: error.message
             }
         }));
+        
+        return false;
     }
-});
+}
+
+// 関数をグローバルスコープに公開
+if (typeof window !== 'undefined') {
+    window.initializeDynamicConfig = initializeDynamicConfig;
+    window.ConfigLoader = ConfigLoader;
+    
+    console.log('✅ dynamic-config.js: 関数をグローバルスコープに公開しました');
+}
 
 // ConfigLoaderをグローバルに公開
 window.ConfigLoader = ConfigLoader;

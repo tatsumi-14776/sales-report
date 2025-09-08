@@ -8,128 +8,128 @@
     
     <!-- 認証チェックスクリプト（最初に実行） -->
     <!-- 認証保護スクリプト -->
-<script>
-(function() {
-    // 認証チェック
-    function checkAuth() {
-        const session = sessionStorage.getItem('userSession') || localStorage.getItem('userSession');
-        
-        if (!session) {
-            alert('ログインが必要です。ログインページに移動します。');
-            window.location.href = 'login.html';
-            return false;
-        }
-        
-        try {
-            const userSession = JSON.parse(session);
-            if (!userSession || !userSession.isLoggedIn) {
+    <script>
+    (function() {
+        // 認証チェック
+        function checkAuth() {
+            const session = sessionStorage.getItem('userSession') || localStorage.getItem('userSession');
+            
+            if (!session) {
                 alert('ログインが必要です。ログインページに移動します。');
                 window.location.href = 'login.html';
                 return false;
             }
             
-            // セッション期限チェック（24時間）
-            const currentTime = Date.now();
-            const loginTime = userSession.loginTime || 0;
-            const sessionDuration = 24 * 60 * 60 * 1000;
-            
-            if (currentTime - loginTime > sessionDuration) {
+            try {
+                const userSession = JSON.parse(session);
+                if (!userSession || !userSession.isLoggedIn) {
+                    alert('ログインが必要です。ログインページに移動します。');
+                    window.location.href = 'login.html';
+                    return false;
+                }
+                
+                // セッション期限チェック（24時間）
+                const currentTime = Date.now();
+                const loginTime = userSession.loginTime || 0;
+                const sessionDuration = 24 * 60 * 60 * 1000;
+                
+                if (currentTime - loginTime > sessionDuration) {
+                    sessionStorage.removeItem('userSession');
+                    localStorage.removeItem('userSession');
+                    alert('セッションが期限切れです。再度ログインしてください。');
+                    window.location.href = 'login.html';
+                    return false;
+                }
+                
+                return true;
+                
+            } catch (error) {
                 sessionStorage.removeItem('userSession');
                 localStorage.removeItem('userSession');
-                alert('セッションが期限切れです。再度ログインしてください。');
+                alert('セッションエラー。ログインページに移動します。');
                 window.location.href = 'login.html';
                 return false;
             }
-            
-            return true;
-            
-        } catch (error) {
-            sessionStorage.removeItem('userSession');
-            localStorage.removeItem('userSession');
-            alert('セッションエラー。ログインページに移動します。');
-            window.location.href = 'login.html';
-            return false;
         }
-    }
-    
-    // 認証チェック実行
-    if (!checkAuth()) {
-        return;
-    }
-    
-    // 認証成功時の処理
-    document.addEventListener('DOMContentLoaded', function() {
-        const userSession = JSON.parse(sessionStorage.getItem('userSession') || localStorage.getItem('userSession') || '{}');
         
-        // 管理者フラグをグローバルに保存
-        window.isAdminUser = userSession.role === 'admin';
-        window.userSessionData = userSession;
+        // 認証チェック実行
+        if (!checkAuth()) {
+            return;
+        }
         
-        // 店舗名を設定
-        const storeNameElement = document.getElementById('storeName');
-        
-        if (storeNameElement) {
-            if (userSession.role === 'admin') {
-                // 管理者フラグを要素に設定
-                storeNameElement.setAttribute('data-admin-mode', 'true');
-            } else if (userSession.storeName) {
-                // 一般ユーザーの場合：読み取り専用
-                if (!storeNameElement.value || storeNameElement.value === '店舗未設定') {
-                    storeNameElement.value = userSession.storeName;
+        // 認証成功時の処理
+        document.addEventListener('DOMContentLoaded', function() {
+            const userSession = JSON.parse(sessionStorage.getItem('userSession') || localStorage.getItem('userSession') || '{}');
+            
+            // 管理者フラグをグローバルに保存
+            window.isAdminUser = userSession.role === 'admin';
+            window.userSessionData = userSession;
+            
+            // 店舗名を設定
+            const storeNameElement = document.getElementById('storeName');
+            
+            if (storeNameElement) {
+                if (userSession.role === 'admin') {
+                    // 管理者フラグを要素に設定
+                    storeNameElement.setAttribute('data-admin-mode', 'true');
+                } else if (userSession.storeName) {
+                    // 一般ユーザーの場合：読み取り専用
+                    if (!storeNameElement.value || storeNameElement.value === '店舗未設定') {
+                        storeNameElement.value = userSession.storeName;
+                    }
+                    storeNameElement.readOnly = true;
+                    storeNameElement.setAttribute('data-original-store-name', userSession.storeName);
                 }
-                storeNameElement.readOnly = true;
-                storeNameElement.setAttribute('data-original-store-name', userSession.storeName);
+            }
+            
+            // ログアウトボタン追加
+            addLogoutButton();
+        });
+        
+        // ログアウト機能追加
+        function addLogoutButton() {
+            const header = document.querySelector('.header');
+            if (header) {
+                const userSession = JSON.parse(sessionStorage.getItem('userSession') || localStorage.getItem('userSession') || '{}');
+                
+                const userInfoDiv = document.createElement('div');
+                userInfoDiv.style.cssText = 'position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.9); padding: 8px 12px; border-radius: 6px; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 1000;';
+                
+                userInfoDiv.innerHTML = `
+                    <div style="margin-bottom: 4px; font-weight: bold; color: #333;">
+                        👤 ${userSession.username || 'ユーザー'} 
+                        ${userSession.role === 'admin' ? '(管理者)' : ''}
+                    </div>
+                    <div style="margin-bottom: 4px; font-size: 11px; color: #666;">
+                        🏪 ${userSession.storeName || '店舗未設定'}
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        ${userSession.role === 'admin' ? '<button onclick="goToAdmin()" style="padding: 4px 8px; font-size: 11px; border: 1px solid #007bff; background: #007bff; color: white; border-radius: 3px; cursor: pointer;">管理画面</button>' : ''}
+                        <button onclick="handleLogout()" style="padding: 4px 8px; font-size: 11px; border: 1px solid #dc3545; background: #dc3545; color: white; border-radius: 3px; cursor: pointer;">ログアウト</button>
+                    </div>
+                `;
+                
+                header.appendChild(userInfoDiv);
             }
         }
         
-        // ログアウトボタン追加
-        addLogoutButton();
-    });
-    
-    // ログアウト機能追加
-    function addLogoutButton() {
-        const header = document.querySelector('.header');
-        if (header) {
-            const userSession = JSON.parse(sessionStorage.getItem('userSession') || localStorage.getItem('userSession') || '{}');
-            
-            const userInfoDiv = document.createElement('div');
-            userInfoDiv.style.cssText = 'position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.9); padding: 8px 12px; border-radius: 6px; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 1000;';
-            
-            userInfoDiv.innerHTML = `
-                <div style="margin-bottom: 4px; font-weight: bold; color: #333;">
-                    👤 ${userSession.username || 'ユーザー'} 
-                    ${userSession.role === 'admin' ? '(管理者)' : ''}
-                </div>
-                <div style="margin-bottom: 4px; font-size: 11px; color: #666;">
-                    🏪 ${userSession.storeName || '店舗未設定'}
-                </div>
-                <div style="display: flex; gap: 8px;">
-                    ${userSession.role === 'admin' ? '<button onclick="goToAdmin()" style="padding: 4px 8px; font-size: 11px; border: 1px solid #007bff; background: #007bff; color: white; border-radius: 3px; cursor: pointer;">管理画面</button>' : ''}
-                    <button onclick="handleLogout()" style="padding: 4px 8px; font-size: 11px; border: 1px solid #dc3545; background: #dc3545; color: white; border-radius: 3px; cursor: pointer;">ログアウト</button>
-                </div>
-            `;
-            
-            header.appendChild(userInfoDiv);
-        }
-    }
-    
-    // グローバル関数として定義
-    window.handleLogout = function() {
-        if (confirm('ログアウトしますか？\n\n入力中のデータは保存されません。')) {
-            sessionStorage.removeItem('userSession');
-            localStorage.removeItem('userSession');
-            window.location.href = 'login.html';
-        }
-    };
-    
-    window.goToAdmin = function() {
-        if (confirm('管理者ダッシュボードに移動しますか？')) {
-            window.location.href = 'admin.html';
-        }
-    };
-    
-})();
-</script>
+        // グローバル関数として定義
+        window.handleLogout = function() {
+            if (confirm('ログアウトしますか？\n\n入力中のデータは保存されません。')) {
+                sessionStorage.removeItem('userSession');
+                localStorage.removeItem('userSession');
+                window.location.href = 'login.html';
+            }
+        };
+        
+        window.goToAdmin = function() {
+            if (confirm('管理者ダッシュボードに移動しますか？')) {
+                window.location.href = 'admin.html';
+            }
+        };
+        
+    })();
+    </script>
 </head>
 <body>
     <!-- 既存のbodyコンテンツをそのまま使用 -->
@@ -199,6 +199,31 @@
                     <div class="cash-diff-item difference-result">
                         <span class="cash-diff-label">過不足額</span>
                         <span class="cash-diff-value" id="cashDifference">¥0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 管理者確定操作（追加） -->
+            <div class="summary-section admin-confirm-section" id="adminConfirmSection" style="display: none;">
+                <div class="summary-subtitle">👑 管理者操作</div>
+                <div class="admin-confirm-actions">
+                    <button class="confirm-button-summary" id="confirmButton" onclick="handleConfirm()" style="display: none;">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        確定
+                    </button>
+                    
+                    <button class="unconfirm-button-summary" id="unconfirmButton" onclick="handleUnconfirm()" style="display: none;">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                        確定解除
+                    </button>
+                    
+                    <div class="confirm-status" id="confirmStatus" style="display: none;">
+                        <span class="status-icon">✅</span>
+                        <span class="status-text">確定済み</span>
                     </div>
                 </div>
             </div>
@@ -469,15 +494,28 @@
         </div>
     </div>
 
-    <!-- JavaScript ファイルを読み込み -->
-    <!-- 動的設定システム（最初に読み込み） -->
-    <script src="js/dynamic-config.js"></script>
+
+    <!-- 基本ライブラリから順番に読み込み -->
+    <script src="js/calculations.js" onerror="console.error('calculations.js の読み込みに失敗しました')"></script>
+    <script src="js/ui.js" onerror="console.error('ui.js の読み込みに失敗しました')"></script>
+    <script src="js/fileManager.js" onerror="console.error('fileManager.js の読み込みに失敗しました')"></script>
+    <script src="js/dataManager.js" onerror="console.error('dataManager.js の読み込みに失敗しました')"></script>
     
-    <!-- 既存のJavaScriptファイル -->
-    <script src="js/calculations.js"></script>
-    <script src="js/ui.js"></script>
-    <script src="js/fileManager.js"></script>
-    <script src="js/dataManager.js"></script>
-    <script src="js/main.js"></script>
+    <!-- 動的設定システム（他の関数定義後に読み込み） -->
+    <script src="js/dynamic-config.js" onerror="console.error('dynamic-config.js の読み込みに失敗しました')"></script>
+    
+    <!-- メイン初期化処理（最後に読み込み） -->
+    <script src="js/main.js" onerror="console.error('main.js の読み込みに失敗しました')"></script>
+    
+    <!-- スクリプト読み込み完了の確認 -->
+    <script>
+        console.log('🔧 全スクリプト読み込み完了');
+        console.log('関数定義確認:', {
+            generatePaymentMethods: typeof generatePaymentMethods,
+            generateDiscountSection: typeof generateDiscountSection,
+            updateAllCalculations: typeof updateAllCalculations,
+            paymentMethodConfig: typeof paymentMethodConfig
+        });
+    </script>
 </body>
 </html>

@@ -630,12 +630,68 @@ function loadDataIntoForm(data) {
         
         // 計算を更新
         updateAllCalculations();
+    
+        // 確定状態を反映（追加）
+        if (data.status) {
+            updateConfirmButtonState(data.status);
+            
+            // 確定済みの場合は全入力フィールドを読み取り専用にする
+            if (data.status === 'confirmed' && !window.isAdminUser) {
+                setFormReadOnly(true);
+            }
+        }
         
         console.log('フォームへのデータ読み込み完了');
         
     } catch (error) {
         console.error('フォームデータ読み込みでエラー:', error);
-        throw new Error('データの読み込みに失敗しました');
+        throw error;
+    }
+}
+
+/**
+ * フォーム全体を読み取り専用にする
+ */
+function setFormReadOnly(readOnly) {
+    try {
+        // 全ての入力フィールドを取得
+        const inputs = document.querySelectorAll('input[type="number"], input[type="text"], input[type="date"], textarea, select');
+        
+        inputs.forEach(input => {
+            if (readOnly) {
+                input.setAttribute('readonly', 'true');
+                input.style.backgroundColor = '#f3f4f6';
+                input.style.cursor = 'not-allowed';
+            } else {
+                input.removeAttribute('readonly');
+                input.style.backgroundColor = '';
+                input.style.cursor = '';
+            }
+        });
+        
+        // ファイル入力も無効化
+        const fileInputs = document.querySelectorAll('input[type="file"]');
+        fileInputs.forEach(input => {
+            input.disabled = readOnly;
+        });
+        
+        // 経費追加ボタンなどの操作ボタンも無効化
+        const actionButtons = document.querySelectorAll('.add-button, .delete-button, .clear-file-button');
+        actionButtons.forEach(button => {
+            button.disabled = readOnly;
+            if (readOnly) {
+                button.style.opacity = '0.5';
+                button.style.cursor = 'not-allowed';
+            } else {
+                button.style.opacity = '';
+                button.style.cursor = '';
+            }
+        });
+        
+        console.log(`フォームを${readOnly ? '読み取り専用' : '編集可能'}に設定しました`);
+        
+    } catch (error) {
+        console.error('フォーム読み取り専用設定でエラー:', error);
     }
 }
 
@@ -716,3 +772,16 @@ function showSuccess(message) {
         console.error('成功メッセージ表示でエラー:', error);
     }
 }
+
+// 関数をグローバルスコープに明示的に公開
+window.generatePaymentMethods = generatePaymentMethods;
+window.generateDiscountSection = generateDiscountSection;
+window.generateDenominationRows = generateDenominationRows;
+window.setupEventListeners = setupEventListeners;
+window.setupRemarksListeners = setupRemarksListeners;
+window.loadDataIntoForm = loadDataIntoForm;
+window.setFormReadOnly = setFormReadOnly;
+window.showError = showError;
+window.showSuccess = showSuccess;
+
+console.log('✅ ui.js: 関数をグローバルスコープに公開しました');

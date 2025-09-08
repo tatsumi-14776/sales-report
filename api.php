@@ -11,7 +11,7 @@ header('Content-Type: application/json');
 
 
 // エラー表示設定
-ini_set('display_errors', 1);
+ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
 // デバッグログ
@@ -31,6 +31,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // デバッグ: リクエスト処理開始
+// デバッグログ（ブラウザには出力されない）
+error_log("API called with: " . print_r($_GET, true));
+error_log("Session data: " . print_r($_SESSION, true));
 error_log("Processing request, action: " . ($_GET['action'] ?? 'none'));
 
 // データベース設定
@@ -116,6 +119,10 @@ class APIController {
                     return $this->createStore($input);
                 case 'getAllStores':
                     return $this->getAllStores($input);
+                case 'confirmReport':
+                    return $this->confirmReport($input);
+                case 'unconfirmReport':
+                    return $this->unconfirmReport($input);
                 default:
                     throw new Exception('無効なアクション: ' . $action);
             }
@@ -204,6 +211,7 @@ class APIController {
     /**
      * 店舗設定取得
      */
+
     private function getStoreSettings($data) {
         $storeId = $data['storeId'] ?? $data['store_id'] ?? 1;
         
@@ -262,8 +270,6 @@ class APIController {
         return [
             'success' => true,
             'store_id' => $storeId,
-            'store_name' => $storeInfo['store_name'],
-            'store_code' => $storeInfo['store_code'],
             'payment_settings' => array_filter($paymentSettings, function($p) { return $p['is_enabled']; }),
             'point_settings' => array_filter($pointSettings, function($p) { return $p['is_enabled']; })
         ];
@@ -406,30 +412,16 @@ private function getReport($data) {
     $reportDate = $data['report_date'] ?? '';
     $storeId = $data['store_id'] ?? 0;
     
-    error_log("getReport: 日付=$reportDate, 店舗ID=$storeId");
-    
     if (empty($reportDate) || empty($storeId)) {
         throw new Exception('日付と店舗IDが必要です');
     }
     
-    // 該当するレコードを検索
     $stmt = $this->db->prepare("
         SELECT * FROM daily_reports 
         WHERE report_date = ? AND store_id = ?
     ");
     $stmt->execute([$reportDate, $storeId]);
     $report = $stmt->fetch();
-    
-    error_log("getReport: 検索結果 = " . ($report ? "データ見つかった (ID: " . $report['id'] . ")" : "データなし"));
-    
-    // デバッグ用：同じ日付の全データを確認
-    $debugStmt = $this->db->prepare("
-        SELECT id, report_date, store_id FROM daily_reports 
-        WHERE report_date = ?
-    ");
-    $debugStmt->execute([$reportDate]);
-    $allReports = $debugStmt->fetchAll();
-    error_log("getReport: 同じ日付($reportDate)の全レポート = " . json_encode($allReports));
     
     if (!$report) {
         return [
@@ -739,8 +731,6 @@ private function addPaymentMethod($data) {
      */
     private function getAllStores($input) {
         try {
-            error_log("getAllStores: 全店舗データを取得中...");
-            
             $stmt = $this->db->prepare("
                 SELECT id, store_name, store_code, created_at 
                 FROM stores 
@@ -750,9 +740,6 @@ private function addPaymentMethod($data) {
             $stmt->execute();
             $stores = $stmt->fetchAll();
             
-            error_log("getAllStores: " . count($stores) . "件の店舗を取得しました");
-            error_log("getAllStores: 店舗データ = " . json_encode($stores));
-            
             return [
                 'success' => true,
                 'data' => $stores,
@@ -760,11 +747,85 @@ private function addPaymentMethod($data) {
             ];
             
         } catch (Exception $e) {
-            error_log("getAllStores: エラー - " . $e->getMessage());
             throw new Exception('店舗一覧の取得に失敗しました: ' . $e->getMessage());
         }
     }
+
+    /**
+     * 日報確定
+     */
+    private function confirmReport($data) {
+    $reportDate = $data['report_date'] ?? '';
+    $storeId = $data['store_id'] ?? 0;
+    
+    if (empty($reportDate) || empty($storeId)) {
+        throw new Exception('日付と店舗IDが必要です');
+    }
+    
+    // レポートの存在確認
+    $stmt = $this->db->prepare("
+        SELECT id FROM daily_reports 
+        WHERE report_date = ? AND store_id = ?
+    ");
+    $stmt->execute([$reportDate, $storeId]);
+    $report = $stmt->fetch();
+    
+    if (!$report) {
+        throw new Exception('指定された日報が見つかりません');
+    }
+    
+    // ステータスを確定に更新
+    $stmt = $this->db->prepare("
+        UPDATE daily_reports 
+        SET status = 'confirmed', updated_at = NOW()
+        WHERE id = ?
+    ");
+    $stmt->execute([$report['id']]);
+    
+    return [
+        'success' => true,
+        'message' => '日報を確定しました'
+    ];
 }
+
+/**
+ * 日報確定解除
+ */
+private function unconfirmReport($data) {
+    $reportDate = $data['report_date'] ?? '';
+    $storeId = $data['store_id'] ?? 0;
+    
+    if (empty($reportDate) || empty($storeId)) {
+        throw new Exception('日付と店舗IDが必要です');
+    }
+    
+    // レポートの存在確認
+    $stmt = $this->db->prepare("
+        SELECT id FROM daily_reports 
+        WHERE report_date = ? AND store_id = ?
+    ");
+    $stmt->execute([$reportDate, $storeId]);
+    $report = $stmt->fetch();
+    
+    if (!$report) {
+        throw new Exception('指定された日報が見つかりません');
+    }
+    
+    // ステータスをドラフトに更新
+    $stmt = $this->db->prepare("
+        UPDATE daily_reports 
+        SET status = 'draft', updated_at = NOW()
+        WHERE id = ?
+    ");
+    $stmt->execute([$report['id']]);
+    
+    return [
+        'success' => true,
+        'message' => '日報の確定を解除しました'
+    ];
+}
+
+} // APIControllerクラスの終了
 
 // メイン処理
 error_log("Starting main processing...");

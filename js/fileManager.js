@@ -503,3 +503,16 @@ function downloadRestoredFile(attachmentNumber) {
         alert('ファイルのダウンロードに失敗しました: ' + error.message);
     }
 }
+
+// 関数をグローバルスコープに明示的に公開
+if (typeof window !== 'undefined') {
+    window.generateFileInputs = generateFileInputs;
+    window.handleFileSelect = handleFileSelect;
+    window.clearFileDisplay = clearFileDisplay;
+    window.clearFileInput = clearFileInput;
+    window.downloadRestoredFile = downloadRestoredFile;
+    window.collectFileData = collectFileData;
+    window.updateFileDisplayFromData = updateFileDisplayFromData;
+    
+    console.log('✅ fileManager.js: 関数をグローバルスコープに公開しました');
+}

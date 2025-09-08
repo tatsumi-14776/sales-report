@@ -189,7 +189,8 @@ function convertDatabaseToFormData(dbData) {
             date: dbData.report_date || '',
             storeName: dbData.store_name || '',
             inputBy: dbData.user_id || '',
-            remarks: dbData.remarks || ''
+            remarks: dbData.remarks || '',
+            status: dbData.status || 'draft'  // 追加
         };
         
         // 売上データを正しく復元

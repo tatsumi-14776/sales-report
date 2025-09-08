@@ -333,3 +333,15 @@ function formatCurrency(value) {
 function formatPercent(value) {
     return `${value.toFixed(1)}%`;
 }
+
+// 関数をグローバルスコープに明示的に公開
+if (typeof window !== 'undefined') {
+    window.updateAllCalculations = updateAllCalculations;
+    window.updateSalesCalculation = updateSalesCalculation;
+    window.updateExpenseCalculation = updateExpenseCalculation;
+    window.updateCashCalculation = updateCashCalculation;
+    window.formatCurrency = formatCurrency;
+    window.formatPercent = formatPercent;
+    
+    console.log('✅ calculations.js: 関数をグローバルスコープに公開しました');
+}
