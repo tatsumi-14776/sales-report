@@ -440,71 +440,27 @@ function loadDataIntoForm(data) {
             dateElement.value = data.date;
             console.log('日付を設定しました:', data.date);
         }
+        
         if (storeNameElement && data.storeName) {
-            console.log('=== 店舗名設定処理詳細ログ ===');
-            console.log('店舗名設定処理開始');
-            console.log('storeNameElement:', storeNameElement);
-            console.log('data.storeName:', data.storeName);
-            console.log('現在のstoreNameElement.value:', storeNameElement.value);
-            console.log('storeNameElement.readOnly:', storeNameElement.readOnly);
-            console.log('storeNameElement.disabled:', storeNameElement.disabled);
-            console.log('storeNameElement.style.display:', storeNameElement.style.display);
-            
             // 管理者モードでも店舗名を強制設定
             const isAdminMode = storeNameElement.getAttribute('data-admin-mode') === 'true';
-            console.log('管理者モード:', isAdminMode);
-            console.log('data-admin-mode属性値:', storeNameElement.getAttribute('data-admin-mode'));
             
             if (isAdminMode) {
-                // 管理者モードの場合は、読み取り専用を一時的に解除して設定
-                console.log('💼 管理者モードでの設定開始');
                 const wasReadOnly = storeNameElement.readOnly;
                 const wasDisabled = storeNameElement.disabled;
-                console.log('設定前 - readOnly:', wasReadOnly, 'disabled:', wasDisabled);
                 
                 storeNameElement.readOnly = false;
                 storeNameElement.disabled = false;
-                console.log('一時的に編集可能に変更');
-                
                 storeNameElement.value = data.storeName;
-                console.log('店舗名を設定:', data.storeName);
-                console.log('設定直後のvalue:', storeNameElement.value);
                 
-                // 属性を元に戻す
                 storeNameElement.readOnly = wasReadOnly;
                 storeNameElement.disabled = wasDisabled;
-                console.log('属性を復元 - readOnly:', storeNameElement.readOnly, 'disabled:', storeNameElement.disabled);
-                
-                // 再度確認
-                console.log('最終確認 - value:', storeNameElement.value);
-                console.log('管理者モードで店舗名を設定しました:', data.storeName);
-                
-                // さらに1秒後に確認
-                setTimeout(() => {
-                    console.log('🔍 1秒後の最終確認:');
-                    console.log('value:', storeNameElement.value);
-                    console.log('readOnly:', storeNameElement.readOnly);
-                    console.log('disabled:', storeNameElement.disabled);
-                }, 1000);
-                
             } else {
-                console.log('💼 一般モードでの設定');
                 storeNameElement.value = data.storeName;
-                console.log('店舗名を設定しました:', data.storeName);
             }
-            console.log('設定後のstoreNameElement.value:', storeNameElement.value);
-            console.log('=== 店舗名設定処理完了 ===');
-        } else {
-            console.log('=== 店舗名設定スキップ ===');
-            if (!storeNameElement) {
-                console.error('❌ storeNameElement が見つかりません');
-            }
-            if (!data.storeName) {
-                console.error('❌ data.storeName が設定されていません:', data);
-                console.log('受信データ全体:', JSON.stringify(data, null, 2));
-            }
-            console.log('=== 店舗名設定スキップ完了 ===');
+            console.log('店舗名を設定しました:', data.storeName);
         }
+        
         if (inputByElement && data.inputBy) {
             inputByElement.value = data.inputBy;
             console.log('担当者を設定しました:', data.inputBy);
@@ -518,16 +474,14 @@ function loadDataIntoForm(data) {
                 
                 if (element10 && data.sales[`${method.id}10`] !== undefined) {
                     element10.value = data.sales[`${method.id}10`] || 0;
-                    console.log(`売上 ${method.id}10 を設定:`, data.sales[`${method.id}10`]);
                 }
                 if (element8 && data.sales[`${method.id}8`] !== undefined) {
                     element8.value = data.sales[`${method.id}8`] || 0;
-                    console.log(`売上 ${method.id}8 を設定:`, data.sales[`${method.id}8`]);
                 }
             });
         }
         
-        // ポイント・クーポン支払情報（税率対応版）
+        // ポイント・クーポン支払情報
         if (data.pointPayments && pointPaymentConfig) {
             pointPaymentConfig.forEach(payment => {
                 const element10 = document.getElementById(`${payment.id}10`);
@@ -535,11 +489,9 @@ function loadDataIntoForm(data) {
                 
                 if (element10 && data.pointPayments[`${payment.id}10`] !== undefined) {
                     element10.value = data.pointPayments[`${payment.id}10`] || 0;
-                    console.log(`ポイント・クーポン支払 ${payment.id}10 を設定:`, data.pointPayments[`${payment.id}10`]);
                 }
                 if (element8 && data.pointPayments[`${payment.id}8`] !== undefined) {
                     element8.value = data.pointPayments[`${payment.id}8`] || 0;
-                    console.log(`ポイント・クーポン支払 ${payment.id}8 を設定:`, data.pointPayments[`${payment.id}8`]);
                 }
             });
         }
@@ -552,15 +504,12 @@ function loadDataIntoForm(data) {
             
             if (nyukinElement && data.income.nyukin !== undefined) {
                 nyukinElement.value = data.income.nyukin || 0;
-                console.log('入金を設定:', data.income.nyukin);
             }
             if (miscIncomeElement && data.income.miscIncome !== undefined) {
                 miscIncomeElement.value = data.income.miscIncome || 0;
-                console.log('雑収入を設定:', data.income.miscIncome);
             }
             if (foundMoneyElement && data.income.foundMoney !== undefined) {
                 foundMoneyElement.value = data.income.foundMoney || 0;
-                console.log('拾得金を設定:', data.income.foundMoney);
             }
         }
         
@@ -569,7 +518,6 @@ function loadDataIntoForm(data) {
             const previousCashElement = document.getElementById('previousCashBalance');
             if (previousCashElement) {
                 previousCashElement.value = data.previousCashBalance || 0;
-                console.log('前日現金残を設定:', data.previousCashBalance);
             }
         }
         
@@ -581,20 +529,15 @@ function loadDataIntoForm(data) {
                 
                 if (registerInput && data.cash[denom.key]?.register !== undefined) {
                     registerInput.value = data.cash[denom.key].register || 0;
-                    console.log(`レジ ${denom.key} を設定:`, data.cash[denom.key].register);
                 }
                 if (safeInput && data.cash[denom.key]?.safe !== undefined) {
                     safeInput.value = data.cash[denom.key].safe || 0;
-                    console.log(`金庫 ${denom.key} を設定:`, data.cash[denom.key].safe);
                 }
             });
         }
         
         // 経費データ
         if (data.expenses && Array.isArray(data.expenses) && data.expenses.length > 0) {
-            console.log('経費データを復元中...');
-            
-            // 既存の経費レコードをクリア
             expenseRecords = [];
             nextExpenseId = 1;
             const expenseContainer = document.getElementById('expenseRecords');
@@ -602,7 +545,6 @@ function loadDataIntoForm(data) {
                 expenseContainer.innerHTML = '';
             }
             
-            // 経費データを復元
             data.expenses.forEach((expense, index) => {
                 addExpenseRecord();
                 const currentId = nextExpenseId - 1;
@@ -616,8 +558,6 @@ function loadDataIntoForm(data) {
                 if (accountSelect) accountSelect.value = expense.account || '';
                 if (itemInput) itemInput.value = expense.item || '';
                 if (amountInput) amountInput.value = expense.amount || 0;
-                
-                console.log(`経費レコード ${index + 1} を復元しました`);
             });
         }
         
@@ -626,9 +566,6 @@ function loadDataIntoForm(data) {
             const remarksElement = document.getElementById('remarks');
             if (remarksElement) {
                 remarksElement.value = data.remarks;
-                console.log('備考を設定しました');
-                
-                // 文字数カウントを更新
                 const charCount = document.getElementById('charCount');
                 if (charCount) {
                     charCount.textContent = data.remarks.length;
@@ -636,32 +573,14 @@ function loadDataIntoForm(data) {
             }
         }
 
-        // 添付ファイル復元の詳細ログ追加
-        console.log('=== loadDataIntoForm - 添付ファイルチェック ===');
-        console.log('data.attachedFiles:', data.attachedFiles);
-        console.log('data.attachedFiles のタイプ:', typeof data.attachedFiles);
-        console.log('data.attachedFiles は配列か:', Array.isArray(data.attachedFiles));
-        if (data.attachedFiles) {
-            console.log('data.attachedFiles の長さ:', data.attachedFiles.length);
-        }
-        
-        console.log('添付ファイル処理の条件チェック中...');
-        console.log('条件1 - data.attachedFiles が存在:', !!data.attachedFiles);
-        console.log('条件2 - Array.isArray(data.attachedFiles):', Array.isArray(data.attachedFiles));
-        console.log('条件3 - data.attachedFiles.length > 0:', data.attachedFiles ? data.attachedFiles.length > 0 : false);
-
+        // 添付ファイル復元
         if (data.attachedFiles && Array.isArray(data.attachedFiles) && data.attachedFiles.length > 0) {
-            console.log('添付ファイルデータを復元中:', data.attachedFiles);
-            
-            // ファイル入力欄をリセット
             generateFileInputs();
             
-            // 添付ファイルデータをグローバル変数に復元
             data.attachedFiles.forEach((fileData, index) => {
                 if (fileData && fileData.attachmentNumber && fileData.fileName) {
                     const attachmentIndex = fileData.attachmentNumber - 1;
                     if (attachmentIndex >= 0 && attachmentIndex < attachedFiles.length) {
-                        // ファイルデータを復元（Base64から擬似Fileオブジェクトを作成）
                         const restoredFile = createFileFromBase64(fileData);
                         
                         if (restoredFile) {
@@ -673,33 +592,43 @@ function loadDataIntoForm(data) {
                                 hasFile: true
                             };
                             
-                            // UIに表示
                             updateFileDisplayFromData(fileData.attachmentNumber, fileData);
-                            console.log(`添付ファイル ${fileData.attachmentNumber} を復元しました:`, fileData.fileName);
                         }
                     }
                 }
             });
-        } else {
-            console.log('=== 添付ファイル復元をスキップ ===');
-            console.log('理由: data.attachedFiles =', data.attachedFiles);
-            console.log('Array.isArray:', Array.isArray(data.attachedFiles));
-            console.log('length:', data.attachedFiles ? data.attachedFiles.length : 'undefined');
         }
-        
-        console.log('=== 添付ファイル処理完了、計算更新開始 ===');
         
         // 計算を更新
         updateAllCalculations();
     
-        // 確定状態を反映（追加）
+        // *** 重要：ステータスに応じた処理 ***
         if (data.status) {
+            console.log('読み込まれたデータのステータス:', data.status);
+            console.log('現在のユーザー種別:', window.isAdminUser ? '管理者' : '一般ユーザー');
+            
+            // 確定ボタンの状態を更新
             updateConfirmButtonState(data.status);
             
-            // 確定済みの場合は全入力フィールドを読み取り専用にする
-            if (data.status === 'confirmed' && !window.isAdminUser) {
+            // 確定済みの場合は全フォームを読み取り専用にする
+            if (data.status === 'approved') {
+                console.log('確定済みのため、確定済みデータが読み込まれました');
                 setFormReadOnly(true);
+                showConfirmedMessage();
+                updateSubmitButtonForConfirmed();
+            } else {
+                // 確定済みでない場合は編集可能
+                setFormReadOnly(false);
+                hideConfirmedMessage();
+                updateSubmitButtonForNormal();
+                console.log('編集可能状態に設定しました');
             }
+        }else {
+            console.log('ステータス情報がありません。編集可能状態にします。');
+            // ステータス情報がない場合は編集可能
+            setFormReadOnly(false);
+            hideConfirmedMessage();
+            updateSubmitButtonForNormal();
         }
         
         console.log('フォームへのデータ読み込み完了');
@@ -707,6 +636,98 @@ function loadDataIntoForm(data) {
     } catch (error) {
         console.error('フォームデータ読み込みでエラー:', error);
         throw error;
+    }
+}
+
+/**
+ * 送信ボタンを確定済み状態に更新（一般ユーザー用）
+ */
+function updateSubmitButtonForConfirmed() {
+    const submitButton = document.querySelector('.submit-button');
+    if (!submitButton) {
+        console.warn('送信ボタンが見つかりません');
+        return;
+    }
+    
+    // 確定済み表示に変更
+    submitButton.innerHTML = `
+        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        確定済み
+    `;
+    submitButton.className = 'submit-button confirmed';
+    submitButton.disabled = true;
+    
+    console.log('✅ 送信ボタンを確定済み状態に変更しました');
+}
+
+/**
+ * 送信ボタンを通常状態に更新（一般ユーザー用）
+ */
+function updateSubmitButtonForNormal() {
+    const submitButton = document.querySelector('.submit-button');
+    if (!submitButton) {
+        console.warn('送信ボタンが見つかりません');
+        return;
+    }
+    
+    // 通常の送信ボタンに戻す
+    submitButton.innerHTML = `
+        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H9V7h6v2z"/>
+        </svg>
+        経理課に送信
+    `;
+    submitButton.className = 'submit-button';
+    submitButton.disabled = false;
+    
+    console.log('✅ 送信ボタンを通常状態に戻しました');
+}
+
+/*
+ * 確定済みメッセージを表示
+ */
+function showConfirmedMessage() {
+    // 既存のメッセージがあれば削除
+    hideConfirmedMessage();
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.id = 'confirmedMessage';
+    messageDiv.style.cssText = `
+        background: linear-gradient(135deg, #fef3c7, #fed7aa);
+        border: 2px solid #d97706;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 1rem 0;
+        text-align: center;
+        font-weight: bold;
+        color: #92400e;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        animation: fadeIn 0.3s ease-in;
+    `;
+    
+    messageDiv.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+            <span style="font-size: 1.2rem;">🔒</span>
+            <span>この日報は確定済みです。編集はできません。</span>
+        </div>
+    `;
+    
+    // ヘッダーの下に挿入
+    const headerElement = document.querySelector('.header');
+    if (headerElement && headerElement.parentNode) {
+        headerElement.parentNode.insertBefore(messageDiv, headerElement.nextSibling);
+    }
+}
+
+/**
+ * 確定済みメッセージを非表示
+ */
+function hideConfirmedMessage() {
+    const existingMessage = document.getElementById('confirmedMessage');
+    if (existingMessage) {
+        existingMessage.remove();
     }
 }
 
@@ -721,12 +742,14 @@ function setFormReadOnly(readOnly) {
         inputs.forEach(input => {
             if (readOnly) {
                 input.setAttribute('readonly', 'true');
-                input.style.backgroundColor = '#f3f4f6';
+                input.style.backgroundColor = '#f8f9fa';
                 input.style.cursor = 'not-allowed';
+                input.style.opacity = '0.7';
             } else {
                 input.removeAttribute('readonly');
                 input.style.backgroundColor = '';
                 input.style.cursor = '';
+                input.style.opacity = '';
             }
         });
         

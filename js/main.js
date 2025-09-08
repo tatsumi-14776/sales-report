@@ -508,7 +508,9 @@ async function handleConfirm() {
         
         if (result.success) {
             showSuccess('日報を確定しました');
-            updateConfirmButtonState('confirmed');
+            updateConfirmButtonState('approved');
+            // フォームを読み取り専用に設定
+            setFormReadOnly(true);
         } else {
             showError('確定に失敗しました: ' + result.message);
         }
@@ -570,7 +572,9 @@ async function handleUnconfirm() {
         
         if (result.success) {
             showSuccess('日報の確定を解除しました');
-            updateConfirmButtonState('draft');
+            updateConfirmButtonState('submitted');
+            // フォームを編集可能に設定
+            setFormReadOnly(false);
         } else {
             showError('確定解除に失敗しました: ' + result.message);
         }
@@ -582,10 +586,10 @@ async function handleUnconfirm() {
 }
 
 /**
- * 確定ボタンの状態更新
+ * 確定ボタンの状態更新（status対応版）
  */
 function updateConfirmButtonState(status) {
-    const submitButton = document.getElementById('submitButton');
+    const submitButton = document.querySelector('.submit-button');
     const confirmButton = document.getElementById('confirmButton');
     const unconfirmButton = document.getElementById('unconfirmButton');
     const confirmStatus = document.getElementById('confirmStatus');
@@ -599,7 +603,7 @@ function updateConfirmButtonState(status) {
     if (window.isAdminUser && adminConfirmSection) {
         adminConfirmSection.style.display = 'block';
         
-        if (status === 'confirmed') {
+        if (status === 'approved') {
             // 確定済み状態
             if (confirmButton) confirmButton.style.display = 'none';
             if (unconfirmButton) unconfirmButton.style.display = 'block';
@@ -614,7 +618,7 @@ function updateConfirmButtonState(status) {
             submitButton.className = 'submit-button confirmed';
             submitButton.disabled = true;
         } else {
-            // 未確定状態
+            // 未確定状態（draft, submitted, rejected）
             if (confirmButton) confirmButton.style.display = 'block';
             if (unconfirmButton) unconfirmButton.style.display = 'none';
             if (confirmStatus) confirmStatus.style.display = 'none';
@@ -632,7 +636,7 @@ function updateConfirmButtonState(status) {
         // 一般ユーザーの場合
         if (adminConfirmSection) adminConfirmSection.style.display = 'none';
         
-        if (status === 'confirmed') {
+        if (status === 'approved') {
             submitButton.innerHTML = `
                 <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -653,6 +657,7 @@ function updateConfirmButtonState(status) {
         }
     }
 }
+
 // デバッグ用: グローバルスコープに公開
 if (typeof window !== 'undefined') {
     window.appDebug = {

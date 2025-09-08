@@ -123,6 +123,8 @@ class APIController {
                     return $this->confirmReport($input);
                 case 'unconfirmReport':
                     return $this->unconfirmReport($input);
+                case 'checkReportStatus':
+                    return $this->checkReportStatus($input);
                 default:
                     throw new Exception('無効なアクション: ' . $action);
             }
@@ -276,13 +278,31 @@ class APIController {
     }
     
     /**
-     * 売上レポート保存（添付ファイル対応版）
+     * 売上レポート保存（確定状態チェック対応版）
      */
     private function saveReport($data) {
         try {
             $reportDate = $data['report_date'] ?? '';
             $storeId = $data['store_id'] ?? 0;
             $userId = $data['user_id'] ?? '';
+            
+            if (empty($reportDate) || empty($storeId) || empty($userId)) {
+                throw new Exception('必須項目が不足しています');
+            }
+            
+            // 既存レポートの確認
+            $stmt = $this->db->prepare("
+                SELECT id, status FROM daily_reports 
+                WHERE report_date = ? AND store_id = ?
+            ");
+            $stmt->execute([$reportDate, $storeId]);
+            $existing = $stmt->fetch();
+            
+            // 確定済みの場合は保存不可
+            if ($existing && $existing['status'] === 'approved') {
+                throw new Exception('この日報は既に確定済みのため、修正・保存できません。管理者にお問い合わせください。');
+            }
+            
             $salesData = $data['sales_data'] ?? [];
             $pointPaymentsData = $data['point_payments_data'] ?? [];
             $incomeData = $data['income_data'] ?? [];
@@ -291,33 +311,12 @@ class APIController {
             $previousCashBalance = floatval($data['previous_cash_balance'] ?? 0);
             $cashDifference = floatval($data['cash_difference'] ?? 0);
             $remarks = $data['remarks'] ?? '';
-            
-            // 添付ファイルデータを追加
             $attachedFiles = $data['attached_files'] ?? [];
-            
-            // デバッグログ追加
-            error_log("=== 添付ファイル保存デバッグ ===");
-            error_log("受信した添付ファイル数: " . count($attachedFiles));
-            error_log("添付ファイルデータ: " . json_encode($attachedFiles));
-            
-            // 保存時の支払方法設定を取得
             $paymentMethodConfig = $data['payment_method_config'] ?? null;
             $pointPaymentConfig = $data['point_payment_config'] ?? null;
             
-            if (empty($reportDate) || empty($storeId) || empty($userId)) {
-                throw new Exception('必須項目が不足しています');
-            }
-            
-            // 既存レポートの確認
-            $stmt = $this->db->prepare("
-                SELECT id FROM daily_reports 
-                WHERE report_date = ? AND store_id = ?
-            ");
-            $stmt->execute([$reportDate, $storeId]);
-            $existing = $stmt->fetch();
-            
             if ($existing) {
-                // 更新
+                // 更新（ステータスは submitted に設定）
                 $stmt = $this->db->prepare("
                     UPDATE daily_reports 
                     SET sales_data = ?, 
@@ -331,6 +330,8 @@ class APIController {
                         cash_difference = ?,
                         remarks = ?,
                         attached_files = ?,
+                        status = 'submitted',
+                        submitted_at = NOW(),
                         user_id = ?, 
                         updated_at = NOW()
                     WHERE id = ?
@@ -346,13 +347,13 @@ class APIController {
                     $previousCashBalance,
                     $cashDifference,
                     $remarks,
-                    $attachedFiles ? json_encode($attachedFiles) : null, // 添付ファイル追加
+                    $attachedFiles ? json_encode($attachedFiles) : null,
                     $userId, 
                     $existing['id']
                 ]);
                 $reportId = $existing['id'];
             } else {
-                // 新規作成
+                // 新規作成（ステータスは submitted に設定）
                 $stmt = $this->db->prepare("
                     INSERT INTO daily_reports (
                         report_date, 
@@ -368,8 +369,10 @@ class APIController {
                         previous_cash_balance,
                         cash_difference,
                         remarks,
-                        attached_files
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        attached_files,
+                        status,
+                        submitted_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'submitted', NOW())
                 ");
                 $stmt->execute([
                     $reportDate, 
@@ -385,7 +388,7 @@ class APIController {
                     $previousCashBalance,
                     $cashDifference,
                     $remarks,
-                    $attachedFiles ? json_encode($attachedFiles) : null // 添付ファイル追加
+                    $attachedFiles ? json_encode($attachedFiles) : null
                 ]);
                 $reportId = $this->db->lastInsertId();
             }
@@ -403,6 +406,36 @@ class APIController {
                 'message' => $e->getMessage()
             ];
         }
+    }
+
+    /**
+     * 日報確定状態チェック
+     */
+    private function checkReportStatus($data) {
+        $reportDate = $data['report_date'] ?? '';
+        $storeId = $data['store_id'] ?? 0;
+        
+        if (empty($reportDate) || empty($storeId)) {
+            throw new Exception('日付と店舗IDが必要です');
+        }
+        
+        $stmt = $this->db->prepare("
+            SELECT id, status, user_id, created_at, updated_at 
+            FROM daily_reports 
+            WHERE report_date = ? AND store_id = ?
+        ");
+        $stmt->execute([$reportDate, $storeId]);
+        $report = $stmt->fetch();
+        
+        return [
+            'success' => true,
+            'exists' => !!$report,
+            'status' => $report['status'] ?? 'draft',
+            'is_confirmed' => ($report['status'] ?? 'draft') === 'approved',
+            'user_id' => $report['user_id'] ?? null,
+            'created_at' => $report['created_at'] ?? null,
+            'updated_at' => $report['updated_at'] ?? null
+        ];
     }
     
 /**
@@ -752,78 +785,88 @@ private function addPaymentMethod($data) {
     }
 
     /**
-     * 日報確定
+     * 日報確定（approved に変更）
      */
     private function confirmReport($data) {
-    $reportDate = $data['report_date'] ?? '';
-    $storeId = $data['store_id'] ?? 0;
-    
-    if (empty($reportDate) || empty($storeId)) {
-        throw new Exception('日付と店舗IDが必要です');
+        $reportDate = $data['report_date'] ?? '';
+        $storeId = $data['store_id'] ?? 0;
+        
+        if (empty($reportDate) || empty($storeId)) {
+            throw new Exception('日付と店舗IDが必要です');
+        }
+        
+        // レポートの存在確認
+        $stmt = $this->db->prepare("
+            SELECT id, status FROM daily_reports 
+            WHERE report_date = ? AND store_id = ?
+        ");
+        $stmt->execute([$reportDate, $storeId]);
+        $report = $stmt->fetch();
+        
+        if (!$report) {
+            throw new Exception('指定された日報が見つかりません');
+        }
+        
+        // 既に確定済みの場合はエラー
+        if ($report['status'] === 'approved') {
+            throw new Exception('この日報は既に確定済みです');
+        }
+        
+        // ステータスを確定に更新
+        $stmt = $this->db->prepare("
+            UPDATE daily_reports 
+            SET status = 'approved', updated_at = NOW()
+            WHERE id = ?
+        ");
+        $stmt->execute([$report['id']]);
+        
+        return [
+            'success' => true,
+            'message' => '日報を確定しました'
+        ];
     }
-    
-    // レポートの存在確認
-    $stmt = $this->db->prepare("
-        SELECT id FROM daily_reports 
-        WHERE report_date = ? AND store_id = ?
-    ");
-    $stmt->execute([$reportDate, $storeId]);
-    $report = $stmt->fetch();
-    
-    if (!$report) {
-        throw new Exception('指定された日報が見つかりません');
-    }
-    
-    // ステータスを確定に更新
-    $stmt = $this->db->prepare("
-        UPDATE daily_reports 
-        SET status = 'confirmed', updated_at = NOW()
-        WHERE id = ?
-    ");
-    $stmt->execute([$report['id']]);
-    
-    return [
-        'success' => true,
-        'message' => '日報を確定しました'
-    ];
-}
 
-/**
- * 日報確定解除
- */
-private function unconfirmReport($data) {
-    $reportDate = $data['report_date'] ?? '';
-    $storeId = $data['store_id'] ?? 0;
-    
-    if (empty($reportDate) || empty($storeId)) {
-        throw new Exception('日付と店舗IDが必要です');
+    /**
+     * 日報確定解除（submitted または draft に変更）
+     */
+    private function unconfirmReport($data) {
+        $reportDate = $data['report_date'] ?? '';
+        $storeId = $data['store_id'] ?? 0;
+        
+        if (empty($reportDate) || empty($storeId)) {
+            throw new Exception('日付と店舗IDが必要です');
+        }
+        
+        // レポートの存在確認
+        $stmt = $this->db->prepare("
+            SELECT id, status FROM daily_reports 
+            WHERE report_date = ? AND store_id = ?
+        ");
+        $stmt->execute([$reportDate, $storeId]);
+        $report = $stmt->fetch();
+        
+        if (!$report) {
+            throw new Exception('指定された日報が見つかりません');
+        }
+        
+        // 確定済みでない場合はエラー
+        if ($report['status'] !== 'approved') {
+            throw new Exception('この日報は確定状態ではありません');
+        }
+        
+        // ステータスを送信済みに更新（編集可能な状態に戻す）
+        $stmt = $this->db->prepare("
+            UPDATE daily_reports 
+            SET status = 'submitted', updated_at = NOW()
+            WHERE id = ?
+        ");
+        $stmt->execute([$report['id']]);
+        
+        return [
+            'success' => true,
+            'message' => '日報の確定を解除しました'
+        ];
     }
-    
-    // レポートの存在確認
-    $stmt = $this->db->prepare("
-        SELECT id FROM daily_reports 
-        WHERE report_date = ? AND store_id = ?
-    ");
-    $stmt->execute([$reportDate, $storeId]);
-    $report = $stmt->fetch();
-    
-    if (!$report) {
-        throw new Exception('指定された日報が見つかりません');
-    }
-    
-    // ステータスをドラフトに更新
-    $stmt = $this->db->prepare("
-        UPDATE daily_reports 
-        SET status = 'draft', updated_at = NOW()
-        WHERE id = ?
-    ");
-    $stmt->execute([$report['id']]);
-    
-    return [
-        'success' => true,
-        'message' => '日報の確定を解除しました'
-    ];
-}
 
 } // APIControllerクラスの終了
 

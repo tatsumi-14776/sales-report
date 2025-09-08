@@ -539,6 +539,58 @@
             transform: translateY(-1px);
             box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
         }
+        
+                /* 確定済みステータスバッジ */
+        .status-confirmed {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #d97706;
+        }
+
+        .status-draft {
+            background: #f3f4f6;
+            color: #374151;
+            border: 1px solid #9ca3af;
+        }
+
+        .status-rejected {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #dc2626;
+        }
+
+        /* 確定済みアクションボタン */
+        .btn-confirmed {
+            background: #fef3c7 !important;
+            color: #92400e !important;
+            border: 1px solid #d97706 !important;
+            cursor: default !important;
+            opacity: 0.8;
+            font-weight: 600;
+        }
+
+        .btn-confirmed:hover {
+            background: #fef3c7 !important;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        .btn-confirmed::before {
+            content: "🔒 ";
+            margin-right: 4px;
+        }
+
+        /* 追加のステータス表示 */
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-align: center;
+            min-width: 80px;
+            display: inline-block;
+        }
+
     </style>
 </head>
 <body>
@@ -791,7 +843,9 @@
             });
         }
 
-        // 日報データ読み込み
+        /**
+         * 日報データ読み込み（status対応版）
+         */
         async function loadReports() {
             showLoading(true);
             
@@ -829,7 +883,7 @@
                                 reports.push({
                                     ...result.data,
                                     store_name: store.store_name,
-                                    status: 'submitted',
+                                    status: result.data.status || 'submitted', // statusを保持
                                     total_sales: calculateTotalSales(result.data)
                                 });
                             } else {
@@ -840,7 +894,7 @@
                                     store_id: store.id,
                                     store_name: store.store_name,
                                     user_id: '-',
-                                    status: 'pending',
+                                    status: 'pending', // 未提出状態
                                     total_sales: 0,
                                     cash_difference: 0,
                                     created_at: null,
@@ -949,7 +1003,9 @@
             renderReportsTable(filteredReports);
         }
 
-        // テーブル描画
+        /**
+         * テーブル描画（status対応版）
+         */
         function renderReportsTable(reports) {
             const tbody = document.getElementById('reportsTableBody');
             const tableContainer = document.getElementById('reportsTableContainer');
@@ -975,13 +1031,7 @@
                     <td>${formatDateTime(report.updated_at)}</td>
                     <td>
                         <div class="action-buttons">
-                            ${report.status === 'submitted' ? `
-                                <button class="btn-small btn-confirm" onclick="viewReportInForm(${report.store_id}, '${report.report_date}')">📋 確認</button>
-                                <button class="btn-small btn-view" onclick="viewReportDetail(${report.id})">👁️ 詳細</button>
-                                <button class="btn-small btn-download" onclick="downloadReport(${report.id})">📄 PDF</button>
-                            ` : `
-                                <button class="btn-small btn-edit" onclick="createReport(${report.store_id}, '${report.report_date}')">✏️ 作成</button>
-                            `}
+                            ${getActionButtons(report)}
                         </div>
                     </td>
                 </tr>
@@ -1003,15 +1053,49 @@
             document.getElementById('totalSales').textContent = formatCurrency(totalSales);
         }
 
-        // ステータスバッジ生成
+        /**
+         * ステータスバッジ生成（status対応版）
+         */
         function getStatusBadge(status) {
             const badges = {
-                submitted: '<span class="status-badge status-submitted">✅ 提出済み</span>',
-                pending: '<span class="status-badge status-pending">⏳ 未提出</span>',
-                late: '<span class="status-badge status-late">⚠️ 遅延</span>'
+                'submitted': '<span class="status-badge status-submitted">✅ 提出済み</span>',
+                'approved': '<span class="status-badge status-confirmed">🔒 確定済み</span>',
+                'draft': '<span class="status-badge status-draft">📝 下書き</span>',
+                'rejected': '<span class="status-badge status-rejected">❌ 却下</span>',
+                'pending': '<span class="status-badge status-pending">⏳ 未提出</span>'
             };
-            return badges[status] || '';
+            return badges[status] || '<span class="status-badge">不明</span>';
         }
+
+        /**
+         * アクションボタン生成（status対応版）
+         */
+        function getActionButtons(report) {
+            if (!report.id) {
+                // 未提出の場合
+                return `<button class="btn-small btn-edit" onclick="createReport(${report.store_id}, '${report.report_date}')">✏️ 作成</button>`;
+            }
+            
+            // 提出済みの場合
+            if (report.status === 'approved') {
+                // 確定済みの場合
+                return `
+                    <button class="btn-small btn-confirmed" onclick="viewReportInForm(${report.store_id}, '${report.report_date}')">🔒 確定済み</button>
+                    <button class="btn-small btn-view" onclick="viewReportDetail(${report.id})">👁️ 詳細</button>
+                    <button class="btn-small btn-download" onclick="downloadReport(${report.id})">📄 PDF</button>
+                `;
+            } else {
+                // 未確定の場合
+                return `
+                    <button class="btn-small btn-confirm" onclick="viewReportInForm(${report.store_id}, '${report.report_date}')">📋 確認</button>
+                    <button class="btn-small btn-view" onclick="viewReportDetail(${report.id})">👁️ 詳細</button>
+                    <button class="btn-small btn-download" onclick="downloadReport(${report.id})">📄 PDF</button>
+                `;
+            }
+        }
+
+
+        
 
         // 日報詳細表示
         async function viewReportDetail(reportId) {
@@ -1242,6 +1326,7 @@
                 loadReports();
             }
         }
+        
     </script>
 </body>
 </html>
