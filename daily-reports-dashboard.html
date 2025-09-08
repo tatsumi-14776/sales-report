@@ -1084,23 +1084,38 @@
             }
         }
 
-        // フィルター適用
+        // フィルター適用（修正版）
         function applyFilters() {
+            console.log('=== applyFilters 実行開始 ===');
+            
             const startDate = document.getElementById('filterStartDate').value;
             const endDate = document.getElementById('filterEndDate').value;
-
+            
+            console.log('フィルター条件:', {startDate, endDate});
+            
             // 日付が設定されていない場合は初期メッセージを表示
             if (!startDate || !endDate) {
                 console.log('日付が未設定のため初期メッセージを表示');
                 showInitialMessage();
                 return;
             }
+            
+            // window.allReportsを使用
+            if (!window.allReports || !Array.isArray(window.allReports)) {
+                console.error('window.allReportsが正しく設定されていません:', window.allReports);
+                showInitialMessage();
+                return;
+            }
+            
             currentFilters.startDate = startDate;
             currentFilters.endDate = endDate;
             currentFilters.store = document.getElementById('filterStore').value;
             currentFilters.status = document.getElementById('filterStatus').value;
             
-            let filteredReports = [...allReports];
+            console.log('設定されたフィルター:', currentFilters);
+            
+            let filteredReports = [...window.allReports];
+            console.log('フィルター前:', filteredReports.length);
             
             // 期間フィルター
             if (currentFilters.startDate && currentFilters.endDate) {
@@ -1108,6 +1123,7 @@
                     report.report_date >= currentFilters.startDate && 
                     report.report_date <= currentFilters.endDate
                 );
+                console.log('期間フィルター後:', filteredReports.length);
             }
             
             // 店舗フィルター
@@ -1115,6 +1131,7 @@
                 filteredReports = filteredReports.filter(report => 
                     report.store_id == currentFilters.store
                 );
+                console.log('店舗フィルター後:', filteredReports.length);
             }
             
             // ステータスフィルター
@@ -1122,9 +1139,43 @@
                 filteredReports = filteredReports.filter(report => 
                     report.status === currentFilters.status
                 );
+                console.log('ステータスフィルター後:', filteredReports.length);
             }
             
-            renderReportsTable(filteredReports);
+            console.log('最終フィルター結果:', filteredReports.length);
+            
+            // 簡易テーブル表示（動作確認済み）
+            const tbody = document.getElementById('reportsTableBody');
+            const tableContainer = document.getElementById('reportsTableContainer');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (filteredReports.length > 0) {
+                tableContainer.style.display = 'block';
+                emptyState.style.display = 'none';
+                
+                tbody.innerHTML = filteredReports.map(report => `
+                    <tr>
+                        <td>${formatDate(report.report_date)}</td>
+                        <td><strong>${escapeHtml(report.store_name)}</strong></td>
+                        <td>${escapeHtml(report.user_id || '-')}</td>
+                        <td>${getStatusBadge(report.status)}</td>
+                        <td class="sales-amount">${formatCurrency(report.total_sales)}</td>
+                        <td style="text-align: right;">${formatCurrency(report.cash_difference)}</td>
+                        <td>${formatDateTime(report.updated_at)}</td>
+                        <td>
+                            <div class="action-buttons">
+                                ${getActionButtons(report)}
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+                
+                console.log('✅ テーブル表示完了');
+            } else {
+                tableContainer.style.display = 'none';
+                emptyState.style.display = 'block';
+                console.log('データ0件のため空状態表示');
+            }
         }
 
         /**
@@ -1789,13 +1840,19 @@ async function performSearch() {
                 console.log(`バッチAPI取得完了: ${existingReports.length}件の既存レポート`);
                 
                 // 全組み合わせを生成して未提出データを補完
-                const allReports = generateCompleteReportSet(startDate, endDate, allStores, existingReports);
+                const completeReports = generateCompleteReportSet(startDate, endDate, allStores, existingReports);
+                console.log(`データ補完完了: ${completeReports.length}件の全レポート`);
                 
-                console.log(`データ補完完了: ${allReports.length}件の全レポート`);
-                
-                window.allReports = allReports;
-                applyFilters();
-                updateStats();
+                window.allReports = completeReports;
+                console.log('✅ グローバル変数設定確認:', window.allReports ? window.allReports.length : 'FAILED');
+                if (window.allReports && window.allReports.length > 0) {
+                    console.log('applyFilters() を実行');
+                    applyFilters();
+                    updateStats();
+                } else {
+                    console.error('❌ グローバル変数の設定に失敗');
+                    showInitialMessage();
+                }
                 
             } else {
                 throw new Error(result.message || 'バッチAPI呼び出しに失敗しました');
