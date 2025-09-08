@@ -857,6 +857,229 @@ function showSuccess(message) {
     }
 }
 
+/**
+ * 管理者用ローディングインジケーター（専用版）
+ * @param {boolean} show 表示する場合はtrue、非表示にする場合はfalse
+ * @param {string} title メインタイトル
+ * @param {string} subtitle サブタイトル
+ */
+function showAdminLoadingIndicator(show, title = '処理中...', subtitle = 'しばらくお待ちください') {
+    try {
+        let loadingOverlay = document.getElementById('adminLoadingOverlay');
+        
+        if (show) {
+            // ローディングオーバーレイが存在しない場合は作成
+            if (!loadingOverlay) {
+                loadingOverlay = document.createElement('div');
+                loadingOverlay.id = 'adminLoadingOverlay';
+                loadingOverlay.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.7);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 10000;
+                    backdrop-filter: blur(4px);
+                `;
+                
+                loadingOverlay.innerHTML = `
+                    <div class="admin-loading-content" style="
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                        padding: 2rem;
+                        border-radius: 16px;
+                        text-align: center;
+                        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+                        min-width: 300px;
+                        max-width: 400px;
+                    ">
+                        <div class="admin-loading-spinner" style="
+                            width: 60px;
+                            height: 60px;
+                            border: 4px solid rgba(255, 255, 255, 0.3);
+                            border-top: 4px solid #ffffff;
+                            border-radius: 50%;
+                            animation: adminSpin 1s linear infinite;
+                            margin: 0 auto 1.5rem;
+                        "></div>
+                        <div class="admin-loading-title" style="
+                            font-size: 1.25rem;
+                            font-weight: bold;
+                            margin-bottom: 0.5rem;
+                            color: #ffffff;
+                        ">${title}</div>
+                        <div class="admin-loading-subtitle" style="
+                            font-size: 0.9rem;
+                            opacity: 0.8;
+                            color: #e2e8f0;
+                        ">${subtitle}</div>
+                        <div class="admin-loading-progress" style="
+                            margin-top: 1.5rem;
+                            height: 4px;
+                            background: rgba(255, 255, 255, 0.2);
+                            border-radius: 2px;
+                            overflow: hidden;
+                        ">
+                            <div style="
+                                width: 100%;
+                                height: 100%;
+                                background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+                                animation: adminProgress 1.5s ease-in-out infinite;
+                            "></div>
+                        </div>
+                    </div>
+                    <style>
+                        @keyframes adminSpin {
+                            0% { transform: rotate(0deg); }
+                            100% { transform: rotate(360deg); }
+                        }
+                        @keyframes adminProgress {
+                            0% { transform: translateX(-100%); }
+                            100% { transform: translateX(100%); }
+                        }
+                    </style>
+                `;
+                
+                document.body.appendChild(loadingOverlay);
+            } else {
+                // 既存のローディングのテキストを更新
+                const titleElement = loadingOverlay.querySelector('.admin-loading-title');
+                const subtitleElement = loadingOverlay.querySelector('.admin-loading-subtitle');
+                if (titleElement) titleElement.textContent = title;
+                if (subtitleElement) subtitleElement.textContent = subtitle;
+            }
+            
+            // ローディングを表示
+            loadingOverlay.style.display = 'flex';
+            console.log('管理者ローディング表示を開始:', title);
+            
+        } else {
+            // ローディングを非表示
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'none';
+                console.log('管理者ローディング表示を終了');
+            }
+        }
+        
+    } catch (error) {
+        console.error('管理者ローディング表示でエラー:', error);
+    }
+}
+
+/**
+ * 確定状態を詳細表示（改善版）
+ * @param {string} status ステータス
+ * @param {string} date 日付
+ * @param {string} storeName 店舗名
+ */
+function displayConfirmationStatus(status, date, storeName) {
+    try {
+        // 既存の状態表示を削除
+        const existingStatus = document.getElementById('confirmationStatusDisplay');
+        if (existingStatus) {
+            existingStatus.remove();
+        }
+        
+        let statusDisplay = null;
+        
+        if (status === 'approved') {
+            // 確定済み状態の詳細表示
+            statusDisplay = document.createElement('div');
+            statusDisplay.id = 'confirmationStatusDisplay';
+            statusDisplay.style.cssText = `
+                background: linear-gradient(135deg, #fef3c7, #fed7aa);
+                border: 2px solid #d97706;
+                border-radius: 12px;
+                padding: 1rem;
+                margin: 1rem 0;
+                text-align: center;
+                font-weight: bold;
+                color: #92400e;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                animation: statusFadeIn 0.5s ease-in;
+            `;
+            
+            statusDisplay.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                    <span style="font-size: 1.5rem;">🔒</span>
+                    <span style="font-size: 1.1rem;">確定済み日報</span>
+                </div>
+                <div style="font-size: 0.9rem; opacity: 0.8;">
+                    ${date} - ${storeName}
+                </div>
+                <div style="font-size: 0.85rem; margin-top: 0.5rem; opacity: 0.7;">
+                    ${window.isAdminUser ? '管理者権限により閲覧・編集可能' : 'この日報は確定済みのため編集できません'}
+                </div>
+            `;
+            
+        } else if (status === 'submitted') {
+            // 提出済み（未確定）状態の表示
+            statusDisplay = document.createElement('div');
+            statusDisplay.id = 'confirmationStatusDisplay';
+            statusDisplay.style.cssText = `
+                background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+                border: 2px solid #3b82f6;
+                border-radius: 12px;
+                padding: 1rem;
+                margin: 1rem 0;
+                text-align: center;
+                font-weight: bold;
+                color: #1e40af;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                animation: statusFadeIn 0.5s ease-in;
+            `;
+            
+            statusDisplay.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                    <span style="font-size: 1.5rem;">📋</span>
+                    <span style="font-size: 1.1rem;">提出済み（未確定）</span>
+                </div>
+                <div style="font-size: 0.9rem; opacity: 0.8;">
+                    ${date} - ${storeName}
+                </div>
+                <div style="font-size: 0.85rem; margin-top: 0.5rem; opacity: 0.7;">
+                    ${window.isAdminUser ? '管理者権限により確定操作が可能です' : '管理者による確定をお待ちください'}
+                </div>
+            `;
+        }
+        
+        // 状態表示を挿入
+        if (statusDisplay) {
+            const headerElement = document.querySelector('.header');
+            if (headerElement && headerElement.parentNode) {
+                headerElement.parentNode.insertBefore(statusDisplay, headerElement.nextSibling);
+            }
+            
+            // アニメーション用CSS追加
+            if (!document.getElementById('statusAnimationCSS')) {
+                const style = document.createElement('style');
+                style.id = 'statusAnimationCSS';
+                style.textContent = `
+                    @keyframes statusFadeIn {
+                        0% { 
+                            opacity: 0; 
+                            transform: translateY(-10px); 
+                        }
+                        100% { 
+                            opacity: 1; 
+                            transform: translateY(0); 
+                        }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+        }
+        
+    } catch (error) {
+        console.error('確定状態表示でエラー:', error);
+    }
+}
+
+
 // 関数をグローバルスコープに明示的に公開
 window.generatePaymentMethods = generatePaymentMethods;
 window.generateDiscountSection = generateDiscountSection;

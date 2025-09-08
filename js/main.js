@@ -458,21 +458,31 @@ if (typeof window !== 'undefined') {
 }
 
 /**
- * 日報確定処理（管理者のみ）
+ * 日報確定処理（デバッグ版）
  */
 async function handleConfirm() {
+    console.log('🔍 handleConfirm 開始');
+    
     if (!window.isAdminUser) {
+        console.log('❌ 管理者チェック失敗');
         showError('管理者のみ確定操作が可能です');
         return;
     }
     
+    console.log('✅ 管理者チェック通過');
+    
     try {
+        console.log('📋 フォームデータ収集開始');
         const formData = collectAllFormData();
+        console.log('📋 フォームデータ:', formData);
         
         if (!formData.date || !formData.storeName) {
+            console.log('❌ 必須データ不足');
             showError('日付と店舗名が必要です');
             return;
         }
+        
+        console.log('✅ 必須データチェック通過');
         
         const confirmMessage = `以下の日報を確定します：\n\n` +
             `日付: ${formData.date}\n` +
@@ -480,18 +490,49 @@ async function handleConfirm() {
             `確定すると店舗ユーザーは編集できなくなります。\n` +
             `よろしいですか？`;
         
+        console.log('💭 確認ダイアログ表示');
         if (!confirm(confirmMessage)) {
+            console.log('❌ ユーザーがキャンセル');
             return;
+        }
+        
+        console.log('✅ ユーザー確認完了');
+        
+        // 🔍 ローディング関数の存在チェック
+        console.log('🔍 showAdminLoadingIndicator 関数チェック:', typeof showAdminLoadingIndicator);
+        
+        if (typeof showAdminLoadingIndicator === 'function') {
+            console.log('🔄 ローディング表示開始');
+            showAdminLoadingIndicator(true, '日報を確定中...', '確定処理を実行しています');
+            console.log('🔄 ローディング表示完了');
+        } else {
+            console.error('❌ showAdminLoadingIndicator 関数が見つかりません');
+            // フォールバック: 簡単なローディング表示
+            alert('処理中です。しばらくお待ちください...');
+        }
+        
+        // 確定ボタンを無効化
+        console.log('🔒 確定ボタン無効化');
+        const confirmButton = document.getElementById('confirmButton');
+        if (confirmButton) {
+            confirmButton.disabled = true;
+            confirmButton.style.opacity = '0.6';
+            console.log('✅ 確定ボタン無効化完了');
+        } else {
+            console.warn('⚠️ 確定ボタンが見つかりません');
         }
         
         // 店舗IDを取得
+        console.log('🏪 店舗ID取得開始');
         const storeId = await getStoreIdByName(formData.storeName);
+        console.log('🏪 取得した店舗ID:', storeId);
+        
         if (!storeId) {
-            showError('店舗情報の取得に失敗しました');
-            return;
+            throw new Error('店舗情報の取得に失敗しました');
         }
         
         // API呼び出し
+        console.log('📡 API呼び出し開始');
         const response = await fetch('api.php', {
             method: 'POST',
             headers: {
@@ -504,25 +545,52 @@ async function handleConfirm() {
             })
         });
         
+        console.log('📡 API応答受信:', response.status);
+        
         const result = await response.json();
+        console.log('📡 API結果:', result);
         
         if (result.success) {
-            showSuccess('日報を確定しました');
+            console.log('✅ 確定処理成功');
+            // 成功時の処理
+            showSuccess('✅ 日報を確定しました');
             updateConfirmButtonState('approved');
             // フォームを読み取り専用に設定
             setFormReadOnly(true);
+            showConfirmedMessage();
+            
+            // 確定済み状態の詳細表示を更新
+            if (typeof displayConfirmationStatus === 'function') {
+                displayConfirmationStatus('approved', formData.date, formData.storeName);
+            }
+            
         } else {
-            showError('確定に失敗しました: ' + result.message);
+            throw new Error(result.message || '確定処理に失敗しました');
         }
         
     } catch (error) {
-        console.error('確定処理エラー:', error);
-        showError('確定処理中にエラーが発生しました');
+        console.error('💥 確定処理エラー:', error);
+        showError('確定処理中にエラーが発生しました: ' + error.message);
+        
+        // エラー時は確定ボタンを再有効化
+        const confirmButton = document.getElementById('confirmButton');
+        if (confirmButton) {
+            confirmButton.disabled = false;
+            confirmButton.style.opacity = '1';
+        }
+        
+    } finally {
+        console.log('🔄 ローディング表示終了');
+        // ローディング表示終了
+        if (typeof showAdminLoadingIndicator === 'function') {
+            showAdminLoadingIndicator(false);
+        }
+        console.log('🏁 handleConfirm 完了');
     }
 }
 
 /**
- * 日報確定解除処理（管理者のみ）
+ * 日報確定解除処理（管理者のみ・ローディング付き）
  */
 async function handleUnconfirm() {
     if (!window.isAdminUser) {
@@ -548,11 +616,20 @@ async function handleUnconfirm() {
             return;
         }
         
+        // 🔄 ローディング表示開始
+        showAdminLoadingIndicator(true, '確定を解除中...', '確定解除処理を実行しています');
+        
+        // 確定解除ボタンを無効化
+        const unconfirmButton = document.getElementById('unconfirmButton');
+        if (unconfirmButton) {
+            unconfirmButton.disabled = true;
+            unconfirmButton.style.opacity = '0.6';
+        }
+        
         // 店舗IDを取得
         const storeId = await getStoreIdByName(formData.storeName);
         if (!storeId) {
-            showError('店舗情報の取得に失敗しました');
-            return;
+            throw new Error('店舗情報の取得に失敗しました');
         }
         
         // API呼び出し
@@ -571,17 +648,34 @@ async function handleUnconfirm() {
         const result = await response.json();
         
         if (result.success) {
-            showSuccess('日報の確定を解除しました');
+            // 成功時の処理
+            showSuccess('✅ 日報の確定を解除しました');
             updateConfirmButtonState('submitted');
             // フォームを編集可能に設定
             setFormReadOnly(false);
+            hideConfirmedMessage();
+            
+            // 確定解除後の状態表示を更新
+            displayConfirmationStatus('submitted', formData.date, formData.storeName);
+            
         } else {
-            showError('確定解除に失敗しました: ' + result.message);
+            throw new Error(result.message || '確定解除処理に失敗しました');
         }
         
     } catch (error) {
         console.error('確定解除処理エラー:', error);
-        showError('確定解除処理中にエラーが発生しました');
+        showError('確定解除処理中にエラーが発生しました: ' + error.message);
+        
+        // エラー時は確定解除ボタンを再有効化
+        const unconfirmButton = document.getElementById('unconfirmButton');
+        if (unconfirmButton) {
+            unconfirmButton.disabled = false;
+            unconfirmButton.style.opacity = '1';
+        }
+        
+    } finally {
+        // 🔄 ローディング表示終了
+        showAdminLoadingIndicator(false);
     }
 }
 
