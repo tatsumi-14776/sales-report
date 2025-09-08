@@ -98,6 +98,15 @@ try {
                 handleToggleStatus($pdo, $data);
                 break;
 
+            case 'get_payment_stats':
+                error_log("=== get_payment_stats action called ===");
+                handleGetPaymentStats($pdo);
+                break;
+
+            case 'test_connection':
+                testConnection($pdo);
+                break;
+
             default:
                 echo json_encode([
                     'success' => false,
@@ -478,6 +487,66 @@ function logPaymentMethodAction($pdo, $action, $method_id, $details = '') {
     } catch (Exception $e) {
         // ログ記録エラーは無視（メイン処理に影響させない）
         error_log("ログ記録エラー: " . $e->getMessage());
+    }
+}
+
+/**
+ * 支払方法統計を取得
+ */
+function handleGetPaymentStats($pdo) {
+    try {
+        error_log("=== handleGetPaymentStats: 開始 ===");
+        
+        // 登録されている支払方法数（削除されていないもの）
+        $stmt = $pdo->query("SELECT COUNT(*) as count FROM payment_method_masters WHERE deleted_at IS NULL");
+        $totalMethods = $stmt->fetch()['count'];
+        error_log("総支払方法数: " . $totalMethods);
+        
+        // デバッグ用：全ての支払方法名を取得
+        $stmt = $pdo->query("SELECT method_name, method_category FROM payment_method_masters WHERE deleted_at IS NULL");
+        $allMethods = $stmt->fetchAll();
+        error_log("登録されている支払方法: " . json_encode($allMethods));
+        
+        // ポイント・クーポン系の支払方法数（method_categoryがpointのもの）
+        $stmt = $pdo->query("SELECT COUNT(*) as count FROM payment_method_masters WHERE deleted_at IS NULL AND method_category = 'point'");
+        $pointCouponCount = $stmt->fetch()['count'];
+        error_log("ポイント・クーポン数: " . $pointCouponCount);
+        
+        // デバッグ用：ポイント系の支払方法を取得
+        $stmt = $pdo->query("SELECT method_name, method_category FROM payment_method_masters WHERE deleted_at IS NULL AND method_category = 'point'");
+        $pointMethods = $stmt->fetchAll();
+        error_log("ポイント・クーポン系の支払方法: " . json_encode($pointMethods));
+        
+        $result = [
+            'success' => true,
+            'totalMethods' => $totalMethods,
+            'pointCouponCount' => $pointCouponCount
+        ];
+        
+        error_log("レスポンス: " . json_encode($result));
+        echo json_encode($result);
+        
+    } catch (Exception $e) {
+        error_log("handleGetPaymentStats エラー: " . $e->getMessage());
+        throw new Exception('支払方法統計の取得に失敗しました: ' . $e->getMessage());
+    }
+}
+
+/**
+ * 接続テスト
+ */
+function testConnection($pdo) {
+    try {
+        $stmt = $pdo->query("SELECT 1");
+        echo json_encode([
+            'success' => true,
+            'message' => 'データベース接続成功'
+        ]);
+    } catch (Exception $e) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'データベース接続エラー: ' . $e->getMessage()
+        ]);
     }
 }
 ?>

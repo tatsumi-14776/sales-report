@@ -270,36 +270,6 @@
 
         <!-- メインコンテンツ -->
         <div class="main-content">
-            <!-- 日報集計確認 -->
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-icon" style="background: linear-gradient(45deg, #2196F3, #1976D2);">📊</div>
-                    <div class="card-title">日報集計確認</div>
-                </div>
-                <div class="card-description">
-                    日次売上報告書の集計データを確認・分析します。期間別の売上推移やトレンド分析が可能です。
-                </div>
-                <button class="btn btn-secondary" onclick="showComingSoon('日報集計確認')">
-                    <span>📈</span>
-                    集計画面を開く
-                </button>
-                <div class="alert">
-                    <span class="alert-icon">⚠️</span>
-                    詳細機能は実装予定です
-                </div>
-                
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <div class="stat-number" id="totalReports">-</div>
-                        <div class="stat-label">保存レポート数</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-number" id="todayReports">-</div>
-                        <div class="stat-label">今日の報告数</div>
-                    </div>
-                </div>
-            </div>
-
             <!-- 日報管理ダッシュボード -->
             <div class="card">
                 <div class="card-header">
@@ -307,7 +277,7 @@
                     <div class="card-title">日報管理</div>
                 </div>
                 <div class="card-description">
-                    各店舗の日報提出状況を一覧で確認。未提出・遅延・提出済みの状況を管理できます
+                    各店舗の日報提出状況を一覧で確認。未提出・提出済み・確定済みの状況を管理できます
                 </div>
                 <a href="daily-reports-dashboard.html" class="btn btn-reports">
                     <span>📋</span>
@@ -369,11 +339,11 @@
                 <div class="stats-grid">
                     <div class="stat-item">
                         <div class="stat-number" id="totalPaymentMethods">-</div>
-                        <div class="stat-label">登録支払方法</div>
+                        <div class="stat-label">登録支払方法数</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-number" id="enabledPaymentMethods">-</div>
-                        <div class="stat-label">有効支払方法</div>
+                        <div class="stat-number" id="pointCouponCount">-</div>
+                        <div class="stat-label">ポイントクーポン数</div>
                     </div>
                 </div>
             </div>
@@ -394,41 +364,14 @@
                 
                 <div class="stats-grid">
                     <div class="stat-item">
-                        <div class="stat-number" id="paymentMethods">-</div>
-                        <div class="stat-label">支払方法数</div>
-                    </div>
-                    <div class="stat-item">
                         <div class="stat-number" id="activeStores">-</div>
-                        <div class="stat-label">アクティブ店舗</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- システム統計 -->
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-icon" style="background: linear-gradient(45deg, #9C27B0, #7B1FA2);">📋</div>
-                    <div class="card-title">システム統計</div>
-                </div>
-                <div class="card-description">
-                    システムの利用状況やデータの統計情報を表示します。パフォーマンス監視も含まれます。
-                </div>
-                
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <div class="stat-number" id="systemUptime">99.9%</div>
-                        <div class="stat-label">システム稼働率</div>
+                        <div class="stat-label">登録店舗数</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-number" id="lastBackup">-</div>
-                        <div class="stat-label">最終バックアップ</div>
+                        <div class="stat-number" id="deletedStores">-</div>
+                        <div class="stat-label">削除済み店舗数</div>
                     </div>
                 </div>
-                
-                <button class="btn btn-purple" onclick="updateStats()" style="margin-top: 1rem;">
-                    <span>🔄</span>
-                    統計を更新
-                </button>
             </div>
         </div>
     </div>
@@ -463,90 +406,61 @@
             }
         }
 
-        // 未実装機能の表示
-        function showComingSoon(featureName) {
-            alert(`${featureName}機能は現在開発中です。\n\n実装予定機能:\n• ${featureName}の詳細画面\n• データの可視化\n• レポート生成\n\n今後のアップデートをお待ちください！`);
-        }
-
         // 統計情報の更新
         function updateStats() {
             try {
-                // LocalStorageから日次報告書データを取得
-                const allKeys = Object.keys(localStorage);
-                const reportKeys = allKeys.filter(key => key.startsWith('dailyReport_'));
-                const autoSaveKeys = allKeys.filter(key => key.startsWith('autoSave_'));
-                
-                // 今日の日付
-                const today = new Date().toISOString().split('T')[0];
-                const todayReports = reportKeys.filter(key => key.includes(today));
-
                 // 日報統計を更新
-                document.getElementById('totalReports').textContent = reportKeys.length;
-                document.getElementById('todayReports').textContent = todayReports.length;
+                updateDailyReportsStats();
 
-                // ユーザー統計を更新（仮データ）
+                // ユーザー統計を更新
                 updateUserStats();
 
                 // 店舗設定統計を更新
                 updateStoreStats();
 
-                // 最終バックアップ時刻
-                const lastBackup = document.getElementById('lastBackup');
-                if (lastBackup) {
-                    lastBackup.textContent = new Date().toLocaleTimeString('ja-JP', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                    });
-                }
-
-                console.log('統計情報を更新しました:', {
-                    total: reportKeys.length,
-                    today: todayReports.length,
-                    autoSaves: autoSaveKeys.length
-                });
+                console.log('統計情報を更新しました');
 
             } catch (error) {
                 console.error('統計情報の更新でエラー:', error);
-                document.getElementById('totalReports').textContent = 'エラー';
-                document.getElementById('todayReports').textContent = 'エラー';
             }
-            // 既存のupdateStats()関数内の最後に追加
-            async function updateDailyReportsStats() {
-                try {
-                    // 今日の日付
-                    const today = new Date().toISOString().split('T')[0];
-                    
-                    // LocalStorageから今日の日報データを検索
-                    const allKeys = Object.keys(localStorage);
-                    const todayReportKeys = allKeys.filter(key => 
-                        key.startsWith('dailyReport_') && key.includes(today)
-                    );
-                    
-                    // 提出済み店舗数
-                    document.getElementById('todaySubmittedReports').textContent = todayReportKeys.length;
-                    
-                    // 未提出店舗数（仮で計算 - 実際は全店舗数から提出済みを引く）
-                    const totalStores = await getTotalStoresCount();
-                    const pendingCount = Math.max(0, totalStores - todayReportKeys.length);
-                    document.getElementById('pendingReports').textContent = pendingCount;
-                    
-                } catch (error) {
-                    console.error('日報統計の更新でエラー:', error);
-                    document.getElementById('todaySubmittedReports').textContent = '?';
-                    document.getElementById('pendingReports').textContent = '?';
-                }
-            }
+        }
 
-            // 店舗総数を取得する関数（新規追加）
-            async function getTotalStoresCount() {
-                try {
-                    const response = await fetch('api.php?action=getAllStores');
-                    const result = await response.json();
-                    return result.success ? result.data.length : 5; // フォールバック値
-                } catch (error) {
-                    console.warn('店舗数取得エラー:', error);
-                    return 5; // デフォルト値
-                }
+        // 日報管理ダッシュボード用の統計更新
+        async function updateDailyReportsStats() {
+            try {
+                // 今日の日付
+                const today = new Date().toISOString().split('T')[0];
+                
+                // LocalStorageから今日の日報データを検索
+                const allKeys = Object.keys(localStorage);
+                const todayReportKeys = allKeys.filter(key => 
+                    key.startsWith('dailyReport_') && key.includes(today)
+                );
+                
+                // 提出済み店舗数
+                document.getElementById('todaySubmittedReports').textContent = todayReportKeys.length;
+                
+                // 未提出店舗数（仮で計算 - 実際は全店舗数から提出済みを引く）
+                const totalStores = await getTotalStoresCount();
+                const pendingCount = Math.max(0, totalStores - todayReportKeys.length);
+                document.getElementById('pendingReports').textContent = pendingCount;
+                
+            } catch (error) {
+                console.error('日報統計の更新でエラー:', error);
+                document.getElementById('todaySubmittedReports').textContent = '?';
+                document.getElementById('pendingReports').textContent = '?';
+            }
+        }
+
+        // 店舗総数を取得する関数
+        async function getTotalStoresCount() {
+            try {
+                const response = await fetch('api.php?action=getAllStores');
+                const result = await response.json();
+                return result.success ? result.data.length : 5; // フォールバック値
+            } catch (error) {
+                console.warn('店舗数取得エラー:', error);
+                return 5; // デフォルト値
             }
         }
 
@@ -580,20 +494,84 @@
         }
 
         // 店舗設定統計の更新
-        function updateStoreStats() {
+        async function updateStoreStats() {
             try {
-                // config.jsから支払方法数を取得
-                const paymentMethodCount = typeof paymentMethodConfig !== 'undefined' 
-                    ? paymentMethodConfig.length 
-                    : 8; // デフォルト値
+                // 店舗データを取得
+                await updateStoreCount();
 
-                document.getElementById('paymentMethods').textContent = paymentMethodCount;
-                document.getElementById('activeStores').textContent = '1'; // 現在は単一店舗対応
+                // 支払方法管理カードの統計を取得
+                await updatePaymentMethodStats();
 
             } catch (error) {
                 console.warn('店舗統計の取得でエラー:', error);
-                document.getElementById('paymentMethods').textContent = '?';
                 document.getElementById('activeStores').textContent = '?';
+                document.getElementById('deletedStores').textContent = '?';
+                if (document.getElementById('totalPaymentMethods')) {
+                    document.getElementById('totalPaymentMethods').textContent = '?';
+                }
+                if (document.getElementById('pointCouponCount')) {
+                    document.getElementById('pointCouponCount').textContent = '?';
+                }
+            }
+        }
+
+        // 店舗数統計の更新
+        async function updateStoreCount() {
+            try {
+                const response = await fetch('store-settings.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'get_store_stats' })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('activeStores').textContent = result.activeStores || 0;
+                    document.getElementById('deletedStores').textContent = result.deletedStores || 0;
+                } else {
+                    throw new Error('店舗統計の取得に失敗');
+                }
+            } catch (error) {
+                console.warn('店舗数統計の取得でエラー:', error);
+                // フォールバック値
+                document.getElementById('activeStores').textContent = '1';
+                document.getElementById('deletedStores').textContent = '0';
+            }
+        }
+
+        // 支払方法統計の更新
+        async function updatePaymentMethodStats() {
+            try {
+                console.log('支払方法統計の取得を開始...');
+                
+                const response = await fetch('payment-methods.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'get_payment_stats' })
+                });
+
+                console.log('レスポンスステータス:', response.status);
+                
+                if (!response.ok) {
+                    console.error('HTTPエラー:', response.status, response.statusText);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                console.log('支払方法統計レスポンス:', result);
+                
+                if (result.success) {
+                    document.getElementById('totalPaymentMethods').textContent = result.totalMethods || 0;
+                    document.getElementById('pointCouponCount').textContent = result.pointCouponCount || 0;
+                } else {
+                    throw new Error('支払方法統計の取得に失敗: ' + (result.message || '不明なエラー'));
+                }
+            } catch (error) {
+                console.error('支払方法統計の取得でエラー:', error);
+                // フォールバック値
+                document.getElementById('totalPaymentMethods').textContent = '8';
+                document.getElementById('pointCouponCount').textContent = '2';
             }
         }
 

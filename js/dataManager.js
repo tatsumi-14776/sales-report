@@ -1367,62 +1367,6 @@ function setupBeforeUnloadWarning() {
 }
 
 /**
- * ローディングインジケーターの表示/非表示
- * @param {boolean} show 表示する場合はtrue、非表示にする場合はfalse
- */
-function showLoadingIndicator(show) {
-    try {
-        let loadingOverlay = document.getElementById('loadingOverlay');
-        
-        if (show) {
-            // ローディングオーバーレイが存在しない場合は作成
-            if (!loadingOverlay) {
-                loadingOverlay = document.createElement('div');
-                loadingOverlay.id = 'loadingOverlay';
-                loadingOverlay.innerHTML = `
-                    <div class="loading-content">
-                        <div class="loading-spinner"></div>
-                        <div class="loading-text">データを読み込み中...</div>
-                        <div class="loading-subtext">しばらくお待ちください</div>
-                    </div>
-                `;
-                document.body.appendChild(loadingOverlay);
-            }
-            
-            // ローディングを表示
-            loadingOverlay.style.display = 'flex';
-            console.log('ローディング表示を開始');
-            
-            // データ読み込みボタンを無効化
-            const loadButton = document.querySelector('button[onclick="handleLoadData()"]');
-            if (loadButton) {
-                loadButton.disabled = true;
-                loadButton.style.opacity = '0.6';
-                loadButton.style.cursor = 'not-allowed';
-            }
-            
-        } else {
-            // ローディングを非表示
-            if (loadingOverlay) {
-                loadingOverlay.style.display = 'none';
-                console.log('ローディング表示を終了');
-            }
-            
-            // データ読み込みボタンを有効化
-            const loadButton = document.querySelector('button[onclick="handleLoadData()"]');
-            if (loadButton) {
-                loadButton.disabled = false;
-                loadButton.style.opacity = '1';
-                loadButton.style.cursor = 'pointer';
-            }
-        }
-        
-    } catch (error) {
-        console.error('ローディング表示でエラー:', error);
-    }
-}
-
-/**
  * 店舗名から店舗IDを取得
  * @param {string} storeName 店舗名
  * @returns {Promise<number|null>} 店舗ID（見つからない場合はnull）

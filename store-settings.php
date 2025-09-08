@@ -99,6 +99,10 @@ try {
             handleDeleteStore($pdo, $data);
             break;
 
+        case 'get_store_stats':
+            handleGetStoreStats($pdo);
+            break;
+
         default:
             echo json_encode([
                 'success' => false,
@@ -692,6 +696,29 @@ function handleDeleteStore($pdo, $data) {
             'success' => false,
             'message' => '店舗の削除に失敗しました: ' . $e->getMessage()
         ]);
+    }
+}
+
+/**
+ * 店舗統計を取得（登録店舗数と削除済み店舗数）
+ */
+function handleGetStoreStats($pdo) {
+    try {
+        // 登録店舗数（is_deleted = 0）
+        $stmt = $pdo->query("SELECT COUNT(*) as count FROM stores WHERE is_deleted = 0");
+        $activeStores = $stmt->fetch()['count'];
+        
+        // 削除済み店舗数（is_deleted = 1）
+        $stmt = $pdo->query("SELECT COUNT(*) as count FROM stores WHERE is_deleted = 1");
+        $deletedStores = $stmt->fetch()['count'];
+        
+        echo json_encode([
+            'success' => true,
+            'activeStores' => $activeStores,
+            'deletedStores' => $deletedStores
+        ]);
+    } catch (Exception $e) {
+        throw new Exception('店舗統計の取得に失敗しました: ' . $e->getMessage());
     }
 }
 ?>

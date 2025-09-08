@@ -124,11 +124,6 @@
             color: white;
         }
 
-        .stats-icon.late {
-            background: linear-gradient(45deg, #f44336, #d32f2f);
-            color: white;
-        }
-
         .stats-icon.total-sales {
             background: linear-gradient(45deg, #2196F3, #1976D2);
             color: white;
@@ -291,11 +286,6 @@
         .status-pending {
             background: #fef3c7;
             color: #92400e;
-        }
-
-        .status-late {
-            background: #fee2e2;
-            color: #991b1b;
         }
 
         /* アクションボタン */
@@ -709,13 +699,6 @@
                     </div>
                 </div>
                 <div class="stats-card">
-                    <div class="stats-icon late">⚠️</div>
-                    <div class="stats-info">
-                        <h3 id="lateCount">-</h3>
-                        <p>遅延提出</p>
-                    </div>
-                </div>
-                <div class="stats-card">
                     <div class="stats-icon total-sales">💰</div>
                     <div class="stats-info">
                         <h3 id="totalSales">-</h3>
@@ -745,10 +728,9 @@
                         <label class="filter-label">ステータス</label>
                         <select id="filterStatus" class="filter-select">
                             <option value="">すべて</option>
-                            <option value="submitted">提出済み</option>
+                            <option value="draft">提出済み</option>
                             <option value="approved">確定済み</option>
                             <option value="pending">未提出</option>
-                            <option value="late">遅延</option>
                         </select>
                     </div>
                     <div class="filter-group">
@@ -1141,9 +1123,21 @@
             
             // ステータスフィルター
             if (currentFilters.status) {
-                filteredReports = filteredReports.filter(report => 
-                    report.status === currentFilters.status
-                );
+                if (currentFilters.status === 'draft') {
+                    // 「提出済み」を選択した場合、draftとsubmittedの両方を含める
+                    filteredReports = filteredReports.filter(report => 
+                        report.status === 'draft' || report.status === 'submitted'
+                    );
+                } else if (currentFilters.status === 'approved') {
+                    // 「確定済み」を選択した場合、approvedのみ
+                    filteredReports = filteredReports.filter(report => 
+                        report.status === 'approved'
+                    );
+                } else {
+                    filteredReports = filteredReports.filter(report => 
+                        report.status === currentFilters.status
+                    );
+                }
                 console.log('ステータスフィルター後:', filteredReports.length);
             }
             
@@ -1220,16 +1214,14 @@
 
         // 統計更新
         function updateStats() {
-            const submitted = allReports.filter(r => r.status === 'submitted').length;
+            const submitted = allReports.filter(r => r.status === 'submitted' || r.status === 'draft').length;
             const pending = allReports.filter(r => r.status === 'pending').length;
-            const late = allReports.filter(r => r.status === 'late').length;
             const totalSales = allReports
-                .filter(r => r.status === 'submitted')
+                .filter(r => r.status === 'submitted' || r.status === 'draft')
                 .reduce((sum, r) => sum + r.total_sales, 0);
             
             document.getElementById('submittedCount').textContent = submitted;
             document.getElementById('pendingCount').textContent = pending;
-            document.getElementById('lateCount').textContent = late;
             document.getElementById('totalSales').textContent = formatCurrency(totalSales);
         }
 
@@ -1239,8 +1231,8 @@
         function getStatusBadge(status) {
             const badges = {
                 'submitted': '<span class="status-badge status-submitted">✅ 提出済み</span>',
-                'approved': '<span class="status-badge status-confirmed"> 確定済み</span>',
-                'draft': '<span class="status-badge status-draft">📝 下書き</span>',
+                'approved': '<span class="status-badge status-confirmed">✅ 確定済み</span>',
+                'draft': '<span class="status-badge status-draft">📝 提出済み</span>',
                 'rejected': '<span class="status-badge status-rejected">❌ 却下</span>',
                 'pending': '<span class="status-badge status-pending">⏳ 未提出</span>'
             };
@@ -1408,7 +1400,10 @@
                         report.report_date,
                         report.store_name,
                         report.user_id || '-',
-                        report.status === 'submitted' ? '提出済み' : report.status === 'pending' ? '未提出' : '遅延',
+                        report.status === 'draft' ? '提出済み' : 
+                        report.status === 'approved' ? '確定済み' : 
+                        report.status === 'submitted' ? '提出済み' : 
+                        report.status === 'pending' ? '未提出' : '不明',
                         report.total_sales,
                         report.cash_difference,
                         report.updated_at || '-'
@@ -1592,7 +1587,6 @@ function resetStats() {
     try {
         document.getElementById('submittedCount').textContent = '-';
         document.getElementById('pendingCount').textContent = '-';
-        document.getElementById('lateCount').textContent = '-';
         document.getElementById('totalSales').textContent = '-';
         console.log('統計を初期状態にリセット');
     } catch (error) {
