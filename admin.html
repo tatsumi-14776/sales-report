@@ -668,9 +668,9 @@
         // 日報管理ダッシュボード用の統計更新（過去3日間対応版）
         async function updateDailyReportsStats() {
             try {
-                console.log('過去3日間の日報統計更新を開始');
+                console.log('🚀 高速版：過去3日間の日報統計更新を開始');
                 
-                // 日付の設定
+                // 日付の設定（変更なし）
                 const today = new Date();
                 const yesterday = new Date(today);
                 yesterday.setDate(today.getDate() - 1);
@@ -685,7 +685,7 @@
                     { key: 'day3', date: day3, label: '3日前' }
                 ];
                 
-                // 日付表示を更新
+                // 日付表示を更新（変更なし）
                 dates.forEach(dateInfo => {
                     const dateValueElement = document.getElementById(`${dateInfo.key}-date-value`);
                     if (dateValueElement) {
@@ -697,18 +697,62 @@
                     }
                 });
                 
-                // 全店舗一覧を取得
+                // 全店舗一覧を取得（変更なし）
                 const allStores = await getAllStores();
                 console.log('取得した全店舗数:', allStores.length);
                 
-                // 各日付について統計を更新（並列処理版）
-                const updatePromises = dates.map(dateInfo => updateDateStatsParallel(dateInfo, allStores));
-                await Promise.all(updatePromises);
+                if (!allStores || allStores.length === 0) {
+                    throw new Error('店舗一覧が取得できませんでした');
+                }
                 
-                console.log('過去3日間の日報統計更新完了');
+                // ⭐ 【ここが高速化のポイント】個別リクエストをバッチAPIに変更
+                const startDate = day3.toISOString().split('T')[0];
+                const endDate = yesterday.toISOString().split('T')[0];
+                const storeIds = allStores.map(store => store.id);
+                
+                console.log(`📡 バッチAPI呼び出し: ${startDate} ～ ${endDate}, 店舗数: ${storeIds.length}`);
+                
+                // 🚀 高速：1回のバッチAPIで全データ取得
+                const response = await fetch('api.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'getBatchReports',  // daily-reports-dashboard.htmlと同じAPI
+                        start_date: startDate,
+                        end_date: endDate,
+                        store_ids: storeIds
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (!result.success) {
+                    throw new Error(result.message || 'バッチAPI呼び出しに失敗しました');
+                }
+                
+                const existingReports = result.data || [];
+                console.log(`✅ バッチAPI取得完了: ${existingReports.length}件のレポート`);
+                
+                // ⭐ 【データ整理】日付別・店舗別にインデックス化（高速検索用）
+                const reportsByDate = {};
+                existingReports.forEach(report => {
+                    if (!reportsByDate[report.report_date]) {
+                        reportsByDate[report.report_date] = {};
+                    }
+                    reportsByDate[report.report_date][report.store_id] = report;
+                });
+                
+                // ⭐ 【各日付の統計計算】ループ処理で高速計算
+                dates.forEach(dateInfo => {
+                    updateDateStatsFast(dateInfo, allStores, reportsByDate);
+                });
+                
+                console.log('🎉 過去3日間の日報統計更新完了（高速版）');
                 
             } catch (error) {
-                console.error('日報統計の更新でエラー:', error);
+                console.error('💥 日報統計の更新でエラー:', error);
                 // エラー時のフォールバック表示
                 ['yesterday', 'day2', 'day3'].forEach(key => {
                     const submittedElement = document.getElementById(`${key}-submitted`);
@@ -722,115 +766,33 @@
             }
         }
 
-        // 個別日付の統計を更新
-        async function updateDateStats(dateInfo, allStores) {
+        
+        function updateDateStatsFast(dateInfo, allStores, reportsByDate) {
             try {
                 const dateString = dateInfo.date.toISOString().split('T')[0];
-                console.log(`${dateInfo.label}（${dateString}）の統計を更新中...`);
+                console.log(`📊 ${dateInfo.label}（${dateString}）の統計を高速計算中...`);
+                
+                const reportsForDate = reportsByDate[dateString] || {};
                 
                 let submittedCount = 0;
                 let confirmedCount = 0;
                 const pendingStores = [];
                 
-                // 各店舗について日報の状況をチェック
-                for (const store of allStores) {
-                    try {
-                        const response = await fetch(`api.php?action=getReport&report_date=${dateString}&store_id=${store.id}`);
-                        const result = await response.json();
-                        
-                        if (result.success && result.data) {
-                            // 日報が存在する（提出済み）
-                            submittedCount++;
-                            
-                            // 確定済みかチェック
-                            if (result.data.status === 'approved') {
-                                confirmedCount++;
-                            }
-                        } else {
-                            // 日報が存在しない（未提出）
-                            pendingStores.push(store.store_name);
-                        }
-                    } catch (storeError) {
-                        console.warn(`店舗 ${store.store_name} のデータ取得エラー:`, storeError);
-                        // エラーの場合は未提出として扱う
-                        pendingStores.push(store.store_name);
-                    }
-                }
-                
-                // DOM要素を更新
-                const submittedElement = document.getElementById(`${dateInfo.key}-submitted`);
-                const confirmedElement = document.getElementById(`${dateInfo.key}-confirmed`);
-                const pendingListElement = document.getElementById(`${dateInfo.key}-pending-list`);
-                
-                if (submittedElement) {
-                    submittedElement.textContent = submittedCount;
-                }
-                
-                if (confirmedElement) {
-                    confirmedElement.textContent = confirmedCount;
-                }
-                
-                if (pendingListElement) {
-                    if (pendingStores.length === 0) {
-                        pendingListElement.textContent = '✅ すべて提出済み';
-                        pendingListElement.className = 'pending-list empty';
-                    } else {
-                        // 未提出店舗を表示
-                        pendingListElement.innerHTML = pendingStores.map(storeName => 
-                            `<span class="pending-store-item">${storeName}</span>`
-                        ).join(' ');
-                        pendingListElement.className = 'pending-list';
-                    }
-                }
-                
-                console.log(`${dateInfo.label}: 提出済み=${submittedCount}, 確定済み=${confirmedCount}, 未提出=${pendingStores.length}`);
-                
-            } catch (error) {
-                console.error(`${dateInfo.label}の統計更新でエラー:`, error);
-                
-                // エラー時の表示
-                const submittedElement = document.getElementById(`${dateInfo.key}-submitted`);
-                const confirmedElement = document.getElementById(`${dateInfo.key}-confirmed`);
-                const pendingListElement = document.getElementById(`${dateInfo.key}-pending-list`);
-                
-                if (submittedElement) submittedElement.textContent = '?';
-                if (confirmedElement) confirmedElement.textContent = '?';
-                if (pendingListElement) {
-                    pendingListElement.textContent = 'データ取得エラー';
-                    pendingListElement.className = 'pending-list loading';
-                }
-            }
-        }
-
-        // 並列処理版（より高速） - updateDateStats関数の直後に追加
-        async function updateDateStatsParallel(dateInfo, allStores) {
-            try {
-                const dateString = dateInfo.date.toISOString().split('T')[0];
-                console.log(`${dateInfo.label}（${dateString}）の統計を並列処理で更新中...`);
-                
-                // 全店舗のAPIリクエストを並列実行
-                const promises = allStores.map(store => 
-                    fetch(`api.php?action=getReport&report_date=${dateString}&store_id=${store.id}`)
-                        .then(response => response.json())
-                        .then(result => ({ store, result, error: null }))
-                        .catch(error => ({ store, result: null, error }))
-                );
-                
-                const results = await Promise.all(promises);
-                
-                // 結果を集計
-                let submittedCount = 0;
-                let confirmedCount = 0;
-                const pendingStores = [];
-                
-                results.forEach(({ store, result, error }) => {
-                    if (error || !result?.success || !result?.data) {
-                        pendingStores.push(store.store_name);
-                    } else {
+                // 🚀 高速：メモリ内のデータで計算（APIリクエストなし）
+                allStores.forEach(store => {
+                    const report = reportsForDate[store.id];
+                    
+                    if (report) {
+                        // 日報が存在する（提出済み）
                         submittedCount++;
-                        if (result.data.status === 'approved') {
+                        
+                        // 確定済みかチェック
+                        if (report.status === 'approved') {
                             confirmedCount++;
                         }
+                    } else {
+                        // 日報が存在しない（未提出）
+                        pendingStores.push(store.store_name);
                     }
                 });
                 
@@ -860,10 +822,10 @@
                     }
                 }
                 
-                console.log(`${dateInfo.label}（並列処理）: 提出済み=${submittedCount}, 確定済み=${confirmedCount}, 未提出=${pendingStores.length}`);
+                console.log(`✅ ${dateInfo.label}: 提出済み=${submittedCount}, 確定済み=${confirmedCount}, 未提出=${pendingStores.length}`);
                 
             } catch (error) {
-                console.error(`${dateInfo.label}の並列統計更新でエラー:`, error);
+                console.error(`💥 ${dateInfo.label}の統計計算でエラー:`, error);
                 
                 // エラー時の表示
                 const submittedElement = document.getElementById(`${dateInfo.key}-submitted`);
@@ -878,9 +840,6 @@
                 }
             }
         }
-
-
-
 
         // 全店舗一覧を取得（改良版）
         async function getAllStores() {
