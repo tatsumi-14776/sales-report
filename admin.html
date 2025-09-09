@@ -230,6 +230,154 @@
             margin-right: 0.5rem;
         }
 
+        /* 日報管理統計セクション */
+        .daily-stats-container {
+            margin-top: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .daily-stats-section {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(248, 250, 252, 0.9));
+            border: 1px solid rgba(226, 232, 240, 0.5);
+            border-radius: 10px;
+            padding: 1rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+
+        .daily-stats-section:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border-color: rgba(167, 139, 250, 0.3);
+        }
+
+        .daily-stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+        }
+
+        .date-label {
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 0.9rem;
+        }
+
+        .date-value {
+            font-size: 0.85rem;
+            color: #718096;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 500;
+        }
+
+        .stats-grid-compact {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .stat-item-compact {
+            text-align: center;
+            padding: 0.75rem;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+            border-radius: 8px;
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            transition: all 0.2s ease;
+        }
+
+        .stat-item-compact:hover {
+            transform: scale(1.02);
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.15));
+        }
+
+        .stat-item-compact .stat-number {
+            font-size: 1.25rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, #6366f1, #8b5cf6);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-item-compact .stat-label {
+            font-size: 0.75rem;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .pending-stores {
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 8px;
+            padding: 0.75rem;
+            border: 1px solid rgba(229, 231, 235, 0.8);
+        }
+
+        .pending-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .pending-label:before {
+            content: "⏳";
+            font-size: 0.9rem;
+        }
+
+        .pending-list {
+            font-size: 0.8rem;
+            line-height: 1.4;
+        }
+
+        .pending-list.empty {
+            color: #059669;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .pending-list.loading {
+            color: #9ca3af;
+            font-style: italic;
+        }
+
+        .pending-store-item {
+            display: inline-block;
+            background: linear-gradient(45deg, #fef3c7, #fde68a);
+            color: #92400e;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            margin: 0.1rem;
+            font-weight: 500;
+            font-size: 0.75rem;
+            border: 1px solid #f59e0b;
+            transition: all 0.2s ease;
+        }
+
+        .pending-store-item:hover {
+            background: linear-gradient(45deg, #fde68a, #fbbf24);
+            transform: scale(1.05);
+        }
+
+        /* 全体の日報管理カードのスタイル調整 */
+        .card .btn-reports {
+            margin-bottom: 1rem;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 1rem;
@@ -247,6 +395,40 @@
 
             .stats-grid {
                 grid-template-columns: 1fr;
+            }
+
+            /* 日報管理統計セクション - モバイル対応 */
+            .daily-stats-section {
+                padding: 0.75rem;
+            }
+
+            .stats-grid-compact {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            }
+
+            .stat-item-compact {
+                padding: 0.6rem;
+            }
+
+            .stat-item-compact .stat-number {
+                font-size: 1.1rem;
+            }
+
+            .pending-store-item {
+                display: block;
+                margin: 0.25rem 0;
+                text-align: center;
+            }
+
+            .daily-stats-header {
+                flex-direction: column;
+                gap: 0.25rem;
+                align-items: flex-start;
+            }
+
+            .date-value {
+                font-size: 0.8rem;
             }
         }
     </style>
@@ -284,14 +466,72 @@
                     日報管理画面を開く
                 </a>
                 
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <div class="stat-number" id="todaySubmittedReports">-</div>
-                        <div class="stat-label">本日提出済み</div>
+                <!-- 過去3日間の統計 -->
+                <div class="daily-stats-container">
+                    <!-- 前日 -->
+                    <div class="daily-stats-section">
+                        <div class="daily-stats-header">
+                            <span class="date-label">前日</span>
+                            <span class="date-value" id="yesterday-date-value">-</span>
+                        </div>
+                        <div class="stats-grid-compact">
+                            <div class="stat-item-compact">
+                                <div class="stat-number" id="yesterday-submitted">-</div>
+                                <div class="stat-label">提出済み</div>
+                            </div>
+                            <div class="stat-item-compact">
+                                <div class="stat-number" id="yesterday-confirmed">-</div>
+                                <div class="stat-label">確定済み</div>
+                            </div>
+                        </div>
+                        <div class="pending-stores">
+                            <div class="pending-label">未提出店舗:</div>
+                            <div class="pending-list" id="yesterday-pending-list">読み込み中...</div>
+                        </div>
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-number" id="pendingReports">-</div>
-                        <div class="stat-label">未提出店舗</div>
+                    
+                    <!-- 2日前 -->
+                    <div class="daily-stats-section">
+                        <div class="daily-stats-header">
+                            <span class="date-label">2日前</span>
+                            <span class="date-value" id="day2-date-value">-</span>
+                        </div>
+                        <div class="stats-grid-compact">
+                            <div class="stat-item-compact">
+                                <div class="stat-number" id="day2-submitted">-</div>
+                                <div class="stat-label">提出済み</div>
+                            </div>
+                            <div class="stat-item-compact">
+                                <div class="stat-number" id="day2-confirmed">-</div>
+                                <div class="stat-label">確定済み</div>
+                            </div>
+                        </div>
+                        <div class="pending-stores">
+                            <div class="pending-label">未提出店舗:</div>
+                            <div class="pending-list" id="day2-pending-list">読み込み中...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 3日前 -->
+                    <div class="daily-stats-section">
+                        <div class="daily-stats-header">
+                            <span class="date-label">3日前</span>
+                            <span class="date-value" id="day3-date-value">-</span>
+                        </div>
+                        <div class="stats-grid-compact">
+                            <div class="stat-item-compact">
+                                <div class="stat-number" id="day3-submitted">-</div>
+                                <div class="stat-label">提出済み</div>
+                            </div>
+                            <div class="stat-item-compact">
+                                <div class="stat-number" id="day3-confirmed">-</div>
+                                <div class="stat-label">確定済み</div>
+                            </div>
+                        </div>
+                        <div class="pending-stores">
+                            <div class="pending-label">未提出店舗:</div>
+                            <div class="pending-list" id="day3-pending-list">読み込み中...</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -425,30 +665,243 @@
             }
         }
 
-        // 日報管理ダッシュボード用の統計更新
+        // 日報管理ダッシュボード用の統計更新（過去3日間対応版）
         async function updateDailyReportsStats() {
             try {
-                // 今日の日付
-                const today = new Date().toISOString().split('T')[0];
+                console.log('過去3日間の日報統計更新を開始');
                 
-                // LocalStorageから今日の日報データを検索
-                const allKeys = Object.keys(localStorage);
-                const todayReportKeys = allKeys.filter(key => 
-                    key.startsWith('dailyReport_') && key.includes(today)
-                );
+                // 日付の設定
+                const today = new Date();
+                const yesterday = new Date(today);
+                yesterday.setDate(today.getDate() - 1);
+                const day2 = new Date(today);
+                day2.setDate(today.getDate() - 2);
+                const day3 = new Date(today);
+                day3.setDate(today.getDate() - 3);
                 
-                // 提出済み店舗数
-                document.getElementById('todaySubmittedReports').textContent = todayReportKeys.length;
+                const dates = [
+                    { key: 'yesterday', date: yesterday, label: '前日' },
+                    { key: 'day2', date: day2, label: '2日前' },
+                    { key: 'day3', date: day3, label: '3日前' }
+                ];
                 
-                // 未提出店舗数（仮で計算 - 実際は全店舗数から提出済みを引く）
-                const totalStores = await getTotalStoresCount();
-                const pendingCount = Math.max(0, totalStores - todayReportKeys.length);
-                document.getElementById('pendingReports').textContent = pendingCount;
+                // 日付表示を更新
+                dates.forEach(dateInfo => {
+                    const dateValueElement = document.getElementById(`${dateInfo.key}-date-value`);
+                    if (dateValueElement) {
+                        dateValueElement.textContent = dateInfo.date.toLocaleDateString('ja-JP', {
+                            month: 'numeric',
+                            day: 'numeric',
+                            weekday: 'short'
+                        });
+                    }
+                });
+                
+                // 全店舗一覧を取得
+                const allStores = await getAllStores();
+                console.log('取得した全店舗数:', allStores.length);
+                
+                // 各日付について統計を更新（並列処理版）
+                const updatePromises = dates.map(dateInfo => updateDateStatsParallel(dateInfo, allStores));
+                await Promise.all(updatePromises);
+                
+                console.log('過去3日間の日報統計更新完了');
                 
             } catch (error) {
                 console.error('日報統計の更新でエラー:', error);
-                document.getElementById('todaySubmittedReports').textContent = '?';
-                document.getElementById('pendingReports').textContent = '?';
+                // エラー時のフォールバック表示
+                ['yesterday', 'day2', 'day3'].forEach(key => {
+                    const submittedElement = document.getElementById(`${key}-submitted`);
+                    const confirmedElement = document.getElementById(`${key}-confirmed`);
+                    const pendingElement = document.getElementById(`${key}-pending-list`);
+                    
+                    if (submittedElement) submittedElement.textContent = '?';
+                    if (confirmedElement) confirmedElement.textContent = '?';
+                    if (pendingElement) pendingElement.textContent = 'データ取得エラー';
+                });
+            }
+        }
+
+        // 個別日付の統計を更新
+        async function updateDateStats(dateInfo, allStores) {
+            try {
+                const dateString = dateInfo.date.toISOString().split('T')[0];
+                console.log(`${dateInfo.label}（${dateString}）の統計を更新中...`);
+                
+                let submittedCount = 0;
+                let confirmedCount = 0;
+                const pendingStores = [];
+                
+                // 各店舗について日報の状況をチェック
+                for (const store of allStores) {
+                    try {
+                        const response = await fetch(`api.php?action=getReport&report_date=${dateString}&store_id=${store.id}`);
+                        const result = await response.json();
+                        
+                        if (result.success && result.data) {
+                            // 日報が存在する（提出済み）
+                            submittedCount++;
+                            
+                            // 確定済みかチェック
+                            if (result.data.status === 'approved') {
+                                confirmedCount++;
+                            }
+                        } else {
+                            // 日報が存在しない（未提出）
+                            pendingStores.push(store.store_name);
+                        }
+                    } catch (storeError) {
+                        console.warn(`店舗 ${store.store_name} のデータ取得エラー:`, storeError);
+                        // エラーの場合は未提出として扱う
+                        pendingStores.push(store.store_name);
+                    }
+                }
+                
+                // DOM要素を更新
+                const submittedElement = document.getElementById(`${dateInfo.key}-submitted`);
+                const confirmedElement = document.getElementById(`${dateInfo.key}-confirmed`);
+                const pendingListElement = document.getElementById(`${dateInfo.key}-pending-list`);
+                
+                if (submittedElement) {
+                    submittedElement.textContent = submittedCount;
+                }
+                
+                if (confirmedElement) {
+                    confirmedElement.textContent = confirmedCount;
+                }
+                
+                if (pendingListElement) {
+                    if (pendingStores.length === 0) {
+                        pendingListElement.textContent = '✅ すべて提出済み';
+                        pendingListElement.className = 'pending-list empty';
+                    } else {
+                        // 未提出店舗を表示
+                        pendingListElement.innerHTML = pendingStores.map(storeName => 
+                            `<span class="pending-store-item">${storeName}</span>`
+                        ).join(' ');
+                        pendingListElement.className = 'pending-list';
+                    }
+                }
+                
+                console.log(`${dateInfo.label}: 提出済み=${submittedCount}, 確定済み=${confirmedCount}, 未提出=${pendingStores.length}`);
+                
+            } catch (error) {
+                console.error(`${dateInfo.label}の統計更新でエラー:`, error);
+                
+                // エラー時の表示
+                const submittedElement = document.getElementById(`${dateInfo.key}-submitted`);
+                const confirmedElement = document.getElementById(`${dateInfo.key}-confirmed`);
+                const pendingListElement = document.getElementById(`${dateInfo.key}-pending-list`);
+                
+                if (submittedElement) submittedElement.textContent = '?';
+                if (confirmedElement) confirmedElement.textContent = '?';
+                if (pendingListElement) {
+                    pendingListElement.textContent = 'データ取得エラー';
+                    pendingListElement.className = 'pending-list loading';
+                }
+            }
+        }
+
+        // 並列処理版（より高速） - updateDateStats関数の直後に追加
+        async function updateDateStatsParallel(dateInfo, allStores) {
+            try {
+                const dateString = dateInfo.date.toISOString().split('T')[0];
+                console.log(`${dateInfo.label}（${dateString}）の統計を並列処理で更新中...`);
+                
+                // 全店舗のAPIリクエストを並列実行
+                const promises = allStores.map(store => 
+                    fetch(`api.php?action=getReport&report_date=${dateString}&store_id=${store.id}`)
+                        .then(response => response.json())
+                        .then(result => ({ store, result, error: null }))
+                        .catch(error => ({ store, result: null, error }))
+                );
+                
+                const results = await Promise.all(promises);
+                
+                // 結果を集計
+                let submittedCount = 0;
+                let confirmedCount = 0;
+                const pendingStores = [];
+                
+                results.forEach(({ store, result, error }) => {
+                    if (error || !result?.success || !result?.data) {
+                        pendingStores.push(store.store_name);
+                    } else {
+                        submittedCount++;
+                        if (result.data.status === 'approved') {
+                            confirmedCount++;
+                        }
+                    }
+                });
+                
+                // DOM要素を更新
+                const submittedElement = document.getElementById(`${dateInfo.key}-submitted`);
+                const confirmedElement = document.getElementById(`${dateInfo.key}-confirmed`);
+                const pendingListElement = document.getElementById(`${dateInfo.key}-pending-list`);
+                
+                if (submittedElement) {
+                    submittedElement.textContent = submittedCount;
+                }
+                
+                if (confirmedElement) {
+                    confirmedElement.textContent = confirmedCount;
+                }
+                
+                if (pendingListElement) {
+                    if (pendingStores.length === 0) {
+                        pendingListElement.textContent = '✅ すべて提出済み';
+                        pendingListElement.className = 'pending-list empty';
+                    } else {
+                        // 未提出店舗を表示
+                        pendingListElement.innerHTML = pendingStores.map(storeName => 
+                            `<span class="pending-store-item">${storeName}</span>`
+                        ).join(' ');
+                        pendingListElement.className = 'pending-list';
+                    }
+                }
+                
+                console.log(`${dateInfo.label}（並列処理）: 提出済み=${submittedCount}, 確定済み=${confirmedCount}, 未提出=${pendingStores.length}`);
+                
+            } catch (error) {
+                console.error(`${dateInfo.label}の並列統計更新でエラー:`, error);
+                
+                // エラー時の表示
+                const submittedElement = document.getElementById(`${dateInfo.key}-submitted`);
+                const confirmedElement = document.getElementById(`${dateInfo.key}-confirmed`);
+                const pendingListElement = document.getElementById(`${dateInfo.key}-pending-list`);
+                
+                if (submittedElement) submittedElement.textContent = '?';
+                if (confirmedElement) confirmedElement.textContent = '?';
+                if (pendingListElement) {
+                    pendingListElement.textContent = 'データ取得エラー';
+                    pendingListElement.className = 'pending-list loading';
+                }
+            }
+        }
+
+
+
+
+        // 全店舗一覧を取得（改良版）
+        async function getAllStores() {
+            try {
+                const response = await fetch('api.php?action=getAllStores');
+                const result = await response.json();
+                
+                if (result.success && result.data) {
+                    // 本社など管理用店舗を除外
+                    return result.data.filter(store => 
+                        !store.store_name.includes('本社') && 
+                        !store.store_name.includes('管理') &&
+                        !store.store_name.includes('テスト')
+                    );
+                } else {
+                    console.warn('店舗一覧の取得に失敗:', result.message);
+                    return [];
+                }
+            } catch (error) {
+                console.error('店舗一覧取得エラー:', error);
+                return [];
             }
         }
 
