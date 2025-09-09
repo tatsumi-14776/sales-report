@@ -230,152 +230,400 @@
             margin-right: 0.5rem;
         }
 
-        /* 日報管理統計セクション */
+        /* 日報管理統計セクション - 統合コンパクト版 */
         .daily-stats-container {
-            margin-top: 1.5rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
+            margin-top: 1rem;
         }
 
-        .daily-stats-section {
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(248, 250, 252, 0.9));
-            border: 1px solid rgba(226, 232, 240, 0.5);
-            border-radius: 10px;
-            padding: 1rem;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(5px);
+        .daily-stats-table {
+            width: 100%;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.95));
+            border: 1px solid rgba(226, 232, 240, 0.6);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
 
-        .daily-stats-section:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            border-color: rgba(167, 139, 250, 0.3);
+        .daily-stats-table table {
+            width: 100%;
+            border-collapse: collapse;
         }
 
-        .daily-stats-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.75rem;
-            padding-bottom: 0.5rem;
+        .daily-stats-table th {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+            color: #4a5568;
+            font-weight: 600;
+            font-size: 0.8rem;
+            padding: 0.6rem 0.4rem;
+            text-align: center;
             border-bottom: 1px solid rgba(226, 232, 240, 0.6);
         }
 
-        .date-label {
-            font-weight: 600;
-            color: #4a5568;
-            font-size: 0.9rem;
-        }
-
-        .date-value {
-            font-size: 0.85rem;
-            color: #718096;
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-weight: 500;
-        }
-
-        .stats-grid-compact {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.75rem;
-            margin-bottom: 0.75rem;
-        }
-
-        .stat-item-compact {
+        .daily-stats-table td {
+            padding: 0.5rem 0.4rem;
             text-align: center;
-            padding: 0.75rem;
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
-            border-radius: 8px;
-            border: 1px solid rgba(139, 92, 246, 0.2);
-            transition: all 0.2s ease;
+            border-bottom: 1px solid rgba(226, 232, 240, 0.3);
+            font-size: 0.85rem;
         }
 
-        .stat-item-compact:hover {
-            transform: scale(1.02);
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.15));
+        .daily-stats-table tr:last-child td {
+            border-bottom: none;
         }
 
-        .stat-item-compact .stat-number {
-            font-size: 1.25rem;
+        .daily-stats-table tr:hover {
+            background: rgba(99, 102, 241, 0.03);
+        }
+
+        .date-cell {
+            font-weight: 600;
+            color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .stat-number-cell {
             font-weight: bold;
             background: linear-gradient(45deg, #6366f1, #8b5cf6);
             background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 0.25rem;
         }
 
-        .stat-item-compact .stat-label {
-            font-size: 0.75rem;
-            color: #6b7280;
-            font-weight: 500;
-        }
-
-        .pending-stores {
-            background: rgba(255, 255, 255, 0.7);
-            border-radius: 8px;
-            padding: 0.75rem;
+        /* 未提出店舗一覧カード - 横スクロール対応 */
+        .pending-stores-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+            padding: 1.5rem;
+            transition: all 0.3s ease;
             border: 1px solid rgba(229, 231, 235, 0.8);
         }
 
-        .pending-label {
-            font-size: 0.8rem;
+        .pending-stores-card:hover {
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        /* 日付ナビゲーション */
+        .date-navigation {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 1rem 0;
+            padding: 0.75rem 1rem;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+        }
+
+        .nav-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
             font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .nav-btn:disabled {
+            background: #d1d5db;
+            color: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .current-date-display {
+            background: white;
+            padding: 0.5rem 1.5rem;
+            border-radius: 20px;
+            font-weight: 700;
+            color: #1f2937;
+            border: 2px solid #667eea;
+            font-size: 1rem;
+            min-width: 140px;
+            text-align: center;
+        }
+
+        /* カルーセル（横スクロール）スタイル - コンパクト版 */
+        .pending-stores-carousel {
+            overflow: hidden;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            background: #f9fafb;
+            margin: 1rem 0;
+            height: 200px; /* 固定高さでコンパクトに */
+        }
+
+        .carousel-container {
+            display: flex;
+            transition: transform 0.3s ease-in-out;
+            width: 300%; /* 3日分のスライド */
+            height: 100%;
+        }
+
+        .carousel-slide {
+            width: 33.333%; /* 3分の1 */
+            flex-shrink: 0;
+            padding: 1rem;
+            background: white;
+            border-right: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .carousel-slide:last-child {
+            border-right: none;
+        }
+
+        .slide-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #e5e7eb;
+            flex-shrink: 0;
+        }
+
+        .slide-date {
+            font-weight: 600;
+            color: #1f2937;
+            font-size: 1rem;
+        }
+
+        .slide-count {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        /* シンプルテキスト一覧 */
+        .pending-stores-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.5rem 0;
+            line-height: 1.6;
+        }
+
+        .pending-store-text {
             color: #374151;
+            font-size: 0.875rem;
+            padding: 0.25rem 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .pending-store-text:last-child {
+            border-bottom: none;
+        }
+
+        .pending-store-text:hover {
+            background: #f9fafb;
+            color: #1f2937;
+        }
+
+        .no-pending-compact {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #059669;
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-align: center;
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border-radius: 6px;
+            border: 1px solid #bbf7d0;
+        }
+
+        /* 下部統計表示 */
+        .pending-summary {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            border: 1px solid #cbd5e1;
+        }
+
+        .summary-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .summary-label {
+            color: #64748b;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .summary-value {
+            color: #1f2937;
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .summary-unit {
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+
+        /* 管理者ダッシュボード - レスポンシブ対応 */
+        @media (max-width: 768px) {
+            .admin-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .daily-stats-table {
+                font-size: 0.875rem;
+            }
+            
+            .daily-stats-table th,
+            .daily-stats-table td {
+                padding: 0.5rem 0.25rem;
+            }
+            
+            /* 横スクロール対応 - モバイル */
+            .date-navigation {
+                flex-direction: column;
+                gap: 0.75rem;
+                padding: 1rem;
+            }
+            
+            .current-date-display {
+                order: -1;
+                min-width: auto;
+                width: 100%;
+            }
+            
+            .pending-stores-carousel {
+                height: 180px;
+            }
+            
+            .carousel-slide {
+                padding: 0.75rem;
+            }
+            
+            .pending-store-text {
+                font-size: 0.8rem;
+                padding: 0.2rem 0;
+            }
+            
+            .nav-btn {
+                flex: 1;
+                padding: 0.75rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .pending-stores-card {
+                padding: 1rem;
+            }
+            
+            .pending-stores-carousel {
+                height: 160px;
+            }
+            
+            .carousel-slide {
+                padding: 0.5rem;
+            }
+            
+            .pending-store-text {
+                font-size: 0.75rem;
+                padding: 0.15rem 0;
+            }
+            
+            .slide-header {
+                flex-direction: column;
+                gap: 0.25rem;
+                text-align: center;
+                margin-bottom: 0.5rem;
+                padding-bottom: 0.25rem;
+            }
+            
+            .slide-date {
+                font-size: 0.9rem;
+            }
+            
+            .slide-count {
+                font-size: 0.7rem;
+                padding: 0.15rem 0.5rem;
+            }
+        }
+
+        .pending-date-section {
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            background: linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(255, 152, 0, 0.1));
+            border-radius: 6px;
+            border-left: 4px solid #f59e0b;
+        }
+
+        .pending-date-header {
+            font-weight: 600;
+            color: #92400e;
+            font-size: 0.85rem;
             margin-bottom: 0.5rem;
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 0.25rem;
         }
 
-        .pending-label:before {
-            content: "⏳";
-            font-size: 0.9rem;
+        .pending-count {
+            background: #fbbf24;
+            color: white;
+            padding: 0.2rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: bold;
         }
 
-        .pending-list {
-            font-size: 0.8rem;
-            line-height: 1.4;
-        }
-
-        .pending-list.empty {
-            color: #059669;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
-
-        .pending-list.loading {
-            color: #9ca3af;
-            font-style: italic;
+        .pending-stores-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.4rem;
         }
 
         .pending-store-item {
-            display: inline-block;
             background: linear-gradient(45deg, #fef3c7, #fde68a);
             color: #92400e;
-            padding: 0.25rem 0.5rem;
-            border-radius: 12px;
-            margin: 0.1rem;
+            padding: 0.3rem 0.5rem;
+            border-radius: 6px;
             font-weight: 500;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
+            text-align: center;
             border: 1px solid #f59e0b;
-            transition: all 0.2s ease;
+            transition: all 0.15s ease;
         }
 
         .pending-store-item:hover {
             background: linear-gradient(45deg, #fde68a, #fbbf24);
-            transform: scale(1.05);
+            transform: scale(1.02);
         }
 
-        /* 全体の日報管理カードのスタイル調整 */
-        .card .btn-reports {
-            margin-bottom: 1rem;
+        .no-pending {
+            color: #059669;
+            font-weight: 500;
+            text-align: center;
+            padding: 1rem;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 6px;
+            font-size: 0.85rem;
         }
 
         @media (max-width: 768px) {
@@ -399,36 +647,48 @@
 
             /* 日報管理統計セクション - モバイル対応 */
             .daily-stats-section {
-                padding: 0.75rem;
+                padding: 0.6rem;
             }
 
             .stats-grid-compact {
                 grid-template-columns: 1fr;
-                gap: 0.5rem;
+                gap: 0.4rem;
             }
 
             .stat-item-compact {
-                padding: 0.6rem;
+                padding: 0.4rem;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                text-align: left;
             }
 
             .stat-item-compact .stat-number {
-                font-size: 1.1rem;
+                font-size: 1rem;
             }
 
-            .pending-store-item {
+            .stat-item-compact .stat-label {
+                font-size: 0.7rem;
+            }
+
+            .pending-stores-compact {
+                padding: 0.4rem;
+                min-height: auto;
+            }
+
+            .pending-store-item-compact {
                 display: block;
-                margin: 0.25rem 0;
+                margin: 0.15rem 0;
                 text-align: center;
+                font-size: 0.6rem;
             }
 
             .daily-stats-header {
-                flex-direction: column;
-                gap: 0.25rem;
-                align-items: flex-start;
+                margin-bottom: 0.4rem;
             }
 
             .date-value {
-                font-size: 0.8rem;
+                font-size: 0.75rem;
             }
         }
     </style>
@@ -466,72 +726,70 @@
                     日報管理画面を開く
                 </a>
                 
-                <!-- 過去3日間の統計 -->
+                <!-- 過去3日間統計 - 統合テーブル版 -->
                 <div class="daily-stats-container">
-                    <!-- 前日 -->
-                    <div class="daily-stats-section">
-                        <div class="daily-stats-header">
-                            <span class="date-label">前日</span>
-                            <span class="date-value" id="yesterday-date-value">-</span>
-                        </div>
-                        <div class="stats-grid-compact">
-                            <div class="stat-item-compact">
-                                <div class="stat-number" id="yesterday-submitted">-</div>
-                                <div class="stat-label">提出済み</div>
-                            </div>
-                            <div class="stat-item-compact">
-                                <div class="stat-number" id="yesterday-confirmed">-</div>
-                                <div class="stat-label">確定済み</div>
-                            </div>
-                        </div>
-                        <div class="pending-stores">
-                            <div class="pending-label">未提出店舗:</div>
-                            <div class="pending-list" id="yesterday-pending-list">読み込み中...</div>
-                        </div>
+                    <div class="daily-stats-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>日付</th>
+                                    <th>提出済み</th>
+                                    <th>確定済み</th>
+                                    <th>未提出数</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="date-cell" id="yesterday-date-value">前日</td>
+                                    <td class="stat-number-cell" id="yesterday-submitted">-</td>
+                                    <td class="stat-number-cell" id="yesterday-confirmed">-</td>
+                                    <td class="stat-number-cell" id="yesterday-pending-count">-</td>
+                                </tr>
+                                <tr>
+                                    <td class="date-cell" id="day2-date-value">2日前</td>
+                                    <td class="stat-number-cell" id="day2-submitted">-</td>
+                                    <td class="stat-number-cell" id="day2-confirmed">-</td>
+                                    <td class="stat-number-cell" id="day2-pending-count">-</td>
+                                </tr>
+                                <tr>
+                                    <td class="date-cell" id="day3-date-value">3日前</td>
+                                    <td class="stat-number-cell" id="day3-submitted">-</td>
+                                    <td class="stat-number-cell" id="day3-confirmed">-</td>
+                                    <td class="stat-number-cell" id="day3-pending-count">-</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
-                    
-                    <!-- 2日前 -->
-                    <div class="daily-stats-section">
-                        <div class="daily-stats-header">
-                            <span class="date-label">2日前</span>
-                            <span class="date-value" id="day2-date-value">-</span>
-                        </div>
-                        <div class="stats-grid-compact">
-                            <div class="stat-item-compact">
-                                <div class="stat-number" id="day2-submitted">-</div>
-                                <div class="stat-label">提出済み</div>
-                            </div>
-                            <div class="stat-item-compact">
-                                <div class="stat-number" id="day2-confirmed">-</div>
-                                <div class="stat-label">確定済み</div>
-                            </div>
-                        </div>
-                        <div class="pending-stores">
-                            <div class="pending-label">未提出店舗:</div>
-                            <div class="pending-list" id="day2-pending-list">読み込み中...</div>
-                        </div>
+                </div>
+            </div>
+
+            <!-- 未提出店舗一覧 - 横スクロール対応 -->
+            <div class="pending-stores-card">
+                <div class="card-header">
+                    <div class="card-icon" style="background: linear-gradient(45deg, #f59e0b, #d97706);">⚠️</div>
+                    <div class="card-title">未提出店舗一覧</div>
+                </div>
+                <div class="card-description">
+                    過去3日間の未提出店舗を日付別に表示します。←→ボタンで日別に切り替え可能です。
+                </div>
+                
+                <!-- 日付ナビゲーション -->
+                <div class="date-navigation">
+                    <button id="prevDateBtn" class="nav-btn nav-btn-prev" onclick="navigateDate('prev')">
+                        ◀ 前の日
+                    </button>
+                    <div class="current-date-display" id="currentDateDisplay">
+                        前日（9/8）
                     </div>
-                    
-                    <!-- 3日前 -->
-                    <div class="daily-stats-section">
-                        <div class="daily-stats-header">
-                            <span class="date-label">3日前</span>
-                            <span class="date-value" id="day3-date-value">-</span>
-                        </div>
-                        <div class="stats-grid-compact">
-                            <div class="stat-item-compact">
-                                <div class="stat-number" id="day3-submitted">-</div>
-                                <div class="stat-label">提出済み</div>
-                            </div>
-                            <div class="stat-item-compact">
-                                <div class="stat-number" id="day3-confirmed">-</div>
-                                <div class="stat-label">確定済み</div>
-                            </div>
-                        </div>
-                        <div class="pending-stores">
-                            <div class="pending-label">未提出店舗:</div>
-                            <div class="pending-list" id="day3-pending-list">読み込み中...</div>
-                        </div>
+                    <button id="nextDateBtn" class="nav-btn nav-btn-next" onclick="navigateDate('next')">
+                        次の日 ▶
+                    </button>
+                </div>
+                
+                <!-- 横スクロール表示エリア -->
+                <div class="pending-stores-carousel" id="pendingStoresCarousel">
+                    <div class="carousel-container" id="carouselContainer">
+                        <!-- 各日付のスライドがここに動的に追加される -->
                     </div>
                 </div>
             </div>
@@ -654,6 +912,7 @@
                 // 🚀 並列実行で高速化
                 const statsPromises = [
                     updateDailyReportsStats(),
+                    updatePendingStoresList(), // 未提出店舗一覧を追加
                     updateUserStats(),
                     updateStoreStats()
                 ];
@@ -663,7 +922,7 @@
                 
                 // 結果をログ出力
                 results.forEach((result, index) => {
-                    const statNames = ['日報統計', 'ユーザー統計', '店舗統計'];
+                    const statNames = ['日報統計', '未提出店舗一覧', 'ユーザー統計', '店舗統計'];
                     if (result.status === 'fulfilled') {
                         console.log(`✅ ${statNames[index]}の更新完了`);
                     } else {
@@ -1098,7 +1357,7 @@
                     const reportsForDate = reportsByDate[dateString] || {};
                     
                     let submitted = 0, confirmed = 0;
-                    const pending = [];
+                    const pendingStores = [];
                     
                     stores.forEach(store => {
                         const report = reportsForDate[store.id];
@@ -1106,12 +1365,29 @@
                             submitted++;
                             if (report.status === 'approved') confirmed++;
                         } else {
-                            pending.push(store.store_name);
+                            // 同じフィルタリング条件を適用
+                            if (!store.store_name.includes('本社') && 
+                                !store.store_name.includes('管理') &&
+                                !store.store_name.includes('テスト')) {
+                                pendingStores.push(store.store_name);
+                            }
                         }
                     });
                     
-                    // DOM更新
-                    updateDateStatDisplay(dateInfo.key, dateString, submitted, confirmed, pending);
+                    // 未提出数を計算
+                    const pendingCount = pendingStores.length;
+                    
+                    // グローバル変数に保存（未提出店舗一覧で再利用）
+                    if (dateInfo.key === 'yesterday') {
+                        window.yesterdayReports = Object.values(reportsForDate);
+                    } else if (dateInfo.key === 'day2') {
+                        window.twoDaysAgoReports = Object.values(reportsForDate);
+                    } else if (dateInfo.key === 'day3') {
+                        window.threeDaysAgoReports = Object.values(reportsForDate);
+                    }
+                    
+                    // DOM更新（未提出数を渡す）
+                    updateDateStatDisplay(dateInfo.key, dateString, submitted, confirmed, pendingCount);
                 });
                 
             } catch (error) {
@@ -1119,8 +1395,8 @@
             }
         }
         
-        // 日付統計表示更新
-        function updateDateStatDisplay(key, dateString, submitted, confirmed, pendingStores) {
+        // 日付統計表示更新 - テーブル形式
+        function updateDateStatDisplay(key, dateString, submitted, confirmed, pendingCount) {
             // 日付表示
             const dateElement = document.getElementById(`${key}-date-value`);
             if (dateElement) {
@@ -1135,20 +1411,224 @@
             // 統計数値
             const submittedElement = document.getElementById(`${key}-submitted`);
             const confirmedElement = document.getElementById(`${key}-confirmed`);
-            const pendingElement = document.getElementById(`${key}-pending-list`);
+            const pendingCountElement = document.getElementById(`${key}-pending-count`);
             
             if (submittedElement) submittedElement.textContent = submitted;
             if (confirmedElement) confirmedElement.textContent = confirmed;
-            
-            if (pendingElement) {
-                if (pendingStores.length === 0) {
-                    pendingElement.innerHTML = '<span style="color: #059669; font-weight: 500;">✅ すべて提出済み</span>';
+            if (pendingCountElement) {
+                pendingCountElement.textContent = pendingCount;
+                // 未提出数に応じて色を変更
+                if (pendingCount === 0) {
+                    pendingCountElement.style.color = '#059669';
+                } else if (pendingCount > 2) {
+                    pendingCountElement.style.color = '#dc2626';
                 } else {
-                    pendingElement.innerHTML = pendingStores.map(name => 
-                        `<span class="pending-store-item">${name}</span>`
-                    ).join(' ');
+                    pendingCountElement.style.color = '#d97706';
                 }
             }
+        }
+
+        // 横スクロール対応の未提出店舗一覧の更新
+        async function updatePendingStoresList() {
+            try {
+                console.log('📋 横スクロール未提出店舗一覧の取得を開始（3日間）...');
+                
+                // 同じ店舗データを使用（データ整合性確保）
+                const stores = await getAllStoresCached();
+                
+                // 日報統計と同じデータソースを使用
+                const threeDayData = await getBatchDailyReports();
+                
+                // 日付別にレポートデータを整理
+                const reportsByDate = {};
+                threeDayData.forEach(report => {
+                    if (!reportsByDate[report.report_date]) {
+                        reportsByDate[report.report_date] = [];
+                    }
+                    reportsByDate[report.report_date].push(report);
+                });
+                
+                displayPendingStoresCarousel(stores, reportsByDate);
+                
+                console.log('✅ 横スクロール未提出店舗一覧の更新完了');
+                
+            } catch (error) {
+                console.error('💥 未提出店舗一覧の更新でエラー:', error);
+                showPendingStoresError();
+            }
+        }
+
+        // 横スクロール表示用の変数
+        let currentSlideIndex = 0;
+        let pendingStoresData = [];
+
+        // 横スクロール未提出店舗一覧の表示
+        function displayPendingStoresCarousel(stores, reportsByDate) {
+            try {
+                const today = new Date();
+                const dates = [
+                    { key: 'yesterday', label: '前日', offset: 1 },
+                    { key: 'day2', label: '2日前', offset: 2 },
+                    { key: 'day3', label: '3日前', offset: 3 }
+                ];
+                
+                pendingStoresData = [];
+                let totalPendingCount = 0;
+                
+                // 各日付のデータを準備
+                dates.forEach((dateInfo, index) => {
+                    const date = new Date(today);
+                    date.setDate(today.getDate() - dateInfo.offset);
+                    const dateString = date.toISOString().split('T')[0];
+                    
+                    const reportsForDate = reportsByDate[dateString] || [];
+                    
+                    // 提出済み店舗IDを取得（データ整合性確保）
+                    const submittedStoreIds = new Set(
+                        reportsForDate.map(report => report.store_id)
+                    );
+                    
+                    // 未提出店舗を特定（店舗フィルタリング統一）
+                    const pendingStores = stores.filter(store => 
+                        !submittedStoreIds.has(store.id) &&
+                        !store.store_name.includes('本社') && 
+                        !store.store_name.includes('管理') &&
+                        !store.store_name.includes('テスト')
+                    );
+                    
+                    totalPendingCount += pendingStores.length;
+                    
+                    const dateLabel = date.toLocaleDateString('ja-JP', {
+                        month: 'numeric',
+                        day: 'numeric',
+                        weekday: 'short'
+                    });
+                    
+                    pendingStoresData.push({
+                        index: index,
+                        key: dateInfo.key,
+                        label: dateInfo.label,
+                        dateLabel: dateLabel,
+                        dateString: dateString,
+                        pendingStores: pendingStores,
+                        count: pendingStores.length
+                    });
+                    
+                    console.log(`📊 ${dateInfo.label}（${dateString}）: 未提出${pendingStores.length}店舗`);
+                });
+                
+                // カルーセルHTML生成
+                generateCarouselHTML(pendingStoresData, totalPendingCount);
+                
+                // 初期表示設定
+                currentSlideIndex = 0;
+                updateCarouselDisplay();
+                updateNavigationButtons();
+                
+            } catch (error) {
+                console.error('横スクロール表示エラー:', error);
+                showPendingStoresError();
+            }
+        }
+
+        // カルーセルHTML生成 - コンパクト版
+        function generateCarouselHTML(data, totalCount) {
+            const container = document.getElementById('carouselContainer');
+            if (!container) return;
+            
+            let html = '';
+            
+            data.forEach((dayData, index) => {
+                html += `
+                    <div class="carousel-slide" data-slide-index="${index}">
+                        <div class="slide-header">
+                            <div class="slide-date">${dayData.label}（${dayData.dateLabel}）</div>
+                            <div class="slide-count">${dayData.count}店舗</div>
+                        </div>
+                        
+                        <div class="pending-stores-list">
+                            ${dayData.count === 0 ? 
+                                '<div class="no-pending-compact">🎉 すべて提出済み</div>' :
+                                dayData.pendingStores.map(store => 
+                                    `<div class="pending-store-text">${store.store_name}</div>`
+                                ).join('')
+                            }
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        // カルーセル表示更新 - 簡素化版
+        function updateCarouselDisplay() {
+            const container = document.getElementById('carouselContainer');
+            const currentDateDisplay = document.getElementById('currentDateDisplay');
+            
+            if (container && pendingStoresData[currentSlideIndex]) {
+                // スライド移動
+                const translateX = -(currentSlideIndex * 33.333);
+                container.style.transform = `translateX(${translateX}%)`;
+                
+                // 現在表示中の日付更新
+                const currentData = pendingStoresData[currentSlideIndex];
+                currentDateDisplay.textContent = `${currentData.label}（${currentData.dateLabel}）`;
+            }
+        }
+
+        // ナビゲーションボタン状態更新
+        function updateNavigationButtons() {
+            const prevBtn = document.getElementById('prevDateBtn');
+            const nextBtn = document.getElementById('nextDateBtn');
+            
+            if (prevBtn) {
+                prevBtn.disabled = (currentSlideIndex === 0);
+            }
+            
+            if (nextBtn) {
+                nextBtn.disabled = (currentSlideIndex === pendingStoresData.length - 1);
+            }
+        }
+
+        // 日付ナビゲーション関数
+        function navigateDate(direction) {
+            if (direction === 'prev' && currentSlideIndex > 0) {
+                currentSlideIndex--;
+            } else if (direction === 'next' && currentSlideIndex < pendingStoresData.length - 1) {
+                currentSlideIndex++;
+            }
+            
+            updateCarouselDisplay();
+            updateNavigationButtons();
+        }
+
+        // 未提出店舗一覧エラー表示 - 簡素化版
+        function showPendingStoresError() {
+            const container = document.getElementById('carouselContainer');
+            
+            if (container) {
+                container.innerHTML = `
+                    <div class="carousel-slide">
+                        <div style="display: flex; align-items: center; justify-content: center; 
+                                    height: 100%; text-align: center; color: #dc2626; 
+                                    background: #fef2f2; border-radius: 8px; border: 1px solid #fca5a5;">
+                            <div>
+                                <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚠️</div>
+                                <div style="font-weight: 600; font-size: 0.9rem;">
+                                    データ取得エラー
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // ナビゲーションボタンを無効化
+            const prevBtn = document.getElementById('prevDateBtn');
+            const nextBtn = document.getElementById('nextDateBtn');
+            if (prevBtn) prevBtn.disabled = true;
+            if (nextBtn) nextBtn.disabled = true;
         }
         
         // フォールバック表示

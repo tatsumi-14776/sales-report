@@ -570,6 +570,46 @@
             margin-right: 4px;
         }
 
+        /* 作成ボタン（新規作成用）*/
+        .btn-create {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+            color: white !important;
+            border: 1px solid #059669 !important;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+        }
+
+        .btn-create:hover {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-create::before {
+            content: "✨ ";
+            margin-right: 4px;
+        }
+
+        /* 編集ボタン（既存データ編集用）*/
+        .btn-edit {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+            color: white !important;
+            border: 1px solid #2563eb !important;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+        }
+
+        .btn-edit:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-edit::before {
+            content: "✏️ ";
+            margin-right: 4px;
+        }
+
         /* 追加のステータス表示 */
         .status-badge {
             padding: 0.25rem 0.75rem;
@@ -745,9 +785,6 @@
                 <div class="quick-filters" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
                     <span style="font-size: 0.875rem; color: #666; margin-right: 0.5rem;">クイック設定:</span>
-                    <button class="quick-filter-btn" onclick="setTodayDate()" title="今日の日付を設定">
-                        📅 今日
-                    </button>
                     <button class="quick-filter-btn" onclick="setThisWeekRange()" title="今週の範囲を設定">
                         📅 今週
                     </button>
@@ -1245,7 +1282,7 @@
         function getActionButtons(report) {
             if (!report.id) {
                 // 未提出の場合
-                return `<button class="btn-small btn-edit" onclick="createReport(${report.store_id}, '${report.report_date}')">✏️ 作成</button>`;
+                return `<button class="btn-small btn-create" onclick="createReport(${report.store_id}, '${report.report_date}')">作成</button>`;
             }
             
             // デバッグ用ログ
@@ -1255,7 +1292,7 @@
             if (report.status === 'approved') {
                 // 確定済みの場合（クリック可能）
                 return `
-                    <button class="btn-small btn-confirmed" onclick="viewReportInForm(${report.store_id}, '${report.report_date}')" title="この日報は確定済みです">🔒 確定済み</button>
+                    <button class="btn-small btn-confirmed" onclick="viewReportInForm(${report.store_id}, '${report.report_date}')" title="この日報は確定済みです">確定済み</button>
                     <button class="btn-small btn-view" onclick="viewReportDetail(${report.id})">👁️ 詳細</button>
                     <button class="btn-small btn-download" onclick="downloadReport(${report.id})">📄 PDF</button>
                 `;
@@ -1269,14 +1306,14 @@
             } else if (report.status === 'draft') {
                 // 下書きの場合
                 return `
-                    <button class="btn-small btn-edit" onclick="viewReportInForm(${report.store_id}, '${report.report_date}')">✏️ 編集</button>
+                    <button class="btn-small btn-edit" onclick="viewReportInForm(${report.store_id}, '${report.report_date}')">確認</button>
                     <button class="btn-small btn-view" onclick="viewReportDetail(${report.id})">👁️ 詳細</button>
                     <button class="btn-small btn-download" onclick="downloadReport(${report.id})">📄 PDF</button>
                 `;
             } else if (report.status === 'rejected') {
                 // 却下の場合
                 return `
-                    <button class="btn-small btn-edit" onclick="viewReportInForm(${report.store_id}, '${report.report_date}')">🔄 再編集</button>
+                    <button class="btn-small btn-edit" onclick="viewReportInForm(${report.store_id}, '${report.report_date}')">再編集</button>
                     <button class="btn-small btn-view" onclick="viewReportDetail(${report.id})">👁️ 詳細</button>
                     <button class="btn-small btn-download" onclick="downloadReport(${report.id})">📄 PDF</button>
                 `;
@@ -1634,16 +1671,6 @@ async function performSearch() {
         showAlert('検索中にエラーが発生しました: ' + error.message, 'error');
     }
 }
-
-    /**
-     * 今日の日付を設定するボタン
-     */
-    function setTodayDate() {
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('filterStartDate').value = today;
-        document.getElementById('filterEndDate').value = today;
-        console.log('今日の日付を設定:', today);
-    }
 
     /**
      * 今週の日付範囲を設定するボタン
