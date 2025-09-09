@@ -645,124 +645,118 @@
                 window.location.href = 'login.html';
             }
         }
-
-        // 統計情報の更新
-        function updateStats() {
+        // 🔄 修正点4: グローバルローディング付き統計更新
+        async function updateStats() {
             try {
-                // 日報統計を更新
-                updateDailyReportsStats();
+                // グローバルローディング表示
+                showGlobalLoading(true, '統計情報を読み込み中...');
+                
+                // 🚀 並列実行で高速化
+                const statsPromises = [
+                    updateDailyReportsStats(),
+                    updateUserStats(),
+                    updateStoreStats()
+                ];
+                
+                // すべての統計を並列で取得（失敗しても継続）
+                const results = await Promise.allSettled(statsPromises);
+                
+                // 結果をログ出力
+                results.forEach((result, index) => {
+                    const statNames = ['日報統計', 'ユーザー統計', '店舗統計'];
+                    if (result.status === 'fulfilled') {
+                        console.log(`✅ ${statNames[index]}の更新完了`);
+                    } else {
+                        console.error(`❌ ${statNames[index]}の更新失敗:`, result.reason);
+                    }
+                });
 
-                // ユーザー統計を更新
-                updateUserStats();
-
-                // 店舗設定統計を更新
-                updateStoreStats();
-
-                console.log('統計情報を更新しました');
+                console.log('✅ 統計情報の並列更新完了');
 
             } catch (error) {
-                console.error('統計情報の更新でエラー:', error);
+                console.error('💥 統計情報の更新でエラー:', error);
+            } finally {
+                // ローディング非表示
+                showGlobalLoading(false);
+            }
+        }
+        
+        // グローバルローディング表示関数（新規追加）
+        function showGlobalLoading(show, message = 'データを読み込み中...') {
+            let loader = document.getElementById('globalAdminLoader');
+            
+            if (show) {
+                if (!loader) {
+                    loader = document.createElement('div');
+                    loader.id = 'globalAdminLoader';
+                    loader.innerHTML = `
+                        <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                                    background: rgba(102, 126, 234, 0.2); z-index: 9999; 
+                                    display: flex; align-items: center; justify-content: center;
+                                    backdrop-filter: blur(4px);">
+                            <div style="background: rgba(255,255,255,0.95); padding: 2rem 3rem; 
+                                        border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+                                        text-align: center; min-width: 300px;">
+                                <div style="width: 50px; height: 50px; border: 4px solid #e5e7eb; 
+                                            border-top: 4px solid #667eea; border-radius: 50%; 
+                                            animation: spin 1s linear infinite; margin: 0 auto 1.5rem;"></div>
+                                <div style="color: #333; font-weight: 600; font-size: 1.1rem; margin-bottom: 0.5rem;">
+                                    ${message}
+                                </div>
+                                <div style="color: #666; font-size: 0.9rem;">
+                                    しばらくお待ちください...
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // スピンアニメーション追加
+                    if (!document.getElementById('adminSpinCSS')) {
+                        const style = document.createElement('style');
+                        style.id = 'adminSpinCSS';
+                        style.textContent = `
+                            @keyframes spin {
+                                0% { transform: rotate(0deg); }
+                                100% { transform: rotate(360deg); }
+                            }
+                        `;
+                        document.head.appendChild(style);
+                    }
+                    
+                    document.body.appendChild(loader);
+                }
+                loader.style.display = 'block';
+            } else {
+                if (loader) {
+                    loader.style.display = 'none';
+                }
             }
         }
 
-        // 日報管理ダッシュボード用の統計更新（過去3日間対応版）
+
+        // 日報管理ダッシュボード用の統計更新（超高速版・修正版）
         async function updateDailyReportsStats() {
             try {
-                console.log('🚀 高速版：過去3日間の日報統計更新を開始');
+                console.log('⚡ 超高速版：過去3日間の日報統計更新を開始');
                 
-                // 日付の設定（変更なし）
-                const today = new Date();
-                const yesterday = new Date(today);
-                yesterday.setDate(today.getDate() - 1);
-                const day2 = new Date(today);
-                day2.setDate(today.getDate() - 2);
-                const day3 = new Date(today);
-                day3.setDate(today.getDate() - 3);
+                // 🚀 修正：まず店舗一覧を取得してからレポートを取得
+                const storesResult = await getAllStoresCached();
                 
-                const dates = [
-                    { key: 'yesterday', date: yesterday, label: '前日' },
-                    { key: 'day2', date: day2, label: '2日前' },
-                    { key: 'day3', date: day3, label: '3日前' }
-                ];
-                
-                // 日付表示を更新（変更なし）
-                dates.forEach(dateInfo => {
-                    const dateValueElement = document.getElementById(`${dateInfo.key}-date-value`);
-                    if (dateValueElement) {
-                        dateValueElement.textContent = dateInfo.date.toLocaleDateString('ja-JP', {
-                            month: 'numeric',
-                            day: 'numeric',
-                            weekday: 'short'
-                        });
-                    }
-                });
-                
-                // 全店舗一覧を取得（変更なし）
-                const allStores = await getAllStores();
-                console.log('取得した全店舗数:', allStores.length);
-                
-                if (!allStores || allStores.length === 0) {
+                if (!storesResult || storesResult.length === 0) {
                     throw new Error('店舗一覧が取得できませんでした');
                 }
                 
-                // ⭐ 【ここが高速化のポイント】個別リクエストをバッチAPIに変更
-                const startDate = day3.toISOString().split('T')[0];
-                const endDate = yesterday.toISOString().split('T')[0];
-                const storeIds = allStores.map(store => store.id);
+                // 店舗一覧取得後にレポートを取得
+                const reportsResult = await getBatchDailyReports();
                 
-                console.log(`📡 バッチAPI呼び出し: ${startDate} ～ ${endDate}, 店舗数: ${storeIds.length}`);
+                // 高速データ処理
+                updateDailyStatsDisplayFast(storesResult, reportsResult);
                 
-                // 🚀 高速：1回のバッチAPIで全データ取得
-                const response = await fetch('api.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        action: 'getBatchReports',  // daily-reports-dashboard.htmlと同じAPI
-                        start_date: startDate,
-                        end_date: endDate,
-                        store_ids: storeIds
-                    })
-                });
-                
-                const result = await response.json();
-                
-                if (!result.success) {
-                    throw new Error(result.message || 'バッチAPI呼び出しに失敗しました');
-                }
-                
-                const existingReports = result.data || [];
-                console.log(`✅ バッチAPI取得完了: ${existingReports.length}件のレポート`);
-                
-                // ⭐ 【データ整理】日付別・店舗別にインデックス化（高速検索用）
-                const reportsByDate = {};
-                existingReports.forEach(report => {
-                    if (!reportsByDate[report.report_date]) {
-                        reportsByDate[report.report_date] = {};
-                    }
-                    reportsByDate[report.report_date][report.store_id] = report;
-                });
-                
-                // ⭐ 【各日付の統計計算】ループ処理で高速計算
-                dates.forEach(dateInfo => {
-                    updateDateStatsFast(dateInfo, allStores, reportsByDate);
-                });
-                
-                console.log('🎉 過去3日間の日報統計更新完了（高速版）');
+                console.log('⚡ 日報統計の超高速更新完了');
                 
             } catch (error) {
                 console.error('💥 日報統計の更新でエラー:', error);
-                // エラー時のフォールバック表示
-                ['yesterday', 'day2', 'day3'].forEach(key => {
-                    const submittedElement = document.getElementById(`${key}-submitted`);
-                    const confirmedElement = document.getElementById(`${key}-confirmed`);
-                    const pendingElement = document.getElementById(`${key}-pending-list`);
-                    
-                    if (submittedElement) submittedElement.textContent = '?';
-                    if (confirmedElement) confirmedElement.textContent = '?';
-                    if (pendingElement) pendingElement.textContent = 'データ取得エラー';
-                });
+                showFallbackDailyStats();
             }
         }
 
@@ -1003,7 +997,172 @@
         document.addEventListener('DOMContentLoaded', checkAuth);
 
         // 統計の自動更新（30秒ごと）
-        setInterval(updateStats, 30000);
+        //setInterval(updateStats, 30000);
+
+        // 🚀 修正点3: バッチAPI実装（admin.htmlの<script>内に追加）
+        
+        // キャッシュ機能
+        const adminStatsCache = {
+            stores: { data: null, timestamp: null, ttl: 60000 }, // 1分
+            reports: { data: null, timestamp: null, ttl: 30000 }  // 30秒
+        };
+        
+        // 店舗一覧取得（キャッシュ付き）
+        async function getAllStoresCached() {
+            const cache = adminStatsCache.stores;
+            const now = Date.now();
+            
+            if (cache.data && cache.timestamp && (now - cache.timestamp < cache.ttl)) {
+                console.log('📦 店舗一覧をキャッシュから取得');
+                return cache.data;
+            }
+            
+            try {
+                const stores = await getAllStores();
+                cache.data = stores;
+                cache.timestamp = now;
+                console.log('🆕 店舗一覧を新規取得してキャッシュ');
+                return stores;
+            } catch (error) {
+                console.error('店舗一覧取得エラー:', error);
+                return cache.data || []; // キャッシュがあれば使用
+            }
+        }
+        
+        // 日報データバッチ取得（修正版）
+        async function getBatchDailyReports() {
+            try {
+                const today = new Date();
+                const day3 = new Date(today);
+                day3.setDate(today.getDate() - 3);
+                const yesterday = new Date(today);
+                yesterday.setDate(today.getDate() - 1);
+                
+                const startDate = day3.toISOString().split('T')[0];
+                const endDate = yesterday.toISOString().split('T')[0];
+                
+                // 🚀 修正：店舗一覧を取得してstore_idsに設定
+                const stores = await getAllStoresCached();
+                const storeIds = stores.map(store => store.id);
+                
+                console.log('📡 バッチ日報API呼び出し:', startDate, '～', endDate, `店舗数: ${storeIds.length}`);
+                
+                const response = await fetch('api.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'getBatchReports',
+                        start_date: startDate,
+                        end_date: endDate,
+                        store_ids: storeIds // ✅ 修正：実際の店舗IDを設定
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    console.log('✅ バッチ日報取得成功:', result.data?.length || 0, '件');
+                    return result.data || [];
+                } else {
+                    throw new Error(result.message || 'バッチ日報取得失敗');
+                }
+                
+            } catch (error) {
+                console.error('バッチ日報取得エラー:', error);
+                return [];
+            }
+        }
+        
+        // 高速表示更新
+        function updateDailyStatsDisplayFast(stores, reports) {
+            try {
+                const today = new Date();
+                const dates = [
+                    { key: 'yesterday', date: new Date(today.getTime() - 1 * 24 * 60 * 60 * 1000) },
+                    { key: 'day2', date: new Date(today.getTime() - 2 * 24 * 60 * 60 * 1000) },
+                    { key: 'day3', date: new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000) }
+                ];
+                
+                // レポートを日付別にインデックス化
+                const reportsByDate = {};
+                reports.forEach(report => {
+                    if (!reportsByDate[report.report_date]) {
+                        reportsByDate[report.report_date] = {};
+                    }
+                    reportsByDate[report.report_date][report.store_id] = report;
+                });
+                
+                // 各日付の統計を高速計算
+                dates.forEach(dateInfo => {
+                    const dateString = dateInfo.date.toISOString().split('T')[0];
+                    const reportsForDate = reportsByDate[dateString] || {};
+                    
+                    let submitted = 0, confirmed = 0;
+                    const pending = [];
+                    
+                    stores.forEach(store => {
+                        const report = reportsForDate[store.id];
+                        if (report) {
+                            submitted++;
+                            if (report.status === 'approved') confirmed++;
+                        } else {
+                            pending.push(store.store_name);
+                        }
+                    });
+                    
+                    // DOM更新
+                    updateDateStatDisplay(dateInfo.key, dateString, submitted, confirmed, pending);
+                });
+                
+            } catch (error) {
+                console.error('高速表示更新エラー:', error);
+            }
+        }
+        
+        // 日付統計表示更新
+        function updateDateStatDisplay(key, dateString, submitted, confirmed, pendingStores) {
+            // 日付表示
+            const dateElement = document.getElementById(`${key}-date-value`);
+            if (dateElement) {
+                const date = new Date(dateString);
+                dateElement.textContent = date.toLocaleDateString('ja-JP', {
+                    month: 'numeric',
+                    day: 'numeric',
+                    weekday: 'short'
+                });
+            }
+            
+            // 統計数値
+            const submittedElement = document.getElementById(`${key}-submitted`);
+            const confirmedElement = document.getElementById(`${key}-confirmed`);
+            const pendingElement = document.getElementById(`${key}-pending-list`);
+            
+            if (submittedElement) submittedElement.textContent = submitted;
+            if (confirmedElement) confirmedElement.textContent = confirmed;
+            
+            if (pendingElement) {
+                if (pendingStores.length === 0) {
+                    pendingElement.innerHTML = '<span style="color: #059669; font-weight: 500;">✅ すべて提出済み</span>';
+                } else {
+                    pendingElement.innerHTML = pendingStores.map(name => 
+                        `<span class="pending-store-item">${name}</span>`
+                    ).join(' ');
+                }
+            }
+        }
+        
+        // フォールバック表示
+        function showFallbackDailyStats() {
+            ['yesterday', 'day2', 'day3'].forEach(key => {
+                const submittedElement = document.getElementById(`${key}-submitted`);
+                const confirmedElement = document.getElementById(`${key}-confirmed`);
+                const pendingElement = document.getElementById(`${key}-pending-list`);
+                
+                if (submittedElement) submittedElement.textContent = '?';
+                if (confirmedElement) confirmedElement.textContent = '?';
+                if (pendingElement) pendingElement.textContent = 'データ取得エラー';
+            });
+        }
     </script>
 </body>
 </html>
