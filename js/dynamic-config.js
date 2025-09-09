@@ -93,7 +93,7 @@ const API = {
 };
 
 /**
- * 設定ローダー
+ * 設定ローダー（修正版）
  */
 const ConfigLoader = {
     /**
@@ -101,8 +101,13 @@ const ConfigLoader = {
      */
     async loadStoreConfig() {
         try {
-            // ローディング表示
-            DynamicConfig.showLoading('店舗設定を読み込み中...');
+            // ローディング表示 - 修正: showLoadingIndicator を使用
+            if (typeof showLoadingIndicator === 'function') {
+                showLoadingIndicator(true, '店舗設定を読み込み中...');
+            } else {
+                console.log('店舗設定を読み込み中...');
+            }
+            
           // URLパラメータから店舗IDと日付を取得
             const urlParams = new URLSearchParams(window.location.search);
             const urlStoreId = urlParams.get('store_id');
@@ -127,7 +132,10 @@ const ConfigLoader = {
                 if (!userSession.store_id && userSession.store_id !== 0) {
                     console.log('管理者：店舗未選択のためフォールバック設定を適用');
                     this.applyFallbackConfig();
-                    DynamicConfig.hideLoading();
+                    // ローディング非表示 - 修正
+                    if (typeof showLoadingIndicator === 'function') {
+                        showLoadingIndicator(false);
+                    }
                     return { success: true, message: '管理者モード：フォールバック設定適用' };
                 }
             }
@@ -156,7 +164,10 @@ const ConfigLoader = {
                 if (userSession.role === 'admin') {
                     console.log('管理者：店舗未選択のためフォールバック設定を適用');
                     this.applyFallbackConfig();
-                    DynamicConfig.hideLoading();
+                    // ローディング非表示 - 修正
+                    if (typeof showLoadingIndicator === 'function') {
+                        showLoadingIndicator(false);
+                    }
                     return { success: true, message: '管理者モード：フォールバック設定適用' };
                 } else {
                     throw new Error('店舗IDが設定されていません');
@@ -181,13 +192,18 @@ const ConfigLoader = {
                 pointMethods: pointPaymentConfig.length
             });
             
-            // ローディング非表示
-            DynamicConfig.hideLoading();
+            // ローディング非表示 - 修正
+            if (typeof showLoadingIndicator === 'function') {
+                showLoadingIndicator(false);
+            }
             
             return response;
             
         } catch (error) {
-            DynamicConfig.hideLoading();
+            // ローディング非表示 - 修正
+            if (typeof showLoadingIndicator === 'function') {
+                showLoadingIndicator(false);
+            }
             console.error('店舗設定の読み込みエラー:', error);
             
             // フォールバック設定を適用
@@ -197,9 +213,7 @@ const ConfigLoader = {
         }
     },
     
-    /**
-     * 設定をグローバル変数に適用
-     */
+    // 残りのメソッドはそのまま（変更なし）
     async applyStoreConfig(response) {
         try {
             // レスポンス構造を確認
@@ -260,8 +274,8 @@ const ConfigLoader = {
                             }
                         }
                     }
-                } catch (error) {
-                    console.error('店舗名取得エラー:', error);
+                } catch (storeError) {
+                    console.error('店舗名取得エラー:', storeError);
                 }
             }
             

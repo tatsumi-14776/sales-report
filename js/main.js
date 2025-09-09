@@ -752,6 +752,138 @@ function updateConfirmButtonState(status) {
     }
 }
 
+/**
+ * ローディングインジケーター表示/非表示
+ * @param {boolean} show true=表示, false=非表示
+ * @param {string} message 表示するメッセージ（オプション）
+ */
+function showLoadingIndicator(show, message = 'データを読み込み中...') {
+    try {
+        // 既存のローディング要素を探す
+        let loadingElement = document.getElementById('globalLoadingIndicator');
+        
+        if (show) {
+            // ローディング要素が存在しない場合は作成
+            if (!loadingElement) {
+                loadingElement = document.createElement('div');
+                loadingElement.id = 'globalLoadingIndicator';
+                loadingElement.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: rgba(255, 255, 255, 0.95);
+                    backdrop-filter: blur(10px);
+                    padding: 2rem 3rem;
+                    border-radius: 12px;
+                    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+                    z-index: 9999;
+                    text-align: center;
+                    min-width: 300px;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+                `;
+                
+                loadingElement.innerHTML = `
+                    <div style="margin-bottom: 1rem; font-weight: 600; color: #333; font-size: 1rem;">
+                        ${message}
+                    </div>
+                    <div style="width: 40px; height: 40px; margin: 0 auto; border: 4px solid #e5e7eb; border-radius: 50%; border-top-color: #4CAF50; animation: spin 1s linear infinite;"></div>
+                `;
+                
+                // スピンアニメーションのCSSを追加（まだ存在しない場合）
+                if (!document.getElementById('loadingSpinCSS')) {
+                    const style = document.createElement('style');
+                    style.id = 'loadingSpinCSS';
+                    style.textContent = `
+                        @keyframes spin {
+                            0% { transform: rotate(0deg); }
+                            100% { transform: rotate(360deg); }
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+                
+                document.body.appendChild(loadingElement);
+            }
+            
+            // 表示
+            loadingElement.style.display = 'block';
+            console.log('✅ ローディングインジケーターを表示しました');
+            
+        } else {
+            // 非表示
+            if (loadingElement) {
+                loadingElement.style.display = 'none';
+                console.log('✅ ローディングインジケーターを非表示にしました');
+            }
+        }
+        
+    } catch (error) {
+        console.error('ローディングインジケーター操作でエラー:', error);
+    }
+}
+
+/**
+ * 管理者用のローディングインジケーター（管理者画面用）
+ * @param {boolean} show true=表示, false=非表示
+ * @param {string} title タイトル
+ * @param {string} message メッセージ
+ */
+function showAdminLoadingIndicator(show, title = '処理中...', message = 'しばらくお待ちください') {
+    try {
+        let loadingElement = document.getElementById('adminLoadingIndicator');
+        
+        if (show) {
+            if (!loadingElement) {
+                loadingElement = document.createElement('div');
+                loadingElement.id = 'adminLoadingIndicator';
+                loadingElement.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: rgba(255, 255, 255, 0.98);
+                    backdrop-filter: blur(15px);
+                    padding: 3rem 4rem;
+                    border-radius: 16px;
+                    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+                    z-index: 10000;
+                    text-align: center;
+                    min-width: 400px;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+                    border: 2px solid #e5e7eb;
+                `;
+                
+                document.body.appendChild(loadingElement);
+            }
+            
+            loadingElement.innerHTML = `
+                <div style="margin-bottom: 1.5rem;">
+                    <h3 style="margin: 0 0 0.5rem 0; font-weight: 700; color: #333; font-size: 1.25rem;">
+                        ${title}
+                    </h3>
+                    <p style="margin: 0; color: #666; font-size: 1rem;">
+                        ${message}
+                    </p>
+                </div>
+                <div style="width: 50px; height: 50px; margin: 0 auto; border: 5px solid #e5e7eb; border-radius: 50%; border-top-color: #4CAF50; animation: spin 1s linear infinite;"></div>
+            `;
+            
+            loadingElement.style.display = 'block';
+            console.log('✅ 管理者ローディングインジケーターを表示しました:', title);
+            
+        } else {
+            if (loadingElement) {
+                loadingElement.style.display = 'none';
+                console.log('✅ 管理者ローディングインジケーターを非表示にしました');
+            }
+        }
+        
+    } catch (error) {
+        console.error('管理者ローディングインジケーター操作でエラー:', error);
+    }
+}
+
 // デバッグ用: グローバルスコープに公開
 if (typeof window !== 'undefined') {
     window.appDebug = {
