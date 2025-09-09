@@ -456,11 +456,14 @@
         async function getTotalStoresCount() {
             try {
                 const response = await fetch('api.php?action=getAllStores');
-                const result = await response.json();
-                return result.success ? result.data.length : 5; // フォールバック値
+                const responseText = await response.text(); // JSONではなくテキストで取得
+                console.log('Raw response:', responseText); // レスポンス内容を確認
+                
+                const result = JSON.parse(responseText);
+                return result.success ? result.data.length : 5;
             } catch (error) {
-                console.warn('店舗数取得エラー:', error);
-                return 5; // デフォルト値
+                console.error('詳細エラー:', error);
+                return 5;
             }
         }
 
