@@ -86,60 +86,6 @@
             gap: 2rem;
         }
 
-        /* 統計サマリー */
-        .stats-overview {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
-        }
-
-        .stats-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .stats-icon {
-            width: 3.5rem;
-            height: 3.5rem;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-        }
-
-        .stats-icon.submitted {
-            background: linear-gradient(45deg, #4CAF50, #45a049);
-            color: white;
-        }
-
-        .stats-icon.pending {
-            background: linear-gradient(45deg, #FF9800, #F57C00);
-            color: white;
-        }
-
-        .stats-icon.total-sales {
-            background: linear-gradient(45deg, #2196F3, #1976D2);
-            color: white;
-        }
-
-        .stats-info h3 {
-            font-size: 2rem;
-            font-weight: bold;
-            margin-bottom: 0.25rem;
-        }
-
-        .stats-info p {
-            color: #666;
-            font-size: 0.875rem;
-        }
-
         /* フィルター・検索エリア */
         .filters-section {
             background: rgba(255, 255, 255, 0.95);
@@ -224,17 +170,6 @@
             gap: 0.5rem;
         }
 
-        .export-button {
-            padding: 0.5rem 1rem;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-weight: 500;
-            cursor: pointer;
-            font-size: 0.875rem;
-        }
-
         .reports-table-container {
             overflow-x: auto;
             border-radius: 8px;
@@ -276,11 +211,6 @@
             text-align: center;
             min-width: 80px;
             display: inline-block;
-        }
-
-        .status-submitted {
-            background: #d1fae5;
-            color: #065f46;
         }
 
         .status-pending {
@@ -421,10 +351,6 @@
                 text-align: center;
             }
 
-            .stats-overview {
-                grid-template-columns: 1fr;
-            }
-
             .filters-grid {
                 grid-template-columns: 1fr;
             }
@@ -541,12 +467,6 @@
             background: #f3f4f6;
             color: #374151;
             border: 1px solid #9ca3af;
-        }
-
-        .status-rejected {
-            background: #fee2e2;
-            color: #991b1b;
-            border: 1px solid #dc2626;
         }
 
         /* 確定済みアクションボタン */
@@ -722,31 +642,6 @@
         </div>
 
         <div class="main-content">
-            <!-- 統計サマリー -->
-            <div class="stats-overview">
-                <div class="stats-card">
-                    <div class="stats-icon submitted">✅</div>
-                    <div class="stats-info">
-                        <h3 id="submittedCount">-</h3>
-                        <p>提出済み店舗</p>
-                    </div>
-                </div>
-                <div class="stats-card">
-                    <div class="stats-icon pending">⏳</div>
-                    <div class="stats-info">
-                        <h3 id="pendingCount">-</h3>
-                        <p>未提出店舗</p>
-                    </div>
-                </div>
-                <div class="stats-card">
-                    <div class="stats-icon total-sales">💰</div>
-                    <div class="stats-info">
-                        <h3 id="totalSales">-</h3>
-                        <p>合計売上額</p>
-                    </div>
-                </div>
-            </div>
-
             <!-- フィルター・検索エリア（改善版） -->
             <div class="filters-section">
                 <div class="filters-grid">
@@ -820,9 +715,6 @@
                         <span>📋</span>
                         日報一覧
                     </h2>
-                    <button class="export-button" onclick="exportReports()">
-                        <span>📄</span> CSV出力
-                    </button>
                 </div>
 
                 <!-- ローディング -->
@@ -1044,7 +936,6 @@
                 
                 allReports = reports;
                 applyFilters();
-                updateStats();
                 
                 if (errorCount > 0) {
                     showAlert(`データを読み込みました（${reports.length}件）\n一部取得できないデータがありました（${errorCount}件）`, 'warning');
@@ -1161,9 +1052,9 @@
             // ステータスフィルター
             if (currentFilters.status) {
                 if (currentFilters.status === 'draft') {
-                    // 「提出済み」を選択した場合、draftとsubmittedの両方を含める
+                    // 「提出済み」を選択した場合、draftのみ
                     filteredReports = filteredReports.filter(report => 
-                        report.status === 'draft' || report.status === 'submitted'
+                        report.status === 'draft'
                     );
                 } else if (currentFilters.status === 'approved') {
                     // 「確定済み」を選択した場合、approvedのみ
@@ -1249,28 +1140,13 @@
             `).join('');
         }
 
-        // 統計更新
-        function updateStats() {
-            const submitted = allReports.filter(r => r.status === 'submitted' || r.status === 'draft').length;
-            const pending = allReports.filter(r => r.status === 'pending').length;
-            const totalSales = allReports
-                .filter(r => r.status === 'submitted' || r.status === 'draft')
-                .reduce((sum, r) => sum + r.total_sales, 0);
-            
-            document.getElementById('submittedCount').textContent = submitted;
-            document.getElementById('pendingCount').textContent = pending;
-            document.getElementById('totalSales').textContent = formatCurrency(totalSales);
-        }
-
         /**
          * ステータスバッジ生成（status対応版）
          */
         function getStatusBadge(status) {
             const badges = {
-                'submitted': '<span class="status-badge status-submitted">✅ 提出済み</span>',
                 'approved': '<span class="status-badge status-confirmed">✅ 確定済み</span>',
                 'draft': '<span class="status-badge status-draft">📝 提出済み</span>',
-                'rejected': '<span class="status-badge status-rejected">❌ 却下</span>',
                 'pending': '<span class="status-badge status-pending">⏳ 未提出</span>'
             };
             return badges[status] || '<span class="status-badge">不明</span>';
@@ -1296,24 +1172,10 @@
                     <button class="btn-small btn-view" onclick="viewReportDetail(${report.id})">👁️ 詳細</button>
                     <button class="btn-small btn-download" onclick="downloadReport(${report.id})">📄 PDF</button>
                 `;
-            } else if (report.status === 'submitted') {
-                // 提出済み・未確定の場合
-                return `
-                    <button class="btn-small btn-confirm" onclick="viewReportInForm(${report.store_id}, '${report.report_date}')">📋 確認</button>
-                    <button class="btn-small btn-view" onclick="viewReportDetail(${report.id})">👁️ 詳細</button>
-                    <button class="btn-small btn-download" onclick="downloadReport(${report.id})">📄 PDF</button>
-                `;
             } else if (report.status === 'draft') {
                 // 下書きの場合
                 return `
                     <button class="btn-small btn-edit" onclick="viewReportInForm(${report.store_id}, '${report.report_date}')">確認</button>
-                    <button class="btn-small btn-view" onclick="viewReportDetail(${report.id})">👁️ 詳細</button>
-                    <button class="btn-small btn-download" onclick="downloadReport(${report.id})">📄 PDF</button>
-                `;
-            } else if (report.status === 'rejected') {
-                // 却下の場合
-                return `
-                    <button class="btn-small btn-edit" onclick="viewReportInForm(${report.store_id}, '${report.report_date}')">再編集</button>
                     <button class="btn-small btn-view" onclick="viewReportDetail(${report.id})">👁️ 詳細</button>
                     <button class="btn-small btn-download" onclick="downloadReport(${report.id})">📄 PDF</button>
                 `;
@@ -1420,51 +1282,6 @@
         function downloadReport(reportId) {
             // PDF生成機能は実装予定
             showAlert('PDF出力機能は開発中です', 'error');
-        }
-
-        // CSV出力
-        function exportReports() {
-            try {
-                const filteredReports = allReports.filter(report => {
-                    if (currentFilters.store && report.store_id != currentFilters.store) return false;
-                    if (currentFilters.status && report.status !== currentFilters.status) return false;
-                    return true;
-                });
-                
-                const csvData = [
-                    ['日付', '店舗名', '担当者', 'ステータス', '売上合計', '現金過不足', '提出日時'],
-                    ...filteredReports.map(report => [
-                        report.report_date,
-                        report.store_name,
-                        report.user_id || '-',
-                        report.status === 'draft' ? '提出済み' : 
-                        report.status === 'approved' ? '確定済み' : 
-                        report.status === 'submitted' ? '提出済み' : 
-                        report.status === 'pending' ? '未提出' : '不明',
-                        report.total_sales,
-                        report.cash_difference,
-                        report.updated_at || '-'
-                    ])
-                ];
-                
-                const csvContent = csvData.map(row => row.join(',')).join('\n');
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement('a');
-                
-                if (link.download !== undefined) {
-                    const url = URL.createObjectURL(blob);
-                    link.setAttribute('href', url);
-                    link.setAttribute('download', `日報一覧_${new Date().toISOString().split('T')[0]}.csv`);
-                    link.style.visibility = 'hidden';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                }
-                
-            } catch (error) {
-                console.error('CSV出力エラー:', error);
-                showAlert('CSV出力に失敗しました', 'error');
-            }
         }
 
         // モーダルを閉じる
@@ -1611,23 +1428,6 @@ function showInitialMessage() {
             </div>
         `;
         console.log('初期メッセージを表示（前日日付設定済み）');
-    }
-    
-    // 統計も初期状態に設定
-    resetStats();
-}
-
-/**
- * 統計を初期状態にリセット
- */
-function resetStats() {
-    try {
-        document.getElementById('submittedCount').textContent = '-';
-        document.getElementById('pendingCount').textContent = '-';
-        document.getElementById('totalSales').textContent = '-';
-        console.log('統計を初期状態にリセット');
-    } catch (error) {
-        console.error('統計リセットエラー:', error);
     }
 }
 
@@ -1813,7 +1613,7 @@ function setLastMonthRange() {
             if (result.success) {
                 // 提出済み
                 const reportData = result.data;
-                const status = reportData.status || 'submitted';
+                const status = reportData.status || 'draft';
                 
                 return {
                     ...reportData,
@@ -1907,7 +1707,6 @@ function setLastMonthRange() {
                 if (window.allReports && window.allReports.length > 0) {
                     console.log('applyFilters() を実行');
                     applyFilters();
-                    updateStats();
                 } else {
                     console.error('❌ グローバル変数の設定に失敗');
                     showInitialMessage();

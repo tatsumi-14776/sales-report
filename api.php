@@ -318,7 +318,7 @@ class APIController {
             $pointPaymentConfig = $data['point_payment_config'] ?? null;
             
             if ($existing) {
-                // 更新（ステータスは submitted に設定）
+                // 更新（ステータスは draft に設定）
                 $stmt = $this->db->prepare("
                     UPDATE daily_reports 
                     SET sales_data = ?, 
@@ -332,7 +332,7 @@ class APIController {
                         cash_difference = ?,
                         remarks = ?,
                         attached_files = ?,
-                        status = 'submitted',
+                        status = 'draft',
                         submitted_at = NOW(),
                         user_id = ?, 
                         updated_at = NOW()
@@ -355,7 +355,7 @@ class APIController {
                 ]);
                 $reportId = $existing['id'];
             } else {
-                // 新規作成（ステータスは submitted に設定）
+                // 新規作成（ステータスは draft に設定）
                 $stmt = $this->db->prepare("
                     INSERT INTO daily_reports (
                         report_date, 
@@ -374,7 +374,7 @@ class APIController {
                         attached_files,
                         status,
                         submitted_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'submitted', NOW())
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', NOW())
                 ");
                 $stmt->execute([
                     $reportDate, 
@@ -933,10 +933,10 @@ private function addPaymentMethod($data) {
             throw new Exception('この日報は確定状態ではありません');
         }
         
-        // ステータスを送信済みに更新（編集可能な状態に戻す）
+        // ステータスを草稿に更新（編集可能な状態に戻す）
         $stmt = $this->db->prepare("
             UPDATE daily_reports 
-            SET status = 'submitted', updated_at = NOW()
+            SET status = 'draft', updated_at = NOW()
             WHERE id = ?
         ");
         $stmt->execute([$report['id']]);
