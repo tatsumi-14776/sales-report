@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日次売上報告書</title>
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- 認証チェックスクリプト（最初に実行） -->
+    <!-- 認証保護スクリプト -->
+    <script>
+    (function() {
+        // 認証チェック
+        function checkAuth() {
+            const session = sessionStorage.getItem('userSession') || localStorage.getItem('userSession');
+            
+            if (!session) {
+                alert('ログインが必要です。ログインページに移動します。');
+                window.location.href = 'login.html';
+                return false;
+            }
+            
+            try {
+                const userSession = JSON.parse(session);
+                if (!userSession || !userSession.isLoggedIn) {
+                    alert('ログインが必要です。ログインページに移動します。');
+                    window.location.href = 'login.html';
+                    return false;
+                }
+                
+                // セッション期限チェック（24時間）
+                const currentTime = Date.now();
+                const loginTime = userSession.loginTime || 0;
+                const sessionDuration = 24 * 60 * 60 * 1000;
+                
+                if (currentTime - loginTime > sessionDuration) {
+                    sessionStorage.removeItem('userSession');
+                    localStorage.removeItem('userSession');
+                    alert('セッションが期限切れです。再度ログインしてください。');
+                    window.location.href = 'login.html';
+                    return false;
+                }
+                
+                return true;
+                
+            } catch (error) {
+                sessionStorage.removeItem('userSession');
+                localStorage.removeItem('userSession');
+                alert('セッションエラー。ログインページに移動します。');
+                window.location.href = 'login.html';
+                return false;
+            }
+        }
+        
+        // 認証チェック実行
+        if (!checkAuth()) {
+            return;
+        }
+        
+        // 認証成功時の処理
+        document.addEventListener('DOMContentLoaded', function() {
+            const userSession = JSON.parse(sessionStorage.getItem('userSession') || localStorage.getItem('userSession') || '{}');
+            
+            // 管理者フラグをグローバルに保存
+            window.isAdminUser = userSession.role === 'admin';
+            window.userSessionData = userSession;
+            
+            // 店舗名を設定
+            const storeNameElement = document.getElementById('storeName');
+            
+            if (storeNameElement) {
+                if (userSession.role === 'admin') {
+                    // 管理者フラグを要素に設定
+                    storeNameElement.setAttribute('data-admin-mode', 'true');
+                } else if (userSession.storeName) {
+                    // 一般ユーザーの場合：読み取り専用
+                    if (!storeNameElement.value || storeNameElement.value === '店舗未設定') {
+                        storeNameElement.value = userSession.storeName;
+                    }
+                    storeNameElement.readOnly = true;
+                    storeNameElement.setAttribute('data-original-store-name', userSession.storeName);
+                }
+            }
+            
+            // ログアウトボタン追加
+            addLogoutButton();
+        });
+        
+        // ログアウト機能追加
+        function addLogoutButton() {
+            const header = document.querySelector('.header');
+            if (header) {
+                const userSession = JSON.parse(sessionStorage.getItem('userSession') || localStorage.getItem('userSession') || '{}');
+                
+                const userInfoDiv = document.createElement('div');
+                userInfoDiv.style.cssText = 'position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.9); padding: 8px 12px; border-radius: 6px; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 1000;';
+                
+                userInfoDiv.innerHTML = `
+                    <div style="margin-bottom: 4px; font-weight: bold; color: #333;">
+                        👤 ${userSession.username || 'ユーザー'} 
+                        ${userSession.role === 'admin' ? '(管理者)' : ''}
+                    </div>
+                    <div style="margin-bottom: 4px; font-size: 11px; color: #666;">
+                        🏪 ${userSession.storeName || '店舗未設定'}
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        ${userSession.role === 'admin' ? '<button onclick="goToAdmin()" style="padding: 4px 8px; font-size: 11px; border: 1px solid #007bff; background: #007bff; color: white; border-radius: 3px; cursor: pointer;">管理画面</button>' : ''}
+                        <button onclick="handleLogout()" style="padding: 4px 8px; font-size: 11px; border: 1px solid #dc3545; background: #dc3545; color: white; border-radius: 3px; cursor: pointer;">ログアウト</button>
+                    </div>
+                `;
+                
+                header.appendChild(userInfoDiv);
+            }
+        }
+        
+        // グローバル関数として定義
+        window.handleLogout = function() {
+            if (confirm('ログアウトしますか？\n\n入力中のデータは保存されません。')) {
+                sessionStorage.removeItem('userSession');
+                localStorage.removeItem('userSession');
+                window.location.href = 'login.html';
+            }
+        };
+        
+        window.goToAdmin = function() {
+            if (confirm('管理者ダッシュボードに移動しますか？')) {
+                window.location.href = 'admin.html';
+            }
+        };
+        
+    })();
+    </script>
+</head>
+<body>
+    <!-- 既存のbodyコンテンツをそのまま使用 -->
+    <div class="container">
+        <!-- 右側：集計サマリーパネル -->
+        <div class="summary-panel">
+            <div class="summary-panel-title">📊 日報集計</div>
+            
+            <!-- 売上情報 -->
+            <div class="summary-section">
+                <div class="summary-subtitle">📊 売上総額</div>
+                <div class="summary-item">
+                    <span class="summary-item-label">売上総額</span>
+                    <span class="summary-item-value" id="summaryTotalSales">¥0</span>
+                </div>
+                <div class="summary-item indent">
+                    <span class="summary-item-label">(内)10%分集計</span>
+                    <span class="summary-item-value" id="summary10Percent">¥0</span>
+                </div>
+                <div class="summary-item indent">
+                    <span class="summary-item-label">(内)8%分集計</span>
+                    <span class="summary-item-value" id="summary8Percent">¥0</span>
+                </div>
+            </div>
+
+            <!-- 現金管理 -->
+            <div class="summary-section">
+                <div class="summary-subtitle">💰 現金管理</div>
+                <div class="summary-item">
+                    <span class="summary-item-label">前日現金残</span>
+                    <span class="summary-item-value" id="summaryPreviousCash">¥0</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-item-label">現金売上</span>
+                    <span class="summary-item-value" id="summaryCashSales">¥0</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-item-label">雑収入</span>
+                    <span class="summary-item-value" id="summaryMiscIncome">¥0</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-item-label negative">出金額</span>
+                    <span class="summary-item-value negative" id="summaryExpenses">¥0</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-item-label negative">入金額</span>
+                    <span class="summary-item-value negative" id="summaryDeposit">¥0</span>
+                </div>
+                <div class="summary-item total-line">
+                    <span class="summary-item-label">本日現金残</span>
+                    <span class="summary-item-value" id="todayCashBalance">¥0</span>
+                </div>
+            </div>
+
+            <!-- 現金過不足 -->
+            <div class="summary-section">
+                <div class="summary-subtitle">⚖️ 現金過不足</div>
+                <div class="cash-difference-display">
+                    <div class="cash-diff-item">
+                        <span class="cash-diff-label">理論残高</span>
+                        <span class="cash-diff-value" id="theoreticalBalance">¥0</span>
+                    </div>
+                    <div class="cash-diff-item">
+                        <span class="cash-diff-label">実際残高</span>
+                        <span class="cash-diff-value" id="actualBalance">¥0</span>
+                    </div>
+                    <div class="cash-diff-item difference-result">
+                        <span class="cash-diff-label">過不足額</span>
+                        <span class="cash-diff-value" id="cashDifference">¥0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 管理者確定操作（追加） -->
+            <div class="summary-section admin-confirm-section" id="adminConfirmSection" style="display: none;">
+                <div class="summary-subtitle">👑 管理者操作</div>
+                <div class="admin-confirm-actions">
+                    <button class="confirm-button-summary" id="confirmButton" onclick="handleConfirm()" style="display: none;">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        確定
+                    </button>
+                    
+                    <button class="unconfirm-button-summary" id="unconfirmButton" onclick="handleUnconfirm()" style="display: none;">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                        確定解除
+                    </button>
+                    
+                    <div class="confirm-status" id="confirmStatus" style="display: none;">
+                        <span class="status-icon">✅</span>
+                        <span class="status-text">確定済み</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 左側：入力フォーム -->
+        <div class="main-content">
+            <div class="form-card">
+                <!-- ヘッダー -->
+                <div class="header">
+                    <div class="title-section">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <h1 class="title">日次売上報告書</h1>
+                    </div>
+
+                    <!-- 基本情報 -->
+                    <div class="basic-info">
+                        <div class="info-group">
+                            <label class="info-label">日付:</label>
+                            <input type="date" id="date" class="info-input wide" required>
+                            <button class="today-load-button" onclick="handleLoadData()">データ読込</button>
+                        </div>
+                        <div class="info-group">
+                            <label class="info-label">店舗:</label>
+                            <input type="text" id="storeName" class="info-input wide" placeholder="店舗名" required>
+                        </div>
+                        <div class="info-group">
+                            <label class="info-label">担当:</label>
+                            <input type="text" id="inputBy" class="info-input" placeholder="担当者" required>
+                        </div>
+                    </div>
+                    
+                    <!-- データ操作ボタン -->
+                    <div class="data-actions">
+                        <button class="load-button" onclick="loadTodayData()">
+                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                            </svg>
+                            当日データを読込
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 印刷用集計サマリー（画面では非表示） -->
+                <div class="print-summary" style="display: none;">
+                    <div class="print-summary-title">日報集計</div>
+                    <div class="print-summary-grid">
+                        <div class="print-summary-item">
+                            <div class="print-summary-label">売上総額</div>
+                            <div class="print-summary-value" id="printTotalSales">¥0</div>
+                        </div>
+                        <div class="print-summary-item">
+                            <div class="print-summary-label">現金売上</div>
+                            <div class="print-summary-value" id="printCashSales">¥0</div>
+                        </div>
+                        <div class="print-summary-item">
+                            <div class="print-summary-label">本日現金残</div>
+                            <div class="print-summary-value" id="printTodayBalance">¥0</div>
+                        </div>
+                        <div class="print-summary-item">
+                            <div class="print-summary-label">現金過不足</div>
+                            <div class="print-summary-value" id="printCashDifference">¥0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content">
+                    <!-- 売上情報 -->
+                    <div class="section section-green">
+                        <h2 class="section-title">売上情報</h2>
+                        <!-- 支払い方法はJavaScriptで動的生成 -->
+                        <!-- 売上合計 -->
+                        <div class="section-total total-green">
+                            <div class="total-row">
+                                <span class="total-label">売上合計:</span>
+                                <span class="total-value" id="salesTotal">¥0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ポイント・クーポン支払 -->
+                    <div class="section section-orange">
+                        <h2 class="section-title">ポイント・クーポン支払</h2>
+                        <!-- ポイント・クーポン支払項目はJavaScriptで動的生成 -->
+                        <!-- 支払合計 -->
+                        <div class="section-total total-orange">
+                            <div class="total-row">
+                                <span class="total-label">ポイント・クーポン合計:</span>
+                                <span class="total-value" id="pointPaymentTotal">¥0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 入金・雑収入 -->
+                    <div class="section section-blue">
+                        <h2 class="section-title">入金・雑収入</h2>
+                        <div class="grid-2">
+                            <div class="discount-item">
+                                <label class="discount-label">入金</label>
+                                <div class="discount-input-wrapper">
+                                    <span class="currency-symbol">¥</span>
+                                    <input type="number" id="nyukin" class="discount-input" placeholder="0">
+                                </div>
+                            </div>
+                            <div class="discount-item">
+                                <label class="discount-label">拾得金</label>
+                                <div class="discount-input-wrapper">
+                                    <span class="currency-symbol">¥</span>
+                                    <input type="number" id="foundMoney" class="discount-input" placeholder="0">
+                                </div>
+                            </div>
+                            <div class="discount-item">
+                                <label class="discount-label">雑収入</label>
+                                <div class="discount-input-wrapper">
+                                    <span class="currency-symbol">¥</span>
+                                    <input type="number" id="miscIncome" class="discount-input" placeholder="0">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- レジ金からの経費支出 -->
+                    <div class="section section-red">
+                        <div class="expense-header">
+                            <h2 class="section-title">レジ金からの経費支出</h2>
+                            <button class="add-button" onclick="addExpenseRecord()">
+                                <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12 4v16m8-8H4"/>
+                                </svg>
+                                追加
+                            </button>
+                        </div>
+
+                        <div id="expenseRecords">
+                            <div class="expense-record">
+                                <input type="text" class="expense-input" placeholder="購入先" data-field="vendor" data-id="1">
+                                <select class="expense-select" data-field="account" data-id="1">
+                                    <option value="">勘定科目</option>
+                                    <option value="消耗品費">消耗品費</option>
+                                    <option value="雑費">雑費</option>
+                                    <option value="通信費">通信費</option>
+                                    <option value="水道光熱費">水道光熱費</option>
+                                    <option value="修繕費">修繕費</option>
+                                    <option value="交通費">交通費</option>
+                                    <option value="その他">その他</option>
+                                </select>
+                                <input type="text" class="expense-input" placeholder="品物・内容" data-field="item" data-id="1">
+                                <div class="expense-amount-wrapper">
+                                    <span class="expense-amount-symbol">¥</span>
+                                    <input type="number" class="expense-amount-input" placeholder="0" data-field="amount" data-id="1">
+                                </div>
+                                <button class="delete-button" onclick="removeExpenseRecord(1)" disabled>
+                                    <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 経費合計 -->
+                        <div class="section-total total-red">
+                            <div class="total-row">
+                                <span class="total-label">経費合計:</span>
+                                <span class="total-value" id="expenseTotal">¥0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- レジ金・金庫管理 -->
+                    <div class="section section-purple">
+                        <h2 class="section-title">レジ金・金庫管理（金種別）</h2>
+
+                        <!-- 前日現金残入力 -->
+                        <div class="previous-cash-section">
+                            <div class="info-group">
+                                <label class="info-label">前日現金残:</label>
+                                <div class="discount-input-wrapper">
+                                    <span class="currency-symbol">¥</span>
+                                    <input type="number" id="previousCashBalance" class="discount-input" placeholder="0" value="0" onchange="updateAllCalculations()">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="cash-table">
+                            <div class="cash-header">
+                                <div>金種</div>
+                                <div style="text-align: center;">レジ（枚）</div>
+                                <div style="text-align: center;">金庫（枚）</div>
+                                <div style="text-align: center;">合計枚数</div>
+                                <div style="text-align: right;">金額</div>
+                            </div>
+
+                            <div id="denominationRows">
+                                <!-- 金種データはJavaScriptで生成 -->
+                            </div>
+
+                            <!-- 合計表示 -->
+                            <div class="cash-summary">
+                                <div class="summary-grid">
+                                    <div class="summary-card summary-blue">
+                                        <div class="summary-label">レジ合計</div>
+                                        <div class="summary-value" id="registerTotal">¥0</div>
+                                    </div>
+                                    <div class="summary-card summary-green">
+                                        <div class="summary-label">金庫合計</div>
+                                        <div class="summary-value" id="safeTotal">¥0</div>
+                                    </div>
+                                    <div class="summary-card summary-purple">
+                                        <div class="summary-label">総合計</div>
+                                        <div class="summary-value" id="totalCash">¥0</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 備考・報告事項 -->
+                    <div class="section section-blue full-width">
+                        <h2 class="section-title">備考・報告事項</h2>
+                        
+                        <div class="remarks-section">
+                            <textarea 
+                                id="remarks" 
+                                class="remarks-textarea" 
+                                placeholder="・特記すべき事項やトラブル等があれば記入してください&#10;・今日の売上傾向や気づいた点など&#10;・お客様からのご意見やクレーム&#10;・設備の不具合や修理依頼など&#10;・その他報告事項"
+                                rows="8"
+                                maxlength="1000"></textarea>
+                            <div class="character-count">
+                                <span id="charCount">0</span> / 1000文字
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 添付ファイル -->
+                    <div class="section section-blue">
+                        <h2 class="section-title">添付ファイル</h2>
+                        
+                        <div class="file-upload-section">
+                            <div class="file-upload-header">
+                                <span class="file-count-info">最大5個のファイルを添付できます</span>
+                            </div>
+                            
+                            <div id="fileInputs">
+                                <!-- ファイル入力欄がJavaScriptで動的生成 -->
+                            </div>
+                            
+                            <div class="file-upload-notes">
+                                <p>対応ファイル形式: PDF, Excel, Word, 画像ファイル（JPG, PNG, GIF）</p>
+                                <p>ファイルサイズ上限: 1ファイル当たり10MB</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 送信ボタン -->
+                    <div class="actions">
+                        <button class="print-button" onclick="handlePrint()">印刷</button>
+                        <button class="submit-button" onclick="handleSubmit()">
+                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H9V7h6v2z"/>
+                            </svg>
+                            経理課に送信
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- 基本ライブラリから順番に読み込み -->
+    <script src="js/calculations.js" onerror="console.error('calculations.js の読み込みに失敗しました')"></script>
+    <script src="js/ui.js" onerror="console.error('ui.js の読み込みに失敗しました')"></script>
+    <script src="js/fileManager.js" onerror="console.error('fileManager.js の読み込みに失敗しました')"></script>
+    <script src="js/dataManager.js" onerror="console.error('dataManager.js の読み込みに失敗しました')"></script>
+    
+    <!-- 動的設定システム（他の関数定義後に読み込み） -->
+    <script src="js/dynamic-config.js" onerror="console.error('dynamic-config.js の読み込みに失敗しました')"></script>
+    
+    <!-- メイン初期化処理（最後に読み込み） -->
+    <script src="js/main.js" onerror="console.error('main.js の読み込みに失敗しました')"></script>
+    
+    <!-- スクリプト読み込み完了の確認 -->
+    <script>
+        console.log('🔧 全スクリプト読み込み完了');
+        console.log('関数定義確認:', {
+            generatePaymentMethods: typeof generatePaymentMethods,
+            generateDiscountSection: typeof generateDiscountSection,
+            updateAllCalculations: typeof updateAllCalculations,
+            paymentMethodConfig: typeof paymentMethodConfig
+        });
+    </script>
+</body>
+</html>
