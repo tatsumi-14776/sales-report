@@ -1,3 +1,4 @@
+
 <?php
 /**
  * 支払方法管理API - payment-methods.php
