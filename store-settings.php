@@ -31,29 +31,33 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // データベース接続設定
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'sales_report');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-
-// データベース接続
+// データベース接続（統一設定を使用）
 try {
+    $config_path = __DIR__ . '/config/database.php';
+    if (!file_exists($config_path)) {
+        throw new Exception("設定ファイルが見つかりません: $config_path");
+    }
+    
+    require_once $config_path;
+    
+    if (!class_exists('DatabaseConfig')) {
+        throw new Exception("DatabaseConfigクラスが見つかりません");
+    }
+    
+    $pdo = DatabaseConfig::getConnection();
+} catch (Exception $config_error) {
+    // フォールバック: 直接接続
+    error_log("統一設定の読み込みに失敗、直接接続を使用: " . $config_error->getMessage());
     $pdo = new PDO(
-        "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4",
-        DB_USER,
-        DB_PASS,
+        "mysql:host=localhost;dbname=sales_report;charset=utf8mb4",
+        'root',
+        '',
         [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES => false
         ]
     );
-} catch (PDOException $e) {
-    echo json_encode([
-        'success' => false,
-        'message' => 'データベース接続エラー: ' . $e->getMessage()
-    ]);
-    exit;
 }
 
 // POSTデータの取得

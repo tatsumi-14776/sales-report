@@ -43,18 +43,32 @@ class Database {
     
     private function __construct() {
         try {
+            // 統一設定を使用
+            $config_path = __DIR__ . '/config/database.php';
+            if (!file_exists($config_path)) {
+                throw new Exception("設定ファイルが見つかりません: $config_path");
+            }
+            
+            require_once $config_path;
+            
+            if (!class_exists('DatabaseConfig')) {
+                throw new Exception("DatabaseConfigクラスが見つかりません");
+            }
+            
+            $this->pdo = DatabaseConfig::getConnection();
+        } catch (Exception $e) {
+            // フォールバック: 直接接続
+            error_log("統一設定の読み込みに失敗、直接接続を使用: " . $e->getMessage());
             $this->pdo = new PDO(
                 "mysql:host=localhost;dbname=sales_report;charset=utf8mb4",
-                'yanagisawa',
-                'zxcvb@12345',
+                'root',
+                '',
                 [
                     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                     PDO::ATTR_EMULATE_PREPARES => false
                 ]
             );
-        } catch (PDOException $e) {
-            throw new Exception('データベース接続エラー: ' . $e->getMessage());
         }
     }
     
