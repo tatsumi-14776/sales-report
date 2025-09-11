@@ -340,28 +340,31 @@
                 </div>
 
                 <div class="content">
-                    <!-- 売上情報 -->
-                    <div class="section section-green">
-                        <h2 class="section-title">売上情報</h2>
-                        <!-- 支払い方法はJavaScriptで動的生成 -->
-                        <!-- 売上合計 -->
-                        <div class="section-total total-green">
-                            <div class="total-row">
-                                <span class="total-label">売上合計:</span>
-                                <span class="total-value" id="salesTotal">¥0</span>
+                    <!-- 売上情報とポイント・クーポンを左右配置 -->
+                    <div class="sales-point-grid">
+                        <!-- 売上情報（左側） -->
+                        <div class="section section-green">
+                            <h2 class="section-title">売上情報</h2>
+                            <!-- 支払い方法はJavaScriptで動的生成 -->
+                            <!-- 売上合計 -->
+                            <div class="section-total total-green">
+                                <div class="total-row">
+                                    <span class="total-label">売上合計:</span>
+                                    <span class="total-value" id="salesTotal">¥0</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- ポイント・クーポン支払 -->
-                    <div class="section section-orange">
-                        <h2 class="section-title">ポイント・クーポン支払</h2>
-                        <!-- ポイント・クーポン支払項目はJavaScriptで動的生成 -->
-                        <!-- 支払合計 -->
-                        <div class="section-total total-orange">
-                            <div class="total-row">
-                                <span class="total-label">ポイント・クーポン合計:</span>
-                                <span class="total-value" id="pointPaymentTotal">¥0</span>
+                        
+                        <!-- ポイント・クーポン支払（右側） -->
+                        <div class="section section-point">
+                            <h2 class="section-title">ポイント・クーポン支払</h2>
+                            <!-- ポイント・クーポン支払項目はJavaScriptで動的生成 -->
+                            <!-- 支払合計 -->
+                            <div class="section-total total-point">
+                                <div class="total-row">
+                                    <span class="total-label">ポイント・クーポン合計:</span>
+                                    <span class="total-value" id="pointTotal">¥0</span>
+                                </div>
                             </div>
                         </div>
                     </div>

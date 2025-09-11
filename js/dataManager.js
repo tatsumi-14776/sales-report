@@ -742,6 +742,28 @@ function getUserSession() {
 }
 
 /**
+ * 手動税率入力データの取得
+ * @returns {Object} 手動税率入力データ
+ */
+function getManualTaxInputs() {
+    try {
+        const manual10Element = document.getElementById('manual10Percent');
+        const manual8Element = document.getElementById('manual8Percent');
+        
+        return {
+            manual10Percent: manual10Element && manual10Element.value.trim() !== '' ? parseFloat(manual10Element.value) : null,
+            manual8Percent: manual8Element && manual8Element.value.trim() !== '' ? parseFloat(manual8Element.value) : null
+        };
+    } catch (error) {
+        console.error('手動税率入力データの取得でエラー:', error);
+        return {
+            manual10Percent: null,
+            manual8Percent: null
+        };
+    }
+}
+
+/**
  * 経費データ収集
  * @returns {Array} 経費データの配列
  */
@@ -860,6 +882,7 @@ function collectAllFormData() {
         
         console.log('基本データ収集完了:', basicData);
 
+        // 手動税率入力データの取得
         const manualTaxInputs = getManualTaxInputs();
         console.log('手動税率入力データ収集完了:', manualTaxInputs);
 
@@ -941,6 +964,7 @@ function collectAllFormData() {
         };
         
         console.log('全フォームデータ収集完了');
+        console.log('収集されたデータ:', JSON.stringify(allData, null, 2));
         return allData;
         
     } catch (error) {
@@ -969,6 +993,7 @@ function collectAllFormData() {
  */
 function validateFormData(data) {
     console.log('データバリデーションを開始');
+    console.log('バリデーション対象データ:', JSON.stringify(data, null, 2));
     
     try {
         const errors = [];
@@ -1029,8 +1054,13 @@ function validateFormData(data) {
         // 売上データの妥当性チェック
         let totalSales = 0;
         try {
+            console.log('売上データチェック開始');
+            console.log('data.sales:', data.sales);
+            console.log('data.pointPayments:', data.pointPayments);
+            
             Object.values(data.sales || {}).forEach(amount => {
                 const numAmount = parseFloat(amount) || 0;
+                console.log('売上項目:', amount, '→', numAmount);
                 if (numAmount < 0) {
                     errors.push('売上金額に負の値は入力できません');
                 }
@@ -1039,13 +1069,16 @@ function validateFormData(data) {
 
             Object.values(data.pointPayments || {}).forEach(amount => {
                 const numAmount = parseFloat(amount) || 0;
+                console.log('ポイント項目:', amount, '→', numAmount);
                 if (numAmount < 0) {
                     errors.push('ポイント・クーポン支払金額に負の値は入力できません');
                 }
                 totalSales += numAmount;
             });
 
+            console.log('売上合計:', totalSales);
             if (totalSales === 0) {
+                console.warn('売上データが0のためエラーを追加');
                 errors.push('売上データが入力されていません');
             }
         } catch (salesValidationError) {

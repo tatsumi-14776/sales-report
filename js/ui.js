@@ -42,12 +42,11 @@ function generatePaymentMethods() {
             const methodDiv = document.createElement('div');
             methodDiv.className = 'payment-method';
             methodDiv.innerHTML = `
+                <div class="method-title">${method.label}</div>
                 <div class="tax-grid">
-                    <div class="method-title">${method.label}</div>
                     <div class="tax-header">税率10%</div>
                     <div class="tax-header">税率8%</div>
                     <div class="tax-header">合計</div>
-                    <div></div>
                     <div><input type="number" id="${method.id}10" class="tax-input" placeholder="0"></div>
                     <div><input type="number" id="${method.id}8" class="tax-input" placeholder="0"></div>
                     <div class="tax-total" id="${method.id}Total">¥0</div>
@@ -73,9 +72,9 @@ function generatePaymentMethods() {
 function generateDiscountSection() {
     console.log('ポイント・クーポン支払セクションの生成を開始');
     
-    const container = document.querySelector('.section-orange');
+    const container = document.querySelector('.section-point');
     if (!container) {
-        console.error('.section-orange要素が見つかりません');
+        console.error('.section-point要素が見つかりません');
         throw new Error('ポイント・クーポン支払セクションが見つかりません');
     }
     
@@ -106,12 +105,11 @@ function generateDiscountSection() {
             const paymentDiv = document.createElement('div');
             paymentDiv.className = 'payment-method';
             paymentDiv.innerHTML = `
+                <div class="method-title">${payment.label}</div>
                 <div class="tax-grid">
-                    <div class="method-title">${payment.label}</div>
                     <div class="tax-header">税率10%</div>
                     <div class="tax-header">税率8%</div>
                     <div class="tax-header">合計</div>
-                    <div></div>
                     <div><input type="number" id="${payment.id}10" class="tax-input" placeholder="0"></div>
                     <div><input type="number" id="${payment.id}8" class="tax-input" placeholder="0"></div>
                     <div class="tax-total" id="${payment.id}Total">¥0</div>
