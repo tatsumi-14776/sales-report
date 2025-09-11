@@ -1091,7 +1091,7 @@
                     <td>
                         <div class="action-buttons">
                             <button class="btn btn-secondary btn-small" onclick="editMethod(${method.id})">✏️ 編集</button>
-                            <button class="btn btn-danger btn-small" onclick="deleteMethod(${method.id}, 'payment')" ${method.is_system_default ? 'disabled title="システム標準の支払方法は削除できません"' : ''}>🗑️ 削除</button>
+                            <button class="btn btn-danger btn-small" onclick="deleteMethod(${method.id}, 'payment')" ${method.is_system_default == 1 ? 'disabled title="システム標準の支払方法は削除できません"' : ''}>🗑️ 削除</button>
                         </div>
                     </td>
                 </tr>
@@ -1246,7 +1246,7 @@
                 return;
             }
 
-            if (!confirm(`${itemName}「${displayName}」を削除しますか？\n\nこの操作は取り消せません。`)) {
+            if (!confirm(`${itemName}「${displayName}」を完全に削除しますか？\n\n⚠️ 重要な注意事項：\n• この操作は取り消せません\n• 店舗設定で使用中の場合は削除できません\n• 削除後は支払方法一覧から完全に消えます\n\n本当に削除してもよろしいですか？`)) {
                 return;
             }
 

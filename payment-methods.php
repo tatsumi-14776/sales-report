@@ -310,13 +310,9 @@ function handleGetMethods($pdo, $data) {
         $type = $data['type'] ?? 'payment';
         $includeDeleted = $data['include_deleted'] ?? false;
         
-        // 削除済み除外条件
-        $whereCondition = "method_category = ?";
+        // ✅ 修正: deleted_atがNULLの項目のみ表示（is_activeは関係なし）
+        $whereCondition = "method_category = ? AND deleted_at IS NULL";
         $params = [$type];
-        
-        if (!$includeDeleted) {
-            $whereCondition .= " AND is_active = 1";
-        }
         
         // 統合テーブルから取得
         $sql = "SELECT id, method_id, method_name, method_category, method_type, 
@@ -400,11 +396,26 @@ function handleDeleteMethod($pdo, $data) {
             throw new Exception('メソッドIDが指定されていません');
         }
 
-        // payment_method_masters から削除（論理削除）
+        // ✅ 追加: 店舗設定での使用状況をチェック
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) as usage_count,
+                   GROUP_CONCAT(DISTINCT s.store_name SEPARATOR ', ') as store_names
+            FROM store_payment_settings sps
+            JOIN stores s ON sps.store_id = s.id
+            WHERE sps.payment_method_id = ? AND sps.is_enabled = 1 AND sps.is_deleted = 0
+        ");
+        $stmt->execute([$methodId]);
+        $usage = $stmt->fetch();
+        
+        if ($usage['usage_count'] > 0) {
+            throw new Exception("この支払方法は以下の店舗で使用されています：{$usage['store_names']}\n\n削除する前に、各店舗の設定画面で使用を停止してください。");
+        }
+
+        // ✅ 修正: 論理削除（deleted_atを設定＋is_activeを0に）
         $stmt = $pdo->prepare("
             UPDATE payment_method_masters 
-            SET is_active = 0, updated_at = NOW() 
-            WHERE id = ? AND method_category = ?
+            SET deleted_at = NOW(), is_active = 0, updated_at = NOW() 
+            WHERE id = ? AND method_category = ? AND deleted_at IS NULL
         ");
         $stmt->execute([$methodId, $type]);
 
