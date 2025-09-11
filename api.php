@@ -330,6 +330,7 @@ class APIController {
             $attachedFiles = $data['attached_files'] ?? [];
             $paymentMethodConfig = $data['payment_method_config'] ?? null;
             $pointPaymentConfig = $data['point_payment_config'] ?? null;
+            $manualTaxInputs = $data['manual_tax_inputs'] ?? null;
             
             if ($existing) {
                 // 更新（ステータスは draft に設定）
@@ -342,6 +343,7 @@ class APIController {
                         cash_data = ?,
                         payment_method_config = ?,
                         point_payment_config = ?,
+                        manual_tax_inputs = ?,
                         previous_cash_balance = ?,
                         cash_difference = ?,
                         remarks = ?,
@@ -360,6 +362,7 @@ class APIController {
                     json_encode($cashData),
                     $paymentMethodConfig ? json_encode($paymentMethodConfig) : null,
                     $pointPaymentConfig ? json_encode($pointPaymentConfig) : null,
+                    $manualTaxInputs ? json_encode($manualTaxInputs) : null,
                     $previousCashBalance,
                     $cashDifference,
                     $remarks,
@@ -382,13 +385,14 @@ class APIController {
                         cash_data,
                         payment_method_config,
                         point_payment_config,
+                        manual_tax_inputs,
                         previous_cash_balance,
                         cash_difference,
                         remarks,
                         attached_files,
                         status,
                         submitted_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', NOW())
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', NOW())
                 ");
                 $stmt->execute([
                     $reportDate, 
@@ -401,6 +405,7 @@ class APIController {
                     json_encode($cashData),
                     $paymentMethodConfig ? json_encode($paymentMethodConfig) : null,
                     $pointPaymentConfig ? json_encode($pointPaymentConfig) : null,
+                    $manualTaxInputs ? json_encode($manualTaxInputs) : null,
                     $previousCashBalance,
                     $cashDifference,
                     $remarks,
@@ -562,6 +567,17 @@ private function getReport($data) {
     
     error_log("Final Status: " . $status);
     
+    // 手動税率入力データを復元
+    $manualTaxInputsData = [];
+    if ($report['manual_tax_inputs']) {
+        try {
+            $manualTaxInputsData = json_decode($report['manual_tax_inputs'], true);
+        } catch (Exception $e) {
+            error_log('手動税率入力データのパースエラー: ' . $e->getMessage());
+            $manualTaxInputsData = [];
+        }
+    }
+
     return [
         'success' => true,
         'data' => [
@@ -580,6 +596,7 @@ private function getReport($data) {
             'cash_difference' => floatval($report['cash_difference'] ?? 0),
             'remarks' => $report['remarks'] ?? '',
             'attached_files' => $attachedFilesData,
+            'manual_tax_inputs' => $manualTaxInputsData,
             'status' => $status, // statusを確実に返す
             'submitted_at' => $report['submitted_at'],
             'created_at' => $report['created_at'],

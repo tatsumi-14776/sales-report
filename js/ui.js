@@ -598,6 +598,20 @@ function loadDataIntoForm(data) {
                 }
             });
         }
+
+        // 手動税率入力データ
+        if (data.manualTaxInputs) {
+            const manual10Input = document.getElementById('manual10Percent');
+            const manual8Input = document.getElementById('manual8Percent');
+            
+            if (manual10Input && data.manualTaxInputs.manual10Percent !== null && data.manualTaxInputs.manual10Percent !== undefined) {
+                manual10Input.value = data.manualTaxInputs.manual10Percent;
+            }
+            if (manual8Input && data.manualTaxInputs.manual8Percent !== null && data.manualTaxInputs.manual8Percent !== undefined) {
+                manual8Input.value = data.manualTaxInputs.manual8Percent;
+            }
+            console.log('手動税率入力データを復元しました:', data.manualTaxInputs);
+        }
         
         // 計算を更新
         updateAllCalculations();

@@ -160,10 +160,30 @@ function updateSummaryCalculation() {
         }
     });
     
-    // 売上総額と税率別集計を表示
+    // 売上総額と税率別集計を表示（手動入力対応版）
     updateElementValue('summaryTotalSales', totalSales);
-    updateElementValue('summary10Percent', total10Percent);
-    updateElementValue('summary8Percent', total8Percent);
+
+    // 手動入力値をチェック
+    const manual10Input = document.getElementById('manual10Percent');
+    const manual8Input = document.getElementById('manual8Percent');
+
+    const manual10Value = manual10Input && manual10Input.value !== '' ? parseFloat(manual10Input.value) || 0 : null;
+    const manual8Value = manual8Input && manual8Input.value !== '' ? parseFloat(manual8Input.value) || 0 : null;
+
+    // 手動入力がある場合はその値を使用、ない場合は自動計算値を使用
+    const display10Percent = manual10Value !== null ? manual10Value : total10Percent;
+    const display8Percent = manual8Value !== null ? manual8Value : total8Percent;
+
+    updateElementValue('summary10Percent', display10Percent);
+    updateElementValue('summary8Percent', display8Percent);
+
+    // 手動入力時の視覚的フィードバック
+    if (manual10Input) {
+        manual10Input.style.backgroundColor = manual10Value !== null ? '#fef3c7' : '';
+    }
+    if (manual8Input) {
+        manual8Input.style.backgroundColor = manual8Value !== null ? '#fef3c7' : '';
+    }
 
     // 現金売上（現金項目のみを合計）
     let cashSales = 0;
@@ -344,4 +364,69 @@ if (typeof window !== 'undefined') {
     window.formatPercent = formatPercent;
     
     console.log('✅ calculations.js: 関数をグローバルスコープに公開しました');
+}
+/**
+ * 手動税率入力をクリア
+ */
+function clearManualTaxInputs() {
+    try {
+        const manual10Input = document.getElementById('manual10Percent');
+        const manual8Input = document.getElementById('manual8Percent');
+        
+        if (manual10Input) {
+            manual10Input.value = '';
+            manual10Input.style.backgroundColor = '';
+        }
+        
+        if (manual8Input) {
+            manual8Input.value = '';
+            manual8Input.style.backgroundColor = '';
+        }
+        
+        // 計算を更新して自動計算に戻す
+        updateAllCalculations();
+        
+        console.log('手動税率入力をクリアしました（自動計算に戻る）');
+        
+    } catch (error) {
+        console.error('手動税率入力クリアでエラー:', error);
+        showError('税率入力のクリアに失敗しました');
+    }
+}
+
+// 手動税率入力の処理
+function clearManualTaxInputs() {
+    document.getElementById('manual10Percent').value = '';
+    document.getElementById('manual8Percent').value = '';
+    updateAllCalculations();
+}
+
+// 手動税率入力時の処理（片方に値を入力したら相手側が空の場合は0にする）
+function handleManualTaxInput(inputId) {
+    const manual10Input = document.getElementById('manual10Percent');
+    const manual8Input = document.getElementById('manual8Percent');
+    
+    if (inputId === 'manual10Percent') {
+        if (manual10Input.value && manual10Input.value !== '') {
+            // 10%に値が入力された場合、8%が空欄なら0にする
+            if (!manual8Input.value || manual8Input.value === '') {
+                manual8Input.value = '0';
+            }
+        }
+    } else if (inputId === 'manual8Percent') {
+        if (manual8Input.value && manual8Input.value !== '') {
+            // 8%に値が入力された場合、10%が空欄なら0にする
+            if (!manual10Input.value || manual10Input.value === '') {
+                manual10Input.value = '0';
+            }
+        }
+    }
+    
+    updateAllCalculations();
+}
+
+// 関数をグローバルスコープに公開
+if (typeof window !== 'undefined') {
+    window.clearManualTaxInputs = clearManualTaxInputs;
+    window.getManualTaxInputs = getManualTaxInputs;
 }

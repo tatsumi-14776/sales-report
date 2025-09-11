@@ -137,7 +137,7 @@
         <!-- 右側：集計サマリーパネル -->
         <div class="summary-panel">
             <div class="summary-panel-title">📊 日報集計</div>
-            
+
             <!-- 売上情報 -->
             <div class="summary-section">
                 <div class="summary-subtitle">📊 売上総額</div>
@@ -153,6 +153,53 @@
                     <span class="summary-item-label">(内)8%分集計</span>
                     <span class="summary-item-value" id="summary8Percent">¥0</span>
                 </div>
+                
+                <!-- 手動調整セクション -->
+                <div class="manual-tax-summary-section">
+                    <details class="manual-tax-details">
+                        <summary class="manual-tax-summary">
+                        <span class="manual-tax-title">手動調整</span>
+                        <span class="manual-tax-chevron" aria-hidden="true">▾</span>
+                        </summary>
+
+                        <div class="manual-tax-inputs">
+                        <div class="manual-tax-input-row">
+                            <input
+                            type="number"
+                            id="manual10Percent"
+                            class="manual-tax-summary-input"
+                            placeholder="10%分売上総額"
+                            onchange="handleManualTaxInput('manual10Percent')"
+                            inputmode="numeric"
+                            >
+                        </div>
+
+                        <div class="manual-tax-input-row">
+                            <input
+                            type="number"
+                            id="manual8Percent"
+                            class="manual-tax-summary-input"
+                            placeholder="8%分売上総額"
+                            onchange="handleManualTaxInput('manual8Percent')"
+                            inputmode="numeric"
+                            >
+                        </div>
+
+                        <div class="manual-tax-reset-wrapper">
+                            <button
+                            class="manual-tax-reset-button"
+                            onclick="clearManualTaxInputs()"
+                            type="button"
+                            title="自動計算に戻す"
+                            >
+                            自動計算に戻す
+                            </button>
+                        </div>
+                        </div>
+                    </details>
+                </div>
+
+
             </div>
 
             <!-- 現金管理 -->

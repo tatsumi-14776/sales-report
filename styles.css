@@ -924,6 +924,109 @@ body {
     border: 1px solid #bae6fd;
 }
 
+/* ===== 手動調整（右パネル） ===== */
+
+/* 全体枠は他summary-sectionと同調 */
+.manual-tax-summary-section {
+  background-color: #f9fafb;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  margin-top: 0.5rem;
+  border: 1px dashed #e5e7eb;
+}
+
+.manual-tax-details {
+  display: block;
+}
+
+/* 見出し部分 */
+.manual-tax-summary {
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  padding: 0.25rem 0;
+}
+.manual-tax-summary::-webkit-details-marker { display: none; }
+.manual-tax-summary::marker { content: ""; }
+
+.manual-tax-title {
+  font-size: 0.875rem; /* 内)10%分集計と同じサイズ */
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.manual-tax-chevron {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  transition: transform 0.15s ease;
+}
+.manual-tax-details[open] .manual-tax-chevron {
+  transform: rotate(180deg);
+}
+
+/* 入力欄 */
+.manual-tax-inputs {
+  margin-top: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.manual-tax-input-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.manual-tax-summary-input {
+  width: 100%;
+  padding: 0.375rem 0.5rem;
+  font-size: 0.875rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.25rem;
+  text-align: right;
+  background-color: white;
+}
+.manual-tax-summary-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px #3b82f6;
+}
+.manual-tax-summary-input:not(:placeholder-shown) {
+  background-color: #fff7ed;
+  border-color: #f59e0b;
+  font-weight: 500;
+  color: #92400e;
+}
+
+/* リセットボタン（下部に配置） */
+.manual-tax-reset-wrapper {
+  text-align: right;
+}
+.manual-tax-reset-button {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  background-color: #6b7280;
+  color: white;
+  border: none;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.manual-tax-reset-button:hover {
+  background-color: #4b5563;
+}
+
+/* 印刷時は非表示 */
+@media print {
+  .manual-tax-summary-section {
+    display: none !important;
+  }
+}
+
+
 @media (max-width: 1024px) {
     .container {
         flex-direction: column;
@@ -962,6 +1065,8 @@ body {
     .discount-grid {
         grid-template-columns: 1fr;
     }
+
+    
 }
 
 /* 印刷専用スタイル */
@@ -1367,4 +1472,11 @@ body {
     .content {
         gap: 20px;
     }
+}
+
+/* 印刷時は非表示 */
+@media print {
+  .manual-tax-summary-section {
+    display: none !important;
+  }
 }

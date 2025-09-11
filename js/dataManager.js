@@ -387,6 +387,21 @@ function convertDatabaseToFormData(dbData) {
             console.log('添付ファイルデータが存在しません');
             formData.attachedFiles = [];
         }
+
+        // 手動税率入力データを復元
+        if (dbData.manual_tax_inputs) {
+            try {
+                const manualTaxData = typeof dbData.manual_tax_inputs === 'string' ? 
+                    JSON.parse(dbData.manual_tax_inputs) : dbData.manual_tax_inputs;
+                formData.manualTaxInputs = manualTaxData;
+                console.log('手動税率入力データ復元完了:', formData.manualTaxInputs);
+            } catch (e) {
+                console.warn('手動税率入力データのパースに失敗:', e);
+                formData.manualTaxInputs = { manual10Percent: null, manual8Percent: null };
+            }
+        } else {
+            formData.manualTaxInputs = { manual10Percent: null, manual8Percent: null };
+        }
         
         console.log('変換完了（全体）:', formData);
         return formData;
@@ -659,6 +674,7 @@ async function saveReportToDatabase(reportData) {
             }),
             expense_data: JSON.stringify(reportData.expenses || []),
             cash_data: JSON.stringify(reportData.cash || {}),
+            manual_tax_inputs: JSON.stringify(reportData.manualTaxInputs || {}),
             // 保存時の支払方法設定も一緒に保存
             payment_method_config: paymentMethodConfig || null,
             point_payment_config: pointPaymentConfig || null,
@@ -844,6 +860,9 @@ function collectAllFormData() {
         
         console.log('基本データ収集完了:', basicData);
 
+        const manualTaxInputs = getManualTaxInputs();
+        console.log('手動税率入力データ収集完了:', manualTaxInputs);
+
         // 動的な売上データ収集
         const sales = {};
         if (paymentMethodConfig && Array.isArray(paymentMethodConfig)) {
@@ -917,6 +936,7 @@ function collectAllFormData() {
             cash,
             attachedFiles,
             remarks,
+            manualTaxInputs,
             submittedAt: new Date().toISOString()
         };
         
