@@ -521,6 +521,17 @@ function loadDataIntoForm(data) {
         
         // 現金管理データ
         if (data.cash && denominations) {
+            console.log('現金データの復元を開始:', data.cash);
+            
+            // 新形式の合計金額をログ出力
+            if (data.cash.totals) {
+                console.log('保存された合計金額:', {
+                    registerTotal: `¥${data.cash.totals.registerTotal?.toLocaleString() || 0}`,
+                    safeTotal: `¥${data.cash.totals.safeTotal?.toLocaleString() || 0}`,
+                    totalCash: `¥${data.cash.totals.totalCash?.toLocaleString() || 0}`
+                });
+            }
+            
             denominations.forEach(denom => {
                 const registerInput = document.querySelector(`[data-type="register"][data-denom="${denom.key}"]`);
                 const safeInput = document.querySelector(`[data-type="safe"][data-denom="${denom.key}"]`);
@@ -532,6 +543,8 @@ function loadDataIntoForm(data) {
                     safeInput.value = data.cash[denom.key].safe || 0;
                 }
             });
+            
+            console.log('現金データの復元完了');
         }
         
         // 経費データ

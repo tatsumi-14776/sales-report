@@ -231,6 +231,20 @@ function checkAndAutoLoadData() {
                 dateElement.value = urlDate;
                 console.log('URLパラメータから日付を設定:', urlDate);
             }
+        } else {
+            // パラメータがない場合は前日現金残を自動読み込み
+            console.log('URLパラメータなし：前日現金残の自動読み込みを実行');
+            
+            setTimeout(() => {
+                const dateElement = document.getElementById('date');
+                const currentDate = dateElement ? dateElement.value : getCurrentDate();
+                
+                if (typeof loadPreviousCashBalance === 'function') {
+                    loadPreviousCashBalance(currentDate);
+                } else {
+                    console.error('loadPreviousCashBalance関数が見つかりません');
+                }
+            }, 1000); // 店舗情報読み込み完了を待つ
         }
         
     } catch (error) {

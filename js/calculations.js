@@ -428,5 +428,4 @@ function handleManualTaxInput(inputId) {
 // 関数をグローバルスコープに公開
 if (typeof window !== 'undefined') {
     window.clearManualTaxInputs = clearManualTaxInputs;
-    window.getManualTaxInputs = getManualTaxInputs;
 }

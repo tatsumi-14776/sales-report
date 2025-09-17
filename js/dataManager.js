@@ -764,6 +764,195 @@ function getManualTaxInputs() {
 }
 
 /**
+ * 前日現金残を自動読み込み（最大1週間遡る）
+ * @param {string} currentDate - 現在の日付 (YYYY-MM-DD)
+ */
+async function loadPreviousCashBalance(currentDate) {
+    console.log('🔄 前日現金残の自動読み込みを開始:', currentDate);
+    
+    try {
+        // URLパラメータをチェック
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('date') || urlParams.has('store') || urlParams.has('action')) {
+            console.log('⏸️ URLパラメータが存在するため、前日現金残の自動読み込みをスキップ');
+            return;
+        }
+        
+        // 現在の店舗IDを取得
+        let storeId = null;
+        const storeNameElement = document.getElementById('storeName');
+        if (storeNameElement && storeNameElement.value) {
+            console.log(`🏪 店舗名から店舗IDを取得中: ${storeNameElement.value}`);
+            // 店舗名から店舗IDを取得
+            try {
+                const storeResponse = await fetch(`api.php?action=getStoreByName&store_name=${encodeURIComponent(storeNameElement.value)}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (storeResponse.ok) {
+                    const storeResult = await storeResponse.json();
+                    if (storeResult.success && storeResult.data) {
+                        storeId = storeResult.data.id;
+                        console.log(`✅ 店舗ID取得成功: ${storeId}`);
+                    }
+                }
+            } catch (error) {
+                console.log('❌ 店舗ID取得エラー:', error);
+            }
+        }
+        
+        if (!storeId) {
+            console.log('⏸️ 店舗IDが取得できないため、前日現金残の自動読み込みをスキップ');
+            return;
+        }
+        
+        console.log(`🔍 過去データ検索開始 (最大1週間遡る)`);
+        const currentDateObj = new Date(currentDate);
+        const maxDaysBack = 7; // 最大1週間遡る
+        
+        for (let daysBack = 1; daysBack <= maxDaysBack; daysBack++) {
+            const targetDate = new Date(currentDateObj);
+            targetDate.setDate(currentDateObj.getDate() - daysBack);
+            const targetDateStr = targetDate.toISOString().split('T')[0];
+            
+            console.log(`📅 ${daysBack}日前のデータを確認中: ${targetDateStr}`);
+            
+            try {
+                // APIから過去のデータを取得
+                const response = await fetch(`api.php?action=getReport&report_date=${encodeURIComponent(targetDateStr)}&store_id=${storeId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    console.log(`⚠️ ${targetDateStr}のデータ取得に失敗: HTTP ${response.status}`);
+                    continue;
+                }
+                
+                const result = await response.json();
+                
+                // APIレスポンスの詳細をログ出力
+                console.log(`📊 ${targetDateStr}のAPIレスポンス:`, {
+                    success: result.success,
+                    hasData: !!result.data,
+                    message: result.message
+                });
+                
+                if (result.success && result.data) {
+                    const data = result.data;
+                    
+                    console.log(`${targetDateStr}のデータ構造:`, {
+                        hasCash: !!data.cash,
+                        hasTotals: !!(data.cash && data.cash.totals),
+                        totalCashValue: data.cash?.totals?.totalCash,
+                        cashKeys: data.cash ? Object.keys(data.cash) : []
+                    });
+                    
+                    // 売上データが存在するかチェック
+                    const salesDataInfo = {
+                        hasSales: !!data.sales,
+                        salesKeys: data.sales ? Object.keys(data.sales) : [],
+                        salesWithValues: []
+                    };
+                    
+                    if (data.sales) {
+                        Object.keys(data.sales).forEach(key => {
+                            const value = data.sales[key];
+                            if (value && value > 0) {
+                                salesDataInfo.salesWithValues.push(`${key}: ${value}`);
+                            }
+                        });
+                    }
+                    
+                    const hasSalesData = salesDataInfo.salesWithValues.length > 0;
+                    
+                    console.log(`🛒 ${targetDateStr}の売上データ詳細:`, salesDataInfo);
+                    console.log(`✅ ${targetDateStr}の売上データ存在チェック:`, hasSalesData);
+                    
+                    // 保存された合計金額を確認
+                    let totalCashAmount = null;
+                    let dataSource = '';
+                    
+                    if (data.cash && data.cash.totals && typeof data.cash.totals.totalCash === 'number') {
+                        // 新形式：合計金額が保存されている場合
+                        totalCashAmount = data.cash.totals.totalCash;
+                        dataSource = '新形式（保存済み合計金額）';
+                        console.log(`${targetDateStr}の${dataSource}を使用: ¥${totalCashAmount.toLocaleString()}`);
+                    } else if (data.cash && denominations) {
+                        // 旧形式：金種データから計算
+                        let calculatedTotal = 0;
+                        denominations.forEach(denom => {
+                            if (data.cash[denom.key]) {
+                                const registerCount = data.cash[denom.key].register || 0;
+                                const safeCount = data.cash[denom.key].safe || 0;
+                                const denomAmount = (registerCount + safeCount) * denom.value;
+                                calculatedTotal += denomAmount;
+                                if (denomAmount > 0) {
+                                    console.log(`  ${denom.label}: ${registerCount + safeCount}枚 = ¥${denomAmount.toLocaleString()}`);
+                                }
+                            }
+                        });
+                        totalCashAmount = calculatedTotal;
+                        dataSource = '旧形式（金種から計算）';
+                        console.log(`${targetDateStr}の${dataSource}: ¥${totalCashAmount.toLocaleString()}`);
+                    } else {
+                        console.log(`${targetDateStr}には現金データがありません`);
+                    }
+                    
+                    if (hasSalesData && totalCashAmount !== null && totalCashAmount > 0) {
+                        console.log(`✅ ${targetDateStr}の有効なデータを発見 (${dataSource})`);
+                        console.log(`   売上データ: あり`);
+                        console.log(`   当日現金残: ¥${totalCashAmount.toLocaleString()}`);
+                        
+                        // 前日現金残入力欄に設定
+                        const previousCashElement = document.getElementById('previousCashBalance');
+                        if (previousCashElement) {
+                            previousCashElement.value = totalCashAmount;
+                            console.log(`🎯 前日現金残を設定: ¥${totalCashAmount.toLocaleString()}`);
+                            
+                            // 計算を更新
+                            if (typeof updateAllCalculations === 'function') {
+                                updateAllCalculations();
+                            }
+                            
+                            // 成功したので処理を終了
+                            return;
+                        }
+                    } else {
+                        const reasons = [];
+                        if (!hasSalesData) reasons.push('売上データなし');
+                        if (totalCashAmount === null) reasons.push('現金データなし');
+                        if (totalCashAmount === 0) reasons.push('現金残0円');
+                        console.log(`❌ ${targetDateStr}は条件不適合: ${reasons.join(', ')}`);
+                    }
+                } else {
+                    if (!result.success) {
+                        console.log(`❌ ${targetDateStr}のAPI呼び出しが失敗: ${result.message || 'エラーメッセージなし'}`);
+                    } else {
+                        console.log(`📭 ${targetDateStr}のデータが見つかりません (result.data が空)`);
+                    }
+                }
+                
+            } catch (error) {
+                console.log(`💥 ${targetDateStr}のデータ取得でエラー:`, error.message || error);
+                continue;
+            }
+        }
+        
+        console.log('❌ 過去1週間のデータに有効な現金残が見つかりませんでした');
+        console.log('💡 手動で前日現金残を入力してください');
+        
+    } catch (error) {
+        console.error('❌ 前日現金残の自動読み込みでエラー:', error);
+    }
+}
+
+/**
  * 経費データ収集
  * @returns {Array} 経費データの配列
  */
@@ -824,6 +1013,9 @@ function collectCashData() {
     
     try {
         const cashData = {};
+        let registerTotal = 0;
+        let safeTotal = 0;
+        let totalCash = 0;
         
         if (!denominations || !Array.isArray(denominations)) {
             console.error('denominations が正しく定義されていません');
@@ -836,11 +1028,23 @@ function collectCashData() {
                 const safeInput = document.querySelector(`[data-type="safe"][data-denom="${denom.key}"]`);
                 
                 if (registerInput && safeInput) {
+                    const registerCount = parseInt(registerInput.value) || 0;
+                    const safeCount = parseInt(safeInput.value) || 0;
+                    
                     cashData[denom.key] = {
-                        register: parseInt(registerInput.value) || 0,
-                        safe: parseInt(safeInput.value) || 0
+                        register: registerCount,
+                        safe: safeCount
                     };
-                    console.log(`現金データ ${denom.key} を収集:`, cashData[denom.key]);
+                    
+                    // 合計金額を計算
+                    const registerAmount = registerCount * denom.value;
+                    const safeAmount = safeCount * denom.value;
+                    
+                    registerTotal += registerAmount;
+                    safeTotal += safeAmount;
+                    totalCash += registerAmount + safeAmount;
+                    
+                    console.log(`現金データ ${denom.key} を収集:`, cashData[denom.key], `(レジ: ¥${registerAmount.toLocaleString()}, 金庫: ¥${safeAmount.toLocaleString()})`);
                 } else {
                     console.warn(`現金データ ${denom.key} の入力要素が見つかりません`);
                     cashData[denom.key] = { register: 0, safe: 0 };
@@ -852,7 +1056,20 @@ function collectCashData() {
             }
         });
         
+        // 合計金額を追加
+        cashData.totals = {
+            registerTotal: registerTotal,
+            safeTotal: safeTotal,
+            totalCash: totalCash
+        };
+        
         console.log('現金データ収集完了:', cashData);
+        console.log('合計金額:', {
+            registerTotal: `¥${registerTotal.toLocaleString()}`,
+            safeTotal: `¥${safeTotal.toLocaleString()}`,
+            totalCash: `¥${totalCash.toLocaleString()}`
+        });
+        
         return cashData;
         
     } catch (error) {
@@ -1496,3 +1713,4 @@ async function createNewStore(storeName) {
 
 // グローバル関数として公開
 window.getStoreIdByName = getStoreIdByName;
+window.getManualTaxInputs = getManualTaxInputs;

@@ -556,6 +556,38 @@ private function getReport($data) {
     error_log("Raw Status: " . ($report['status'] ?? 'NULL'));
     error_log("Report Date: " . $report['report_date']);
     
+    // デバッグログ追加
+    error_log("=== getReport デバッグ ===");
+    error_log("Report ID: " . $report['id']);
+    error_log("Raw Status: " . ($report['status'] ?? 'NULL'));
+    error_log("Report Date: " . $report['report_date']);
+    error_log("Raw cash_data: " . substr($report['cash_data'] ?? 'NULL', 0, 200));
+    
+    // cash_dataの詳細デバッグ
+    if ($report['cash_data']) {
+        $cashDataRaw = $report['cash_data'];
+        error_log("cash_data type: " . gettype($cashDataRaw));
+        error_log("cash_data length: " . strlen($cashDataRaw));
+        
+        // 二重JSON解析を試行
+        $firstDecode = json_decode($cashDataRaw, true);
+        if (is_string($firstDecode)) {
+            error_log("cash_data is double-encoded, performing second decode");
+            $secondDecode = json_decode($firstDecode, true);
+            if ($secondDecode !== null) {
+                error_log("Second decode successful");
+                $cashDataParsed = $secondDecode;
+            } else {
+                error_log("Second decode failed");
+                $cashDataParsed = $firstDecode;
+            }
+        } else {
+            $cashDataParsed = $firstDecode;
+        }
+    } else {
+        $cashDataParsed = [];
+    }
+    
     $attachedFilesData = $report['attached_files'] ? json_decode($report['attached_files'], true) : [];
     error_log("添付ファイル数: " . count($attachedFilesData));
     
@@ -585,17 +617,23 @@ private function getReport($data) {
             'report_date' => $report['report_date'],
             'store_id' => $report['store_id'],
             'user_id' => $report['user_id'],
+            // 旧形式との互換性を保持
             'sales_data' => $report['sales_data'] ? json_decode($report['sales_data'], true) : [],
             'point_payments_data' => $report['point_payments_data'] ? json_decode($report['point_payments_data'], true) : [],
             'income_data' => $report['income_data'] ? json_decode($report['income_data'], true) : [],
             'expense_data' => $report['expense_data'] ? json_decode($report['expense_data'], true) : [],
-            'cash_data' => $report['cash_data'] ? json_decode($report['cash_data'], true) : [],
+            'cash_data' => $cashDataParsed,
+            // 新形式も併用（前日現金残取得用）
+            'sales' => $report['sales_data'] ? json_decode($report['sales_data'], true) : [],
+            'cash' => $cashDataParsed,
+            'expenses' => $report['expense_data'] ? json_decode($report['expense_data'], true) : [],
             'payment_method_config' => $report['payment_method_config'] ? json_decode($report['payment_method_config'], true) : null,
             'point_payment_config' => $report['point_payment_config'] ? json_decode($report['point_payment_config'], true) : null,
             'previous_cash_balance' => floatval($report['previous_cash_balance'] ?? 0),
             'cash_difference' => floatval($report['cash_difference'] ?? 0),
             'remarks' => $report['remarks'] ?? '',
             'attached_files' => $attachedFilesData,
+            'attachedFiles' => $attachedFilesData, // 新形式も併用
             'manual_tax_inputs' => $manualTaxInputsData,
             'status' => $status, // statusを確実に返す
             'submitted_at' => $report['submitted_at'],

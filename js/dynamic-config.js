@@ -345,6 +345,7 @@ const ConfigLoader = {
         denominations = [
             { key: 'bill10000', label: '10,000円札', value: 10000 },
             { key: 'bill5000', label: '5,000円札', value: 5000 },
+            { key: 'bill2000', label: '2,000円札', value: 2000 },
             { key: 'bill1000', label: '1,000円札', value: 1000 },
             { key: 'coin500', label: '500円玉', value: 500 },
             { key: 'coin100', label: '100円玉', value: 100 },
