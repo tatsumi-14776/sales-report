@@ -30,8 +30,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-// データベース接続設定
-// データベース接続（統一設定を使用）
 // 統一データベース設定を使用
 try {
     require_once __DIR__ . '/config/database.php';

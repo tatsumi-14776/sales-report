@@ -51,7 +51,6 @@ try {
         throw new Exception('アクションが指定されていません');
     }
 
-    // データベース接続（統一設定を使用）
     // 統一データベース設定を使用
     try {
         require_once __DIR__ . '/config/database.php';
@@ -62,16 +61,6 @@ try {
         echo json_encode(['success' => false, 'message' => 'データベース接続に失敗しました']);
         exit;
     }
-
-    // POSTデータの取得とデバッグログ
-    $rawInput = file_get_contents('php://input');
-    error_log("Raw POST data: " . $rawInput);
-
-    $data = json_decode($rawInput, true);
-    $action = $data['action'] ?? '';
-
-    error_log("Parsed action: " . $action);
-    error_log("Parsed data: " . json_encode($data));
 
     // アクションに応じた処理
     try {
