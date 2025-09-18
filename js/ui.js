@@ -684,6 +684,7 @@ function loadDataIntoForm(data) {
             if (data.status === 'approved') {
                 console.log('確定済みのため、確定済みデータが読み込まれました');
                 setFormReadOnly(true);
+                // 管理者・一般ユーザー問わず統一メッセージを表示
                 showConfirmedMessage();
                 updateSubmitButtonForConfirmed();
             } else {
@@ -965,43 +966,18 @@ function showSuccess(message) {
  */
 function displayConfirmationStatus(status, date, storeName) {
     try {
-        // 既存の状態表示を削除
+        // 既存のステータス表示を削除
         const existingStatus = document.getElementById('confirmationStatusDisplay');
         if (existingStatus) {
             existingStatus.remove();
         }
         
-        let statusDisplay = null;
+        let statusDisplay;
         
         if (status === 'approved') {
-            // 確定済み状態の詳細表示
-            statusDisplay = document.createElement('div');
-            statusDisplay.id = 'confirmationStatusDisplay';
-            statusDisplay.style.cssText = `
-                background: linear-gradient(135deg, #fef3c7, #fed7aa);
-                border: 2px solid #d97706;
-                border-radius: 12px;
-                padding: 1rem;
-                margin: 1rem 0;
-                text-align: center;
-                font-weight: bold;
-                color: #92400e;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                animation: statusFadeIn 0.5s ease-in;
-            `;
-            
-            statusDisplay.innerHTML = `
-                <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem; margin-bottom: 0.5rem;">
-                    <span style="font-size: 1.5rem;">🔒</span>
-                    <span style="font-size: 1.1rem;">確定済み日報</span>
-                </div>
-                <div style="font-size: 0.9rem; opacity: 0.8;">
-                    ${date} - ${storeName}
-                </div>
-                <div style="font-size: 0.85rem; margin-top: 0.5rem; opacity: 0.7;">
-                    ${window.isAdminUser ? '管理者権限により閲覧・編集可能' : 'この日報は確定済みのため編集できません'}
-                </div>
-            `;
+            // 確定済みの場合は何も表示しない（showConfirmedMessageで統一表示）
+            console.log('確定済み状態：統一メッセージで表示済みのため、詳細ステータス表示はスキップ');
+            return;
             
         } else if (status === 'submitted') {
             // 提出済み（未確定）状態の表示

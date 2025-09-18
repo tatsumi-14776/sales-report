@@ -1180,7 +1180,7 @@
             if (report.status === 'approved') {
                 // 確定済みの場合（クリック可能）
                 return `
-                    <button class="btn-small btn-confirmed" onclick="viewReportInForm(${report.store_id}, '${report.report_date}')" title="この日報は確定済みです">確定済み</button>
+                    <button class="btn-small btn-confirmed" onclick="viewReportInForm(${report.store_id}, '${report.report_date}')" title="この日報は確定済みです">確定</button>
                     <button class="btn-small btn-view" onclick="viewReportDetail(${report.id})">👁️ 詳細</button>
                     <button class="btn-small btn-download" onclick="downloadReport(${report.id})">📄 PDF</button>
                 `;
