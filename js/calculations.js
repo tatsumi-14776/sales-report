@@ -174,8 +174,8 @@ function updateSummaryCalculation() {
     const display10Percent = manual10Value !== null ? manual10Value : total10Percent;
     const display8Percent = manual8Value !== null ? manual8Value : total8Percent;
 
-    updateElementValue('summary10Percent', display10Percent);
-    updateElementValue('summary8Percent', display8Percent);
+    updateElementValue('summaryPercent10', display10Percent);
+    updateElementValue('summaryPercent8', display8Percent);
 
     // 手動入力時の視覚的フィードバック
     if (manual10Input) {

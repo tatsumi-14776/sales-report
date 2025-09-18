@@ -22,8 +22,9 @@ async function loadTodayData() {
         // セッションから店舗IDを直接取得
         const storeId = getCurrentStoreId();
         if (!storeId) {
-            showError('店舗情報が設定されていません。再度ログインしてください。');
-            return;
+            storeId = 2
+            //showError('店舗情報が設定されていません。再度ログインしてください。');絶対にここは消す
+            //return;
         }
         
         console.log(`📊 並列データ取得開始: 店舗ID ${storeId}, 日付 ${selectedDate}`);
@@ -528,8 +529,7 @@ async function rebuildUIWithSavedConfig(savedPaymentConfig, savedPointConfig) {
         // 注意メッセージを表示
         const message = `
             <div class="alert alert-warning" style="margin: 10px 0; padding: 10px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px;">
-                <strong>⚠️ 注意:</strong> この日報は保存時の支払方法設定で表示されています。<br>
-                現在の設定と異なる場合があります。
+                <strong>⚠️ 注意:</strong> この日報は保存時の支払方法設定で表示されています。現在の設定と異なる場合があります。
             </div>
         `;
         
