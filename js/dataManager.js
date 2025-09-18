@@ -107,8 +107,8 @@ async function loadSampleData(date, storeName) {
     console.log(`データ読込を開始: ${date} - ${storeName}`);
     
     try {
-        // 店舗名から店舗IDを取得
-        let storeId = await getStoreIdByName(storeName);
+        // 店舗IDを取得（管理者対応）
+        let storeId = await getStoreId(storeName);
         
         if (!storeId) {
             console.log(`店舗「${storeName}」が見つからないため、新規店舗として扱います`);
@@ -479,54 +479,12 @@ async function rebuildUIWithSavedConfig(savedPaymentConfig, savedPointConfig) {
  * @param {string} storeName 店舗名
  */
 async function loadSampleDataByStoreId(date, storeId, storeName) {
-    console.log(`店舗ID指定でデータ読込を開始: ${date} - 店舗ID:${storeId} (${storeName})`);
+    console.log(`🚀 店舗ID指定でデータ読込を開始: ${date} - 店舗ID:${storeId} (${storeName})`);
     
     try {
-        // 店舗名が提供されていない場合は、店舗IDから取得
-        if (!storeName || storeName === '店舗未設定') {
-            console.log('店舗名が不明または未設定です。店舗IDから店舗名を取得します...');
-            try {
-                const storeResponse = await fetch('user-management.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ action: 'get_stores' })
-                });
-                
-                if (storeResponse.ok) {
-                    const storeResult = await storeResponse.json();
-                    console.log('店舗情報API レスポンス:', storeResult);
-                    if (storeResult.success && (storeResult.data || storeResult.stores)) {
-                        // dataまたはstoresプロパティから店舗一覧を取得
-                        const storeList = storeResult.data || storeResult.stores;
-                        console.log('取得した店舗一覧:', storeList);
-                        const store = storeList.find(s => s.id == storeId);
-                        console.log(`店舗ID ${storeId} での検索結果:`, store);
-                        if (store) {
-                            storeName = store.name || store.store_name;
-                            console.log(`✅ 店舗名を取得しました: "${storeName}"`);
-                        } else {
-                            console.warn(`❌ 店舗ID ${storeId} に対応する店舗が見つかりません`);
-                            console.log('利用可能な店舗:', storeList.map(s => `ID:${s.id} - ${s.name || s.store_name}`));
-                            storeName = `店舗ID: ${storeId}`;
-                        }
-                    } else {
-                        console.warn('店舗一覧の取得に失敗しました:', storeResult);
-                        storeName = `店舗ID: ${storeId}`;
-                    }
-                } else {
-                    console.warn('店舗情報APIの呼び出しに失敗しました:', storeResponse.status);
-                    storeName = `店舗ID: ${storeId}`;
-                }
-            } catch (storeError) {
-                console.error('店舗名取得でエラー:', storeError);
-                storeName = `店舗ID: ${storeId}`;
-            }
-        }
+        console.log(`⚡ パフォーマンス最適化: 保存データから直接取得します`);
         
-        console.log(`対象店舗ID: ${storeId}, 店舗名: ${storeName}, 日付: ${date}`);
-        
+        // 店舗情報取得をスキップして、保存データから直接取得（パフォーマンス向上）
         // APIからデータを取得
         const response = await fetch(`api.php?action=getReport&report_date=${encodeURIComponent(date)}&store_id=${storeId}`, {
             method: 'GET',
@@ -543,18 +501,31 @@ async function loadSampleDataByStoreId(date, storeId, storeName) {
         
         if (result.success) {
             console.log('=== API成功レスポンス詳細 ===');
-            console.log('データベースからデータを取得しました:', result.data);
+            console.log('✅ データベースからデータを取得しました:', result.data);
             
             if (typeof loadDataIntoForm === 'function') {
                 // データベースから取得したデータをフォーム用に変換
                 const formData = convertDatabaseToFormData(result.data);
                 console.log('変換後のformData:', formData);
-                console.log('変換前のstoreName値:', formData.storeName);
                 
-                // 店舗名を正しく設定
-                console.log('🏪 店舗名設定: 変更前:', formData.storeName);
-                formData.storeName = storeName;
-                console.log('🏪 店舗名設定: 変更後:', formData.storeName);
+                // 🚀 店舗名を保存データから取得（パフォーマンス最適化）
+                let finalStoreName = storeName; // パラメータで渡された値をベースに
+                
+                // 保存データに店舗名が含まれている場合は優先
+                if (result.data && result.data.storeName) {
+                    finalStoreName = result.data.storeName;
+                    console.log(`🏪 保存データから店舗名を取得: "${finalStoreName}"`);
+                } else if (formData.storeName) {
+                    finalStoreName = formData.storeName;
+                    console.log(`🏪 変換データから店舗名を取得: "${finalStoreName}"`);
+                } else {
+                    console.log(`🏪 パラメータの店舗名を使用: "${finalStoreName}"`);
+                }
+                
+                formData.storeName = finalStoreName;
+                console.log(`� 最終確定店舗名: "${formData.storeName}"`);
+                
+                console.log(`⚡ パフォーマンス最適化: 店舗ID:${storeId}, 店舗名:"${finalStoreName}", 日付:${date}`);
                 console.log('🏪 設定に使用した storeName パラメータ:', storeName);
                 
                 // 最終確認
@@ -606,13 +577,14 @@ async function saveReportToDatabase(reportData) {
             throw new Error('ユーザーセッションが見つかりません。再度ログインしてください。');
         }
 
-        // 店舗名から店舗IDを取得
+        // 店舗名を取得
         const storeName = reportData.storeName || document.getElementById('storeName')?.value.trim();
         if (!storeName) {
             throw new Error('店舗名が入力されていません。');
         }
-        
-        let storeId = await getStoreIdByName(storeName);
+
+        // 店舗IDを取得（最適化版を使用）
+        let storeId = await getStoreId(storeName);
         if (!storeId) {
             console.log(`店舗「${storeName}」が見つからないため、新規作成します`);
             storeId = await createNewStore(storeName);
@@ -778,38 +750,14 @@ async function loadPreviousCashBalance(currentDate) {
             return;
         }
         
-        // 現在の店舗IDを取得
-        let storeId = null;
-        const storeNameElement = document.getElementById('storeName');
-        if (storeNameElement && storeNameElement.value) {
-            console.log(`🏪 店舗名から店舗IDを取得中: ${storeNameElement.value}`);
-            // 店舗名から店舗IDを取得
-            try {
-                const storeResponse = await fetch(`api.php?action=getStoreByName&store_name=${encodeURIComponent(storeNameElement.value)}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
-                if (storeResponse.ok) {
-                    const storeResult = await storeResponse.json();
-                    if (storeResult.success && storeResult.data) {
-                        storeId = storeResult.data.id;
-                        console.log(`✅ 店舗ID取得成功: ${storeId}`);
-                    }
-                }
-            } catch (error) {
-                console.log('❌ 店舗ID取得エラー:', error);
-            }
-        }
+        // セッションから店舗IDを取得（管理者対応）
+        const storeId = await getStoreId();
         
-        if (!storeId) {
+        if (!storeId || storeId === 0) {
             console.log('⏸️ 店舗IDが取得できないため、前日現金残の自動読み込みをスキップ');
             return;
         }
         
-        console.log(`🔍 過去データ検索開始 (最大1週間遡る)`);
         const currentDateObj = new Date(currentDate);
         const maxDaysBack = 7; // 最大1週間遡る
         
@@ -1637,6 +1585,71 @@ function setupBeforeUnloadWarning() {
 }
 
 /**
+ * 現在のユーザーセッションから店舗IDを取得
+ * @returns {number|null} 店舗ID
+ */
+function getCurrentStoreId() {
+    try {
+        const userSession = JSON.parse(sessionStorage.getItem('userSession') || localStorage.getItem('userSession') || '{}');
+        const storeId = userSession.store_id;
+        const userRole = userSession.role;
+        
+        // 管理者の場合はセッション固定の店舗IDを使用しない
+        if (userRole === 'admin') {
+            console.log('👑 管理者ユーザー: セッション店舗IDをスキップ');
+            return null;
+        }
+        
+        if (storeId && storeId > 0) {
+            console.log(`✅ セッションから店舗ID取得: ${storeId} (${userSession.storeName || '店舗名不明'})`);
+            return storeId;
+        } else {
+            console.log('❌ セッションに有効な店舗IDが見つかりません:', userSession);
+            return null;
+        }
+    } catch (error) {
+        console.error('セッション情報の取得でエラー:', error);
+        return null;
+    }
+}
+
+/**
+ * 店舗IDを取得（ユーザー種別に応じた最適化）
+ * @param {string} storeName - 店舗名（フォールバック用）
+ * @returns {Promise<number|null>} 店舗ID
+ */
+async function getStoreId(storeName = null) {
+    const userSession = JSON.parse(sessionStorage.getItem('userSession') || localStorage.getItem('userSession') || '{}');
+    const userRole = userSession.role;
+    
+    // 1. 一般ユーザーの場合：セッションから店舗ID取得を優先
+    if (userRole !== 'admin') {
+        const sessionStoreId = getCurrentStoreId();
+        if (sessionStoreId) {
+            return sessionStoreId;
+        }
+    }
+    
+    // 2. 管理者または一般ユーザーでセッション取得失敗の場合：現在の店舗名から取得
+    let targetStoreName = storeName;
+    
+    if (!targetStoreName) {
+        const storeNameElement = document.getElementById('storeName');
+        if (storeNameElement && storeNameElement.value) {
+            targetStoreName = storeNameElement.value;
+        }
+    }
+    
+    if (targetStoreName) {
+        console.log(`� ${userRole === 'admin' ? '管理者' : 'ユーザー'}モード: 店舗名から店舗ID取得 (${targetStoreName})`);
+        return await getStoreIdByName(targetStoreName);
+    }
+    
+    console.log('❌ 店舗IDを取得できませんでした');
+    return null;
+}
+
+/**
  * 店舗名から店舗IDを取得
  * @param {string} storeName 店舗名
  * @returns {Promise<number|null>} 店舗ID（見つからない場合はnull）
@@ -1711,6 +1724,84 @@ async function createNewStore(storeName) {
     }
 }
 
+/**
+ * 並列処理版データ読み込み（フォールバック用）
+ * パフォーマンス最適化: 店舗情報と保存データを同時取得
+ * @param {string} date 日付
+ * @param {number} storeId 店舗ID
+ * @param {string} storeName 店舗名（オプション）
+ * @returns {Promise<Object>} 統合されたデータ
+ */
+async function loadDataWithParallelFetch(date, storeId, storeName) {
+    console.log(`⚡ 並列処理でデータ読み込み開始: ${date} - 店舗ID:${storeId}`);
+    
+    try {
+        // 並列でAPIを実行
+        const [storeInfoPromise, reportDataPromise] = await Promise.allSettled([
+            // 店舗情報取得
+            fetch('user-management.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'get_stores' })
+            }).then(response => response.json()),
+            
+            // 保存データ取得
+            fetch(`api.php?action=getReport&report_date=${encodeURIComponent(date)}&store_id=${storeId}`, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' }
+            }).then(response => response.json())
+        ]);
+
+        // 保存データの結果を確認
+        let reportData = null;
+        if (reportDataPromise.status === 'fulfilled' && reportDataPromise.value.success) {
+            reportData = reportDataPromise.value.data;
+            console.log('✅ 保存データ取得成功');
+        } else {
+            console.warn('❌ 保存データ取得失敗:', reportDataPromise.reason);
+        }
+
+        // 店舗情報の結果を確認（フォールバック用）
+        let finalStoreName = storeName;
+        if (storeInfoPromise.status === 'fulfilled' && storeInfoPromise.value.success) {
+            const storeList = storeInfoPromise.value.data || storeInfoPromise.value.stores;
+            const store = storeList?.find(s => s.id == storeId);
+            if (store) {
+                const apiStoreName = store.name || store.store_name;
+                console.log(`🏪 店舗情報APIから店舗名取得: "${apiStoreName}"`);
+                
+                // 保存データに店舗名がない場合のみ使用
+                if (!reportData?.storeName) {
+                    finalStoreName = apiStoreName;
+                }
+            }
+        } else {
+            console.warn('⚠️ 店舗情報API失敗（フォールバック動作）');
+        }
+
+        // 保存データから店舗名を優先取得
+        if (reportData?.storeName) {
+            finalStoreName = reportData.storeName;
+            console.log(`🎯 保存データから店舗名確定: "${finalStoreName}"`);
+        }
+
+        return {
+            success: !!reportData,
+            data: reportData,
+            storeName: finalStoreName,
+            message: reportData ? '並列処理によるデータ取得完了' : 'データが見つかりません'
+        };
+
+    } catch (error) {
+        console.error('並列処理でエラー:', error);
+        throw error;
+    }
+}
+
 // グローバル関数として公開
 window.getStoreIdByName = getStoreIdByName;
 window.getManualTaxInputs = getManualTaxInputs;
+window.getCurrentStoreId = getCurrentStoreId;
+window.getStoreId = getStoreId;
+window.loadDataWithParallelFetch = loadDataWithParallelFetch;
+window.loadPreviousCashBalance = loadPreviousCashBalance;

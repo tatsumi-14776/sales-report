@@ -451,8 +451,11 @@ const ConfigLoader = {
         storeNameElements.forEach(element => {
             if (element.tagName === 'INPUT') {
                 element.value = displayStoreName;
-                // URLパラメータがある場合は読み取り専用に
-                element.readOnly = !!urlStoreId;
+                // 店舗名フィールドは常に読み取り専用（ユーザーに編集させない）
+                element.readOnly = true;
+                element.style.backgroundColor = '#f8f9fa';
+                element.style.cursor = 'not-allowed';
+                element.style.opacity = '0.7';
             }
         });
         

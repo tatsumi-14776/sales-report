@@ -440,21 +440,29 @@ function loadDataIntoForm(data) {
         }
         
         if (storeNameElement && data.storeName) {
-            // 管理者モードでも店舗名を強制設定
+            // 管理者モードでも店舗名を強制設定（但し常にreadonly維持）
             const isAdminMode = storeNameElement.getAttribute('data-admin-mode') === 'true';
             
             if (isAdminMode) {
-                const wasReadOnly = storeNameElement.readOnly;
                 const wasDisabled = storeNameElement.disabled;
                 
-                storeNameElement.readOnly = false;
+                storeNameElement.readOnly = false; // 値設定のため一時的に解除
                 storeNameElement.disabled = false;
                 storeNameElement.value = data.storeName;
                 
-                storeNameElement.readOnly = wasReadOnly;
+                // 設定後は常にreadonly復元（ユーザーには編集させない）
+                storeNameElement.readOnly = true;
                 storeNameElement.disabled = wasDisabled;
+                storeNameElement.style.backgroundColor = '#f8f9fa';
+                storeNameElement.style.cursor = 'not-allowed';
+                storeNameElement.style.opacity = '0.7';
             } else {
                 storeNameElement.value = data.storeName;
+                // 通常モードでも常にreadonly（ユーザーには編集させない）
+                storeNameElement.readOnly = true;
+                storeNameElement.style.backgroundColor = '#f8f9fa';
+                storeNameElement.style.cursor = 'not-allowed';
+                storeNameElement.style.opacity = '0.7';
             }
             console.log('店舗名を設定しました:', data.storeName);
         }
@@ -765,6 +773,15 @@ function setFormReadOnly(readOnly) {
         const inputs = document.querySelectorAll('input[type="number"], input[type="text"], input[type="date"], textarea, select');
         
         inputs.forEach(input => {
+            // 店舗名フィールドは常にreadonly（ユーザーに編集させない）
+            if (input.id === 'storeName') {
+                input.setAttribute('readonly', 'true');
+                input.style.backgroundColor = '#f8f9fa';
+                input.style.cursor = 'not-allowed';
+                input.style.opacity = '0.7';
+                return; // 店舗名は以降の処理をスキップ
+            }
+            
             if (readOnly) {
                 input.setAttribute('readonly', 'true');
                 input.style.backgroundColor = '#f8f9fa';

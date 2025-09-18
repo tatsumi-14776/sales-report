@@ -7,7 +7,6 @@
 let isAppInitialized = false;
 
 // 経費レコード管理
-let expenseRecords = [];
 let nextExpenseId = 1;
 
 // 勘定科目設定
@@ -122,6 +121,22 @@ function initializeApplication() {
 
         // URLパラメータをチェックして自動データ読み込み
         checkAndAutoLoadData();
+
+        // 前日現金残の自動読み込み（URLパラメータがない場合）
+        setTimeout(() => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (!urlParams.has('date') && !urlParams.has('store') && !urlParams.has('action')) {
+                console.log('🎯 前日現金残の自動読み込みを実行します');
+                const currentDate = dateElement ? dateElement.value : getCurrentDate();
+                if (typeof loadPreviousCashBalance === 'function') {
+                    loadPreviousCashBalance(currentDate);
+                } else {
+                    console.error('loadPreviousCashBalance関数が見つかりません');
+                }
+            } else {
+                console.log('⏸️ URLパラメータが存在するため、前日現金残の自動読み込みをスキップ');
+            }
+        }, 2000); // 他の初期化処理完了を待つ
 
         // 初期化完了
         isAppInitialized = true;
@@ -255,6 +270,16 @@ function checkAndAutoLoadData() {
 // 設定読み込み前の代替処理
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('DOM読み込み完了。動的設定を初期化します...');
+    
+    // 店舗名フィールドを常にreadonly（ユーザーに編集させない）
+    const storeNameElement = document.getElementById('storeName');
+    if (storeNameElement) {
+        storeNameElement.setAttribute('readonly', 'true');
+        storeNameElement.style.backgroundColor = '#f8f9fa';
+        storeNameElement.style.cursor = 'not-allowed';
+        storeNameElement.style.opacity = '0.7';
+        console.log('店舗名フィールドをreadonlyに設定しました');
+    }
     
     try {
         // 動的設定の初期化を実行
@@ -536,9 +561,9 @@ async function handleConfirm() {
             console.warn('⚠️ 確定ボタンが見つかりません');
         }
         
-        // 店舗IDを取得
-        console.log('🏪 店舗ID取得開始');
-        const storeId = await getStoreIdByName(formData.storeName);
+        // 店舗IDを取得（最適化版を使用）
+        console.log('🏪 店舗ID取得開始（最適化版）');
+        const storeId = await getStoreId(formData.storeName);
         console.log('🏪 取得した店舗ID:', storeId);
         
         if (!storeId) {
@@ -640,8 +665,8 @@ async function handleUnconfirm() {
             unconfirmButton.style.opacity = '0.6';
         }
         
-        // 店舗IDを取得
-        const storeId = await getStoreIdByName(formData.storeName);
+        // 店舗IDを取得（最適化版を使用）
+        const storeId = await getStoreId(formData.storeName);
         if (!storeId) {
             throw new Error('店舗情報の取得に失敗しました');
         }

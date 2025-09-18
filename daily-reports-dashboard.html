@@ -799,6 +799,18 @@
             }
         }
 
+        // ログアウト処理
+        function handleLogout() {
+            if (confirm('ログアウトしますか？')) {
+                // セッション情報をクリア
+                sessionStorage.removeItem('userSession');
+                localStorage.removeItem('userSession');
+                
+                // ログイン画面にリダイレクト
+                window.location.href = 'login.html';
+            }
+        }
+
         // ページ初期化（前日日付設定版）
         async function initializePage() {
             try {
