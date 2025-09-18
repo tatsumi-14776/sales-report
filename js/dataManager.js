@@ -59,13 +59,36 @@ function handleLoadData() {
         let selectedDate = dateElement ? dateElement.value : '';
         let storeName = storeNameElement ? storeNameElement.value.trim() : '';
 
-        // URLパラメータがある場合は優先
-        if (urlDate) {
+        // デバッグログ追加
+        console.log('🔍 handleLoadData デバッグ情報:', {
+            dateFieldValue: dateElement ? dateElement.value : 'null',
+            urlDate: urlDate,
+            hasUsedUrlParams: hasUsedUrlParams,
+            selectedDate: selectedDate
+        });
+
+        // URLパラメータがある場合は初回のみ優先（管理者からの確認モード）
+        if (urlDate && !hasUsedUrlParams) {
             selectedDate = urlDate;
-            if (dateElement) {
+            // dateElementがまだ設定されていない場合のみ設定
+            if (dateElement && dateElement.value !== urlDate) {
                 dateElement.value = urlDate;
+                console.log('✅ handleLoadData: URLパラメータの日付を設定:', urlDate);
+            }
+            // URLパラメータ使用フラグを設定
+            hasUsedUrlParams = true;
+            console.log('✅ 初回アクセス: URLパラメータの日付を使用:', urlDate);
+        } else {
+            // 2回目以降または手動変更時は常に現在の日付フィールドの値を優先
+            if (dateElement && dateElement.value) {
+                selectedDate = dateElement.value;
+                console.log('✅ 手動入力の日付を使用:', selectedDate);
+            } else {
+                console.log('⚠️ 日付フィールドが空です');
             }
         }
+
+        console.log('🎯 最終選択日付:', selectedDate);
 
         if (!selectedDate) {
             showError('読み込む日付を選択してください');
@@ -918,19 +941,21 @@ function collectExpenseData() {
                 const vendorInput = record.querySelector('[data-field="vendor"]');
                 const accountSelect = record.querySelector('[data-field="account"]');
                 const itemInput = record.querySelector('[data-field="item"]');
+                const invoiceNumberInput = record.querySelector('[data-field="invoiceNumber"]');
                 const amountInput = record.querySelector('[data-field="amount"]');
                 
-                if (vendorInput && accountSelect && itemInput && amountInput) {
+                if (vendorInput && accountSelect && itemInput && invoiceNumberInput && amountInput) {
                     const expense = {
                         id: parseInt(vendorInput.dataset.id) || index + 1,
                         vendor: vendorInput.value.trim(),
                         account: accountSelect.value,
                         item: itemInput.value.trim(),
+                        invoiceNumber: invoiceNumberInput.value.trim(),
                         amount: parseFloat(amountInput.value) || 0
                     };
                     
                     // 空の経費レコードは除外（金額が0でない、またはいずれかのフィールドに入力がある場合のみ追加）
-                    if (expense.amount > 0 || expense.vendor || expense.account || expense.item) {
+                    if (expense.amount > 0 || expense.vendor || expense.account || expense.item || expense.invoiceNumber) {
                         expenses.push(expense);
                         console.log(`経費レコード ${index + 1} を収集:`, expense);
                     }

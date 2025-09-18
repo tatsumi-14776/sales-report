@@ -181,6 +181,13 @@ function generateDenominationRows() {
  */
 function addExpenseRecord() {
     console.log('経費レコードを追加中');
+    console.log('expenseRecords の状態:', expenseRecords, 'type:', typeof expenseRecords, 'isArray:', Array.isArray(expenseRecords));
+    
+    // expenseRecords が配列でない場合は初期化
+    if (!Array.isArray(expenseRecords)) {
+        console.warn('expenseRecords が配列ではありません。初期化します。');
+        expenseRecords = [];
+    }
     
     const container = document.getElementById('expenseRecords');
     if (!container) {
@@ -214,6 +221,7 @@ function addExpenseRecord() {
                 <span class="expense-amount-symbol">¥</span>
                 <input type="number" class="expense-amount-input" placeholder="0" data-field="amount" data-id="${nextExpenseId}">
             </div>
+            <input type="text" class="expense-input" placeholder="適格請求書登録番号" data-field="invoiceNumber" data-id="${nextExpenseId}">
             <button class="delete-button" onclick="removeExpenseRecord(${nextExpenseId})">
                 <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -222,7 +230,7 @@ function addExpenseRecord() {
         `;
         container.appendChild(newRecord);
         
-        expenseRecords.push({id: nextExpenseId, vendor: '', account: '', item: '', amount: ''});
+        expenseRecords.push({id: nextExpenseId, vendor: '', account: '', item: '', invoiceNumber: '', amount: ''});
         console.log(`経費レコード ID:${nextExpenseId} を追加しました`);
         nextExpenseId++;
         
@@ -362,6 +370,33 @@ function setupEventListeners() {
             }
         });
         console.log('経費項目の動的リスナーを設定');
+        
+        // 日付フィールドの変更監視（URLパラメータフラグリセット用）
+        const dateElement = document.getElementById('date');
+        if (dateElement) {
+            dateElement.addEventListener('change', function() {
+                // ユーザーが手動で日付を変更した場合、URLパラメータフラグをリセット
+                console.log('🔄 日付フィールド変更検出:', {
+                    新しい値: this.value,
+                    変更前のフラグ: typeof hasUsedUrlParams !== 'undefined' ? hasUsedUrlParams : 'undefined'
+                });
+                if (typeof hasUsedUrlParams !== 'undefined') {
+                    hasUsedUrlParams = false;
+                    console.log('✅ URLパラメータフラグをリセットしました');
+                }
+                
+                // URLからdateパラメータを削除（完全に手動モードに切り替え）
+                const url = new URL(window.location);
+                if (url.searchParams.has('date')) {
+                    url.searchParams.delete('date');
+                    window.history.replaceState({}, '', url);
+                    console.log('🗑️ URLからdateパラメータを削除しました');
+                }
+            });
+            console.log('日付フィールドの変更監視を設定');
+        } else {
+            console.warn('日付フィールドが見つかりません');
+        }
         
         console.log('イベントリスナーの設定完了');
         
@@ -571,11 +606,13 @@ function loadDataIntoForm(data) {
                 const vendorInput = document.querySelector(`[data-field="vendor"][data-id="${currentId}"]`);
                 const accountSelect = document.querySelector(`[data-field="account"][data-id="${currentId}"]`);
                 const itemInput = document.querySelector(`[data-field="item"][data-id="${currentId}"]`);
+                const invoiceNumberInput = document.querySelector(`[data-field="invoiceNumber"][data-id="${currentId}"]`);
                 const amountInput = document.querySelector(`[data-field="amount"][data-id="${currentId}"]`);
                 
                 if (vendorInput) vendorInput.value = expense.vendor || '';
                 if (accountSelect) accountSelect.value = expense.account || '';
                 if (itemInput) itemInput.value = expense.item || '';
+                if (invoiceNumberInput) invoiceNumberInput.value = expense.invoiceNumber || '';
                 if (amountInput) amountInput.value = expense.amount || 0;
             });
         }
@@ -782,6 +819,15 @@ function setFormReadOnly(readOnly) {
                 return; // 店舗名は以降の処理をスキップ
             }
             
+            // 日付フィールドは常に操作可能（確定データでも日付変更を許可）
+            if (input.id === 'date' || input.type === 'date') {
+                input.removeAttribute('readonly');
+                input.style.backgroundColor = '';
+                input.style.cursor = '';
+                input.style.opacity = '';
+                return; // 日付フィールドは以降の処理をスキップ
+            }
+            
             if (readOnly) {
                 input.setAttribute('readonly', 'true');
                 input.style.backgroundColor = '#f8f9fa';
@@ -801,7 +847,7 @@ function setFormReadOnly(readOnly) {
             input.disabled = readOnly;
         });
         
-        // 経費追加ボタンなどの操作ボタンも無効化
+        // 経費追加ボタンなどの操作ボタンも無効化（但し、データ読み込みボタンと日付フィールドは除外）
         const actionButtons = document.querySelectorAll('.add-button, .delete-button, .clear-file-button');
         actionButtons.forEach(button => {
             button.disabled = readOnly;
@@ -812,6 +858,14 @@ function setFormReadOnly(readOnly) {
                 button.style.opacity = '';
                 button.style.cursor = '';
             }
+        });
+        
+        // データ読み込みボタンは常に有効化（確定データでも日付変更して再読み込みできるように）
+        const loadButtons = document.querySelectorAll('.today-load-button');
+        loadButtons.forEach(button => {
+            button.disabled = false;
+            button.style.opacity = '';
+            button.style.cursor = '';
         });
         
         console.log(`フォームを${readOnly ? '読み取り専用' : '編集可能'}に設定しました`);

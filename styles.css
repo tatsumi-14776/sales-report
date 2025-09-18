@@ -542,7 +542,7 @@ body {
 
 .expense-record {
     display: grid;
-    grid-template-columns: 3fr 2fr 4fr 2fr 1fr;
+    grid-template-columns: 3fr 2fr 4fr 2fr 3fr 1fr;
     gap: 0.5rem;
     padding: 0.5rem;
     background-color: #f9fafb;
@@ -1375,19 +1375,6 @@ body {
         font-weight: bold;
     }
 
-    /* çµŒè²»è¨˜éŒ² */
-    .expense-record {
-        display: table-row;
-        border-bottom: 1px solid #666;
-    }
-
-    .expense-record > * {
-        display: table-cell;
-        border: 1px solid #666;
-        padding: 4px;
-        vertical-align: middle;
-    }
-
     .expense-input,
     .expense-select,
     .expense-amount-input {
@@ -1396,13 +1383,6 @@ body {
         width: 100%;
         font-weight: bold;
         padding: 2px;
-    }
-
-    #expenseRecords {
-        display: table;
-        width: 100%;
-        border-collapse: collapse;
-        border: 1px solid #000;
     }
 
     /* ç¾é‡‘ç®¡ç†ãƒ†ãƒ¼ãƒ–ãƒ« */
@@ -1566,7 +1546,7 @@ body {
   }
 }
 
-/* ŠÇ—ÒŠm’èŠm’è‰ğœƒ{ƒ^ƒ“ */
+/* ï¿½Ç—ï¿½ï¿½ÒŠmï¿½ï¿½mï¿½ï¿½ï¿½ï¿½ï¿½ï¿½{ï¿½^ï¿½ï¿½ */
 .confirm-button-summary {
     width: 100%;
     padding: 12px 16px;

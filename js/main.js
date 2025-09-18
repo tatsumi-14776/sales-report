@@ -8,6 +8,10 @@ let isAppInitialized = false;
 
 // 経費レコード管理
 let nextExpenseId = 1;
+let expenseRecords = [];
+
+// URLパラメータ使用フラグ（初回のみURLパラメータを使用するため）
+let hasUsedUrlParams = false;
 
 // 勘定科目設定
 const accountCategories = [
@@ -58,7 +62,7 @@ function initializeApplication() {
 
         // 初期経費レコードを設定
         if (expenseRecords.length === 0) {
-            expenseRecords.push({id: 1, vendor: '', account: '', item: '', amount: ''});
+            expenseRecords.push({id: 1, vendor: '', account: '', item: '', invoiceNumber: '', amount: ''});
         }
         
         // UI要素の生成（存在チェック付き）
@@ -166,7 +170,7 @@ function initializeApplication() {
 
         // 初期経費レコードを設定
         if (expenseRecords.length === 0) {
-            expenseRecords.push({id: 1, vendor: '', account: '', item: '', amount: ''});
+            expenseRecords.push({id: 1, vendor: '', account: '', item: '', invoiceNumber: '', amount: ''});
         }
         
         // UI要素の生成
@@ -186,14 +190,31 @@ function initializeApplication() {
         // データ管理機能
         setupBeforeUnloadWarning();
         
-        // 初期日付設定
-        const dateElement = document.getElementById('date');
-        if (dateElement && !dateElement.value) {
-            dateElement.value = getCurrentDate();
-        }
-
         // URLパラメータをチェックして自動データ読み込み
         checkAndAutoLoadData();
+        
+        // 初期日付設定（URLパラメータがない場合のみ）
+        const dateElement = document.getElementById('date');
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlDate = urlParams.get('date');
+        
+        console.log('初期日付設定チェック:', {
+            dateElementExists: !!dateElement,
+            currentValue: dateElement?.value,
+            hasUrlDate: !!urlDate,
+            urlDate: urlDate
+        });
+        
+        if (dateElement && !dateElement.value) {
+            if (!urlParams.has('date')) {
+                dateElement.value = getCurrentDate();
+                console.log('URLパラメータなし：当日日付を設定:', dateElement.value);
+            } else {
+                console.log('URLパラメータあり：日付設定をスキップ');
+            }
+        } else {
+            console.log('日付フィールドが既に設定済み:', dateElement?.value);
+        }
 
         // 初期化完了
         isAppInitialized = true;
@@ -231,6 +252,19 @@ function checkAndAutoLoadData() {
         if (urlDate && urlStoreId && viewMode === 'view') {
             console.log('確認モード：自動データ読み込みを実行');
             
+            // URLパラメータの日付を即座に設定
+            const dateElement = document.getElementById('date');
+            if (dateElement) {
+                console.log('確認モード：日付設定前の状態:', {
+                    currentValue: dateElement.value,
+                    urlDate: urlDate
+                });
+                dateElement.value = urlDate;
+                console.log('確認モード：URLパラメータから日付を設定完了:', dateElement.value);
+            }
+            
+            // URLパラメータ使用フラグはhandleLoadDataで設定される
+            
             // 少し遅らせてUIが完全に準備されてから実行
             setTimeout(() => {
                 if (typeof handleLoadData === 'function') {
@@ -244,6 +278,7 @@ function checkAndAutoLoadData() {
             const dateElement = document.getElementById('date');
             if (dateElement) {
                 dateElement.value = urlDate;
+                // URLパラメータ使用フラグはhandleLoadDataで設定される
                 console.log('URLパラメータから日付を設定:', urlDate);
             }
         } else {
@@ -270,6 +305,17 @@ function checkAndAutoLoadData() {
 // 設定読み込み前の代替処理
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('DOM読み込み完了。動的設定を初期化します...');
+    
+    // URLパラメータの日付を最優先で設定（他の処理より先に実行）
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlDate = urlParams.get('date');
+    if (urlDate) {
+        const dateElement = document.getElementById('date');
+        if (dateElement) {
+            dateElement.value = urlDate;
+            console.log('🎯 DOMContentLoaded: URLパラメータの日付を即座に設定:', urlDate);
+        }
+    }
     
     // 店舗名フィールドを常にreadonly（ユーザーに編集させない）
     const storeNameElement = document.getElementById('storeName');
@@ -932,6 +978,9 @@ if (typeof window !== 'undefined') {
         storeInfo: () => storeInfo,
         isAppInitialized: () => isAppInitialized,
         expenseRecords: () => expenseRecords,
+        nextExpenseId: () => nextExpenseId,
+        hasUsedUrlParams: () => hasUsedUrlParams,
+        resetUrlParamsFlag: () => { hasUsedUrlParams = false; },
         checkForUnsavedData: checkForUnsavedData,
         reinitialize: () => {
             isAppInitialized = false;
