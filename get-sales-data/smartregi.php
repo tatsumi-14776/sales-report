@@ -42,7 +42,7 @@ const SMAREGI_CONFIG = [
  * スマレジ使用店舗を増やす場合はここ
  */
 const STORE_ID_MAPPING = [
-    1 => '1',    // 店舗A
+    2 => '1',    // 店舗A
     //3 => '2',    // 店舗B  
     //5 => '3',    // 店舗C
     //8 => '4',    // 店舗D
@@ -71,7 +71,7 @@ const SMAREGI_TO_INTERNAL_MAPPING = [
  * 新規店舗追加や既存店舗のフォーム変更時はここを編集
  */
 const INTERNAL_TO_RESPONSE_MAPPING = [
-    // 店舗1のマッピング
+    // スマレジ店舗ID "1" のマッピング
     1 => [
         'cash' => 'cash10',           // 現金売上 → cash10フィールド
         'credit' => 'stera10',         // クレジット売上 → card10フィールド
@@ -281,6 +281,9 @@ function callSmaregiAPI($date, $smaregiStoreId) {
  * @param int $systemStoreId システム店舗ID
  * @return array 店舗フォームキーでマッピングされたデータ
  */
+/**
+ * スマレジデータを店舗フォームキーにマッピング（2段階処理）
+ */
 function mapToStoreFields($smaregiData, $requestDate, $requestStoreId, $systemStoreId) {
     try {
         // レスポンス構造の確認
@@ -294,15 +297,17 @@ function mapToStoreFields($smaregiData, $requestDate, $requestStoreId, $systemSt
             throw new Exception("指定された日付 {$requestDate} と店舗ID {$requestStoreId} のデータが見つかりません");
         }
         
-        writeSmaregiLog("対象データ確認: " . $targetData['sumDate'] . " 店舗ID " . $targetData['storeId']);
+        // スマレジレスポンスからstoreIdを取得
+        $smaregiStoreId = $targetData['storeId'];
+        writeSmaregiLog("対象データ確認: " . $targetData['sumDate'] . " スマレジ店舗ID " . $smaregiStoreId);
         
         // ステップ1: スマレジデータ → 内部変数への変換
         writeSmaregiLog("🔄 第1段階: スマレジデータ → 内部変数変換");
         $internalData = convertSmaregiToInternal($targetData);
         
-        // ステップ2: 内部変数 → 店舗レスポンスキーへの変換
-        writeSmaregiLog("🔄 第2段階: 内部変数 → 店舗レスポンスキー変換");
-        $responseData = convertInternalToResponse($internalData, $systemStoreId);
+        // ステップ2: 内部変数 → 店舗レスポンスキーへの変換（スマレジ店舗IDを使用）
+        writeSmaregiLog("🔄 第2段階: 内部変数 → 店舗レスポンスキー変換（スマレジ店舗ID: {$smaregiStoreId}）");
+        $responseData = convertInternalToResponse($internalData, $smaregiStoreId); // ← 修正：スマレジ店舗IDを渡す
         
         writeSmaregiLog("🎉 2段階マッピング完了: " . json_encode($responseData));
         
@@ -372,18 +377,18 @@ function convertSmaregiToInternal($targetData) {
 /**
  * 第2段階: 内部変数を店舗レスポンスキーに変換
  * @param array $internalData 内部変数データ
- * @param int $systemStoreId システム店舗ID
+ * @param string $smaregiStoreId スマレジ店舗ID（文字列）
  * @return array レスポンスデータ
  */
-function convertInternalToResponse($internalData, $systemStoreId) {
+function convertInternalToResponse($internalData, $smaregiStoreId) {
     try {
-        // 店舗のマッピング設定を取得
-        if (!isset(INTERNAL_TO_RESPONSE_MAPPING[$systemStoreId])) {
-            throw new Exception("店舗ID {$systemStoreId} の内部変数→レスポンスマッピング設定が見つかりません");
+        // スマレジ店舗IDでマッピング設定を取得
+        if (!isset(INTERNAL_TO_RESPONSE_MAPPING[$smaregiStoreId])) {
+            throw new Exception("スマレジ店舗ID {$smaregiStoreId} の内部変数→レスポンスマッピング設定が見つかりません");
         }
         
-        $responseMapping = INTERNAL_TO_RESPONSE_MAPPING[$systemStoreId];
-        writeSmaregiLog("🎯 店舗マッピング設定: 店舗ID {$systemStoreId} (" . count($responseMapping) . "件)");
+        $responseMapping = INTERNAL_TO_RESPONSE_MAPPING[$smaregiStoreId];
+        writeSmaregiLog("🎯 スマレジ店舗マッピング設定: 店舗ID {$smaregiStoreId} (" . count($responseMapping) . "件)");
         
         $responseData = [];
         

@@ -107,10 +107,10 @@ try {
     // 店舗ID毎の分岐処理（テスト用：実際のAPIは呼び出さず、パターン情報のみ返却）
     switch ($storeId) {
         // パターン1: スマレジ系
-        case 1:
-        case 3:
-        case 5:
-        case 8:
+        case 2:
+        //case 3
+        //case 5:
+        //case 8:
             writeLog("パターン1(スマレジ系)に分岐: 店舗ID {$storeId}", 'INFO');
             require_once __DIR__ . '/smartregi.php';
             $result = getPattern1SalesData($storeId, $date);
@@ -128,8 +128,8 @@ try {
             break;
 
         // パターン2: Airレジ系
-        case 2:
-        case 6:
+        case 10:
+        //case 6:
             writeLog("パターン2(Airレジ系)に分岐: 店舗ID {$storeId}", 'INFO');
             
             // テスト用のダミーデータ
@@ -152,8 +152,8 @@ try {
             break;
 
         // パターン3: Excel取込
-        case 4:
-        case 7:
+        case 100:
+        //case 7:
             writeLog("パターン3(Excel取込)に分岐: 店舗ID {$storeId}", 'INFO');
             
             // テスト用のダミーデータ

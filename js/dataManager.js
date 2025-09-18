@@ -4,39 +4,94 @@
  */
 
 /**
- * 当日データ読込処理
+ * 該当日のデータ読込処理（並列処理・高速化版）
  */
-function loadTodayData() {
-    console.log('当日データ読込処理を開始');
+async function loadTodayData() {
+    console.log('🚀 当日データ読込処理を開始（並列処理版）');
     
     try {
-        const today = getCurrentDate();
+        // 日付を取得
         const dateElement = document.getElementById('date');
-        if (dateElement) {
-            dateElement.value = today;
-            console.log('今日の日付を設定しました:', today);
-        } else {
-            console.warn('date要素が見つかりません');
-        }
+        const selectedDate = dateElement ? dateElement.value : '';
         
-        const storeNameElement = document.getElementById('storeName');
-        const storeName = storeNameElement ? storeNameElement.value.trim() : '';
-        
-        if (!storeName) {
-            showError('店舗名を入力してからデータを読み込んでください');
+        if (!selectedDate) {
+            showError('データを読み込む日付を選択してください');
             return;
         }
         
-        // ローディング表示を開始
-        showLoadingIndicator(true);
+        // セッションから店舗IDを直接取得
+        const storeId = getCurrentStoreId();
+        if (!storeId) {
+            showError('店舗情報が設定されていません。再度ログインしてください。');
+            return;
+        }
         
-        loadSampleData(today, storeName);
+        console.log(`📊 並列データ取得開始: 店舗ID ${storeId}, 日付 ${selectedDate}`);
+        
+        // ローディング表示
+        showLoadingIndicator(true, '売上データと前日残高を取得中...');
+        
+        // ステップ1: フォーム内容を全てリセット
+        console.log('🔄 フォームリセット開始');
+        resetAllFormFields();
+        console.log('✅ フォームリセット完了');
+        
+        // ステップ2: 売上データ取得と前日残高取得を並列実行
+        console.log('⚡ 並列処理開始: 売上データ & 前日残高');
+        const [salesResult, cashResult] = await Promise.allSettled([
+            fetchSalesDataFromAPI(storeId, selectedDate),
+            loadPreviousCashBalanceForDate(selectedDate, storeId)
+        ]);
+        
+        // ステップ3: 結果を処理
+        let successCount = 0;
+        let errorMessages = [];
+        
+        // 売上データの適用
+        if (salesResult.status === 'fulfilled' && salesResult.value) {
+            try {
+                applySalesDataToForm(salesResult.value);
+                console.log('✅ 売上データ適用完了');
+                successCount++;
+            } catch (error) {
+                console.error('❌ 売上データ適用エラー:', error);
+                errorMessages.push('売上データの適用に失敗しました');
+            }
+        } else {
+            console.error('❌ 売上データ取得失敗:', salesResult.reason);
+            errorMessages.push('売上データの取得に失敗しました');
+        }
+        
+        // 前日残高の適用
+        if (cashResult.status === 'fulfilled') {
+            console.log('✅ 前日残高取得完了');
+            successCount++;
+        } else {
+            console.warn('⚠️ 前日残高取得失敗:', cashResult.reason);
+            errorMessages.push('前日残高の取得に失敗しました（手動で入力してください）');
+        }
+        
+        // ステップ4: 結果表示
+        if (successCount > 0) {
+            const message = successCount === 2 ? 
+                '売上データと前日残高を読み込みました！' : 
+                `${successCount}件のデータを読み込みました`;
+            showSuccess(message);
+            
+            if (errorMessages.length > 0) {
+                console.warn('一部のデータ取得に失敗:', errorMessages);
+            }
+        } else {
+            showError('データの取得に失敗しました:\n' + errorMessages.join('\n'));
+        }
         
     } catch (error) {
-        console.error('当日データ読込処理でエラー:', error);
-        showError('当日データの読み込み中にエラーが発生しました');
-        // エラー時もローディングを非表示
+        console.error('❌ 当日データ読込処理でエラー:', error);
+        showError('データの読み込み中にエラーが発生しました: ' + error.message);
+    } finally {
+        // ローディング非表示
         showLoadingIndicator(false);
+        console.log('🏁 当日データ読込処理完了');
     }
 }
 
@@ -496,6 +551,290 @@ async function rebuildUIWithSavedConfig(savedPaymentConfig, savedPointConfig) {
 }
 
 /**
+ * フォーム内容を全てリセット
+ */
+function resetAllFormFields() {
+    try {
+        console.log('📝 全フィールドリセット開始');
+        
+        // 基本情報（日付と店舗名は保持、担当者のみリセット）
+        const inputByElement = document.getElementById('inputBy');
+        if (inputByElement) inputByElement.value = '';
+        
+        // 売上データのリセット（動的に対応）
+        if (paymentMethodConfig && Array.isArray(paymentMethodConfig)) {
+            paymentMethodConfig.forEach(method => {
+                const element10 = document.getElementById(`${method.id}10`);
+                const element8 = document.getElementById(`${method.id}8`);
+                if (element10) element10.value = '';
+                if (element8) element8.value = '';
+            });
+        }
+        
+        // ポイント・クーポン支払のリセット
+        if (pointPaymentConfig && Array.isArray(pointPaymentConfig)) {
+            pointPaymentConfig.forEach(payment => {
+                const element10 = document.getElementById(`${payment.id}10`);
+                const element8 = document.getElementById(`${payment.id}8`);
+                if (element10) element10.value = '';
+                if (element8) element8.value = '';
+            });
+        }
+        
+        // 入金・雑収入のリセット
+        const incomeFields = ['nyukin', 'miscIncome', 'foundMoney'];
+        incomeFields.forEach(fieldId => {
+            const element = document.getElementById(fieldId);
+            if (element) element.value = '';
+        });
+        
+        // 前日現金残のリセット（後で自動入力される）
+        const previousCashElement = document.getElementById('previousCashBalance');
+        if (previousCashElement) previousCashElement.value = '';
+        
+        // 経費データのリセット
+        resetExpenseRecords();
+        
+        // 現金管理データのリセット
+        if (denominations && Array.isArray(denominations)) {
+            denominations.forEach(denom => {
+                const registerInput = document.querySelector(`[data-type="register"][data-denom="${denom.key}"]`);
+                const safeInput = document.querySelector(`[data-type="safe"][data-denom="${denom.key}"]`);
+                if (registerInput) registerInput.value = '';
+                if (safeInput) safeInput.value = '';
+            });
+        }
+        
+        // 備考のリセット
+        const remarksElement = document.getElementById('remarks');
+        if (remarksElement) {
+            remarksElement.value = '';
+            const charCount = document.getElementById('charCount');
+            if (charCount) charCount.textContent = '0';
+        }
+        
+        // 手動税率入力のリセット
+        const manual10Input = document.getElementById('manual10Percent');
+        const manual8Input = document.getElementById('manual8Percent');
+        if (manual10Input) {
+            manual10Input.value = '';
+            manual10Input.style.backgroundColor = '';
+        }
+        if (manual8Input) {
+            manual8Input.value = '';
+            manual8Input.style.backgroundColor = '';
+        }
+        
+        // 添付ファイルのリセット
+        if (typeof generateFileInputs === 'function') {
+            generateFileInputs();
+        }
+        
+        console.log('✅ 全フィールドリセット完了');
+        
+    } catch (error) {
+        console.error('フィールドリセットエラー:', error);
+    }
+}
+
+/**
+ * 経費レコードをリセット（1件のみ残す）
+ */
+function resetExpenseRecords() {
+    try {
+        const expenseContainer = document.getElementById('expenseRecords');
+        if (!expenseContainer) return;
+        
+        // 既存のレコードをすべて削除
+        expenseContainer.innerHTML = '';
+        
+        // グローバル変数をリセット
+        if (typeof expenseRecords !== 'undefined') {
+            window.expenseRecords = [];
+        }
+        if (typeof nextExpenseId !== 'undefined') {
+            window.nextExpenseId = 1;
+        }
+        
+        // 1件だけ追加
+        if (typeof addExpenseRecord === 'function') {
+            addExpenseRecord();
+        }
+        
+        console.log('経費レコードをリセットしました');
+        
+    } catch (error) {
+        console.error('経費レコードリセットエラー:', error);
+    }
+}
+
+/**
+ * 指定日付用の前日残高読み込み（既存関数のラッパー）
+ * @param {string} currentDate 現在の日付
+ * @param {number} storeId 店舗ID
+ * @returns {Promise} 前日残高読み込み処理
+ */
+function loadPreviousCashBalanceForDate(currentDate, storeId) {
+    return new Promise((resolve, reject) => {
+        try {
+            // 既存の loadPreviousCashBalance 関数を呼び出し
+            if (typeof loadPreviousCashBalance === 'function') {
+                loadPreviousCashBalance(currentDate);
+                resolve(true);
+            } else {
+                reject(new Error('loadPreviousCashBalance関数が見つかりません'));
+            }
+        } catch (error) {
+            reject(error);
+        }
+    });
+}
+
+/**
+ * 売上データAPIからデータを取得（デバッグ強化版）
+ * @param {number} storeId 店舗ID
+ * @param {string} date 日付 (YYYY-MM-DD)
+ * @returns {Object|null} 売上データまたはnull
+ */
+async function fetchSalesDataFromAPI(storeId, date) {
+    try {
+        console.log('📡 売上データAPI呼び出し詳細:', {
+            storeId: storeId,
+            storeIdType: typeof storeId,
+            date: date,
+            dateType: typeof date,
+            dateFormat: /^\d{4}-\d{2}-\d{2}$/.test(date) ? 'valid' : 'invalid'
+        });
+        
+        const requestData = {
+            store_id: storeId,
+            date: date
+        };
+        
+        console.log('📤 送信データ:', JSON.stringify(requestData));
+        
+        const response = await fetch('get-sales-data/get-sales-data.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestData)
+        });
+        
+        console.log('📥 レスポンス詳細:', {
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries(response.headers.entries())
+        });
+        
+        // レスポンステキストを先に取得
+        const responseText = await response.text();
+        console.log('📄 レスポンステキスト:', responseText);
+        
+        if (!response.ok) {
+            // エラーレスポンスの詳細を表示
+            try {
+                const errorData = JSON.parse(responseText);
+                console.error('❌ APIエラー詳細:', errorData);
+                throw new Error(`API Error: ${errorData.error || errorData.message || 'Unknown error'} (Status: ${response.status})`);
+            } catch (parseError) {
+                console.error('❌ レスポンスパースエラー:', parseError);
+                throw new Error(`HTTP error! status: ${response.status}, response: ${responseText.substring(0, 200)}`);
+            }
+        }
+        
+        // 成功時のJSONパース
+        try {
+            const result = JSON.parse(responseText);
+            console.log('📊 売上データAPI応答:', result);
+            
+            if (result.success) {
+                return result.data;
+            } else {
+                throw new Error(result.error || result.message || '売上データの取得に失敗しました');
+            }
+        } catch (parseError) {
+            console.error('❌ 成功レスポンスパースエラー:', parseError);
+            throw new Error('APIレスポンスの解析に失敗しました: ' + responseText.substring(0, 100));
+        }
+        
+    } catch (error) {
+        console.error('💥 売上データAPI呼び出しエラー:', error);
+        throw error;
+    }
+}
+
+/**
+ * 売上データをフォームに適用（修正版）
+ * @param {Object} salesData 売上データ
+ */
+function applySalesDataToForm(salesData) {
+    try {
+        console.log('📝 売上データをフォームに適用開始:', salesData);
+        
+        let appliedCount = 0;
+        
+        // 方法1: レスポンスデータの全フィールドを直接設定
+        console.log('🎯 方法1: 直接フィールド設定');
+        Object.keys(salesData).forEach(fieldName => {
+            const element = document.getElementById(fieldName);
+            if (element) {
+                const value = salesData[fieldName] || 0;
+                element.value = value;
+                console.log(`✅ 直接設定: ${fieldName} = ${value}`);
+                appliedCount++;
+            } else {
+                console.warn(`⚠️ フィールドが見つかりません: ${fieldName}`);
+            }
+        });
+        
+        // 方法2: paymentMethodConfig経由での設定（補完用）
+        console.log('🎯 方法2: paymentMethodConfig経由設定');
+        if (paymentMethodConfig && Array.isArray(paymentMethodConfig)) {
+            paymentMethodConfig.forEach(method => {
+                const field10 = `${method.id}10`;
+                const field8 = `${method.id}8`;
+                
+                const element10 = document.getElementById(field10);
+                const element8 = document.getElementById(field8);
+                
+                // 10%フィールドの設定（まだ設定されていない場合のみ）
+                if (element10 && salesData.hasOwnProperty(field10)) {
+                    const value = salesData[field10] || 0;
+                    if (!element10.value || element10.value == '0') {
+                        element10.value = value;
+                        console.log(`✅ Config補完: ${field10} = ${value}`);
+                    }
+                }
+                
+                // 8%フィールドの設定（まだ設定されていない場合のみ）
+                if (element8 && salesData.hasOwnProperty(field8)) {
+                    const value = salesData[field8] || 0;
+                    if (!element8.value || element8.value == '0') {
+                        element8.value = value;
+                        console.log(`✅ Config補完: ${field8} = ${value}`);
+                    }
+                }
+            });
+        }
+        
+        console.log(`📊 売上データ適用完了: ${appliedCount}個のフィールドに値を設定`);
+        
+        // 計算を更新
+        if (typeof updateAllCalculations === 'function') {
+            updateAllCalculations();
+            console.log('🔄 計算を更新しました');
+        } else {
+            console.warn('updateAllCalculations関数が見つかりません');
+        }
+        
+    } catch (error) {
+        console.error('売上データフォーム適用エラー:', error);
+        throw error;
+    }
+}
+
+/**
  * 店舗IDを直接指定してデータ読込
  * @param {string} date 日付
  * @param {number} storeId 店舗ID
@@ -586,6 +925,101 @@ async function loadSampleDataByStoreId(date, storeId, storeName) {
         showLoadingIndicator(false);
     }
 }
+
+/**
+ * 売上データAPIからデータを取得
+ * @param {number} storeId 店舗ID
+ * @param {string} date 日付 (YYYY-MM-DD)
+ * @returns {Object|null} 売上データまたはnull
+ */
+async function fetchSalesDataFromAPI(storeId, date) {
+    try {
+        console.log('売上データAPI呼び出し:', { storeId, date });
+        
+        const response = await fetch('get-sales-data/get-sales-data.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                store_id: storeId,
+                date: date
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        console.log('売上データAPI応答:', result);
+        
+        if (result.success) {
+            return result.data;
+        } else {
+            throw new Error(result.error || result.message || '売上データの取得に失敗しました');
+        }
+        
+    } catch (error) {
+        console.error('売上データAPI呼び出しエラー:', error);
+        throw error;
+    }
+}
+
+/**
+ * 売上データをフォームに適用
+ * @param {Object} salesData 売上データ
+ */
+function applySalesDataToForm(salesData) {
+    try {
+        console.log('売上データをフォームに適用開始:', salesData);
+        
+        let appliedCount = 0;
+        
+        // paymentMethodConfigの各項目に対してデータを設定
+        if (paymentMethodConfig && Array.isArray(paymentMethodConfig)) {
+            paymentMethodConfig.forEach(method => {
+                // 10%と8%のフィールドを確認
+                const field10 = `${method.id}10`;
+                const field8 = `${method.id}8`;
+                
+                const element10 = document.getElementById(field10);
+                const element8 = document.getElementById(field8);
+                
+                // 10%フィールドの設定
+                if (element10 && salesData.hasOwnProperty(field10)) {
+                    const value = salesData[field10] || 0;
+                    element10.value = value;
+                    console.log(`設定: ${field10} = ${value}`);
+                    appliedCount++;
+                }
+                
+                // 8%フィールドの設定
+                if (element8 && salesData.hasOwnProperty(field8)) {
+                    const value = salesData[field8] || 0;
+                    element8.value = value;
+                    console.log(`設定: ${field8} = ${value}`);
+                    appliedCount++;
+                }
+            });
+        }
+        
+        console.log(`売上データ適用完了: ${appliedCount}個のフィールドに値を設定`);
+        
+        // 計算を更新
+        if (typeof updateAllCalculations === 'function') {
+            updateAllCalculations();
+            console.log('計算を更新しました');
+        } else {
+            console.warn('updateAllCalculations関数が見つかりません');
+        }
+        
+    } catch (error) {
+        console.error('売上データフォーム適用エラー:', error);
+        throw error;
+    }
+}
+
 
 /**
  * データベースにレポートデータを保存（添付ファイル対応版）
@@ -1830,3 +2264,8 @@ window.getCurrentStoreId = getCurrentStoreId;
 window.getStoreId = getStoreId;
 window.loadDataWithParallelFetch = loadDataWithParallelFetch;
 window.loadPreviousCashBalance = loadPreviousCashBalance;
+window.fetchSalesDataFromAPI = fetchSalesDataFromAPI;
+window.applySalesDataToForm = applySalesDataToForm;
+window.resetAllFormFields = resetAllFormFields;
+window.fetchSalesDataFromAPI = fetchSalesDataFromAPI;
+window.applySalesDataToForm = applySalesDataToForm;
