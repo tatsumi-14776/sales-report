@@ -112,24 +112,19 @@ try {
         case 5:
         case 8:
             writeLog("パターン1(スマレジ系)に分岐: 店舗ID {$storeId}", 'INFO');
-            
-            // テスト用のダミーデータ
-            $testData = [
-                'cash10' => 45000,
-                'cash8' => 15000,
-                'card10' => 25000,
-                'card8' => 8000,
-                'paypay10' => 12000,
-                'paypay8' => 3000
-            ];
-            
-            sendSuccessResponse(
-                $testData, 
-                'pattern1', 
-                'smaregi', 
-                $storeId, 
-                "店舗は{$storeId}です pattern1のAPIを利用します。日付は{$date}です"
-            );
+            require_once __DIR__ . '/smartregi.php';
+            $result = getPattern1SalesData($storeId, $date);
+            if ($result['success']) {
+                sendSuccessResponse(
+                    $result['data'], 
+                    'pattern1', 
+                    'smaregi', 
+                    $storeId, 
+                    "店舗は{$storeId}です pattern1のAPIを利用します。日付は{$date}です"
+                );
+            } else {
+                sendErrorResponse($result['error'], 'PATTERN1_ERROR');
+            }
             break;
 
         // パターン2: Airレジ系
