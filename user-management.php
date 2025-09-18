@@ -45,29 +45,15 @@ try {
         throw new Exception('アクションが指定されていません');
     }
 
-    // データベース接続（統一設定を使用）
+    // 統一データベース設定を使用
     try {
-        $config_path = __DIR__ . '/config/database.php';
-        if (!file_exists($config_path)) {
-            throw new Exception("設定ファイルが見つかりません: $config_path");
-        }
-        
-        require_once $config_path;
-        
-        if (!class_exists('DatabaseConfig')) {
-            throw new Exception("DatabaseConfigクラスが見つかりません");
-        }
-        
+        require_once __DIR__ . '/config/database.php';
         $pdo = DatabaseConfig::getConnection();
-    } catch (Exception $config_error) {
-        // フォールバック: 直接接続
-        error_log("統一設定の読み込みに失敗、直接接続を使用: " . $config_error->getMessage());
-        $dsn = "mysql:host=localhost;port=3306;dbname=sales_report;charset=utf8mb4";
-        $pdo = new PDO($dsn, 'root', '', [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false
-        ]);
+    } catch (Exception $e) {
+        error_log("データベース接続エラー: " . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'データベース接続に失敗しました']);
+        exit;
     }
 
     // アクションに応じた処理
