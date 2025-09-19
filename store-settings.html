@@ -853,6 +853,57 @@
             }
         };
 
+        class APIClient {
+            async request(action, data = {}) {
+                try {
+                    const response = await fetch('store-settings.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action, ...data })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const result = await response.json();
+                    if (!result.success) {
+                        throw new Error(result.message || 'APIエラー');
+                    }
+                    
+                    return result;
+                } catch (error) {
+                    console.error('API Error:', error);
+                    throw error;
+                }
+            }
+            
+            // 各APIメソッドを簡潔に
+            getStores() { return this.request('get_stores'); }
+            getStoreSettings(storeId) { return this.request('get_store_settings', { store_id: storeId }); }
+            createStore(name, code) { return this.request('create_store', { store_name: name, store_code: code }); }
+            deleteStore(storeId) { return this.request('delete_store', { store_id: storeId }); }
+            saveSettings(storeId, settings) { return this.request('save_store_settings', { store_id: storeId, ...settings }); }
+            updateStoreInfo(storeId, name, code) { 
+                return this.request('update_store_info', { 
+                    store_id: storeId, 
+                    store_name: name, 
+                    store_code: code 
+                }); 
+            }
+            
+            getDeletedStores() { 
+                return this.request('get_deleted_stores'); 
+            }
+            
+            restoreStore(storeId) { 
+                return this.request('restore_store', { store_id: storeId }); 
+            }
+        }
+
+        const api = new APIClient();
+
+
         // 初期化
         document.addEventListener('DOMContentLoaded', function() {
             checkAuth();
@@ -871,6 +922,7 @@
                 showAlert('アプリケーションの初期化に失敗しました', 'error');
             }
         }
+
 
         // 初期ローディングの表示/非表示
         function showInitialLoading(show) {
@@ -912,35 +964,21 @@
             try {
                 console.log('店舗一覧を取得中...');
                 
-                const response = await fetch('store-settings.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'get_stores' })
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const result = await response.json();
+                const result = await api.getStores();
                 console.log('店舗一覧の応答:', result);
 
-                if (result.success) {
-                    const selector = document.getElementById('storeSelector');
-                    selector.innerHTML = '<option value="">店舗を選択してください</option>';
-                    
-                    if (result.stores && Array.isArray(result.stores)) {
-                        result.stores.forEach(store => {
-                            const option = document.createElement('option');
-                            option.value = store.id;
-                            option.textContent = store.store_name;
-                            selector.appendChild(option);
-                        });
-                    } else {
-                        console.warn('店舗データが配列ではありません:', result.stores);
-                    }
+                const selector = document.getElementById('storeSelector');
+                selector.innerHTML = '<option value="">店舗を選択してください</option>';
+                
+                if (result.stores && Array.isArray(result.stores)) {
+                    result.stores.forEach(store => {
+                        const option = document.createElement('option');
+                        option.value = store.id;
+                        option.textContent = store.store_name;
+                        selector.appendChild(option);
+                    });
                 } else {
-                    throw new Error(result.message || '店舗データの取得に失敗しました');
+                    console.warn('店舗データが配列ではありません:', result.stores);
                 }
             } catch (error) {
                 console.error('店舗一覧の読み込みエラーの詳細:', error);
@@ -998,38 +1036,20 @@
         // 店舗設定の読み込み
         async function loadStoreSettings(storeId) {
             try {
-                const response = await fetch('store-settings.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        action: 'get_store_settings',
-                        store_id: storeId
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                const result = await response.json();
+                const result = await api.getStoreSettings(storeId);
                 
-                if (result.success) {
-                    document.getElementById('storeName').value = result.store.store_name;
-                    document.getElementById('storeCode').value = result.store.store_code;
-                    
-                    // 修正：正しいオブジェクト記法を使用
-                    AppState.updateState({
-                        storePaymentSettings: result.payment_settings || [],
-                        storePointSettings: result.point_settings || []
-                    });
-                    
-                    renderPaymentMethods();
-                    renderPointMethods();
-                    updateStats();
-                    
-                } else {
-                    throw new Error(result.message || '店舗設定の取得に失敗しました');
-                }
+                document.getElementById('storeName').value = result.store.store_name;
+                document.getElementById('storeCode').value = result.store.store_code;
+                
+                AppState.updateState({
+                    storePaymentSettings: result.payment_settings || [],
+                    storePointSettings: result.point_settings || []
+                });
+                
+                renderPaymentMethods();
+                renderPointMethods();
+                updateStats();
+                
             } catch (error) {
                 console.error('店舗設定読み込みエラー:', error);
                 throw error;
@@ -1240,24 +1260,7 @@
         // 店舗削除のサーバーリクエスト
         async function deleteStore(storeId) {
             try {
-                const response = await fetch('store-settings.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        action: 'delete_store',
-                        store_id: storeId
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                const result = await response.json();
-                if (!result.success) {
-                    throw new Error(result.message || '店舗の削除に失敗しました');
-                }
-                
+                const result = await api.deleteStore(storeId);
                 return result;
             } catch (error) {
                 console.error('店舗削除リクエストエラー:', error);
@@ -1267,7 +1270,6 @@
 
         // 設定保存
         async function saveSettings() {
-            // 修正：AppState.AppState → AppState
             if (!AppState.currentStoreId) {
                 showAlert('店舗を選択してください', 'error');
                 return;
@@ -1278,32 +1280,21 @@
 
                 await updateStoreInfo();
 
-                const response = await fetch('store-settings.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        action: 'save_store_settings',
-                        store_id: AppState.currentStoreId,
-                        payment_settings: AppState.storePaymentSettings.map(setting => ({
-                            master_id: setting.master_id,
-                            is_enabled: setting.is_enabled,
-                            display_name: setting.display_name !== setting.method_name ? setting.display_name : null
-                        })),
-                        point_settings: AppState.storePointSettings.map(setting => ({
-                            master_id: setting.master_id,
-                            is_enabled: setting.is_enabled,
-                            display_name: setting.display_name !== setting.method_name ? setting.display_name : null
-                        }))
-                    })
-                });
+                const settings = {
+                    payment_settings: AppState.storePaymentSettings.map(setting => ({
+                        master_id: setting.master_id,
+                        is_enabled: setting.is_enabled,
+                        display_name: setting.display_name !== setting.method_name ? setting.display_name : null
+                    })),
+                    point_settings: AppState.storePointSettings.map(setting => ({
+                        master_id: setting.master_id,
+                        is_enabled: setting.is_enabled,
+                        display_name: setting.display_name !== setting.method_name ? setting.display_name : null
+                    }))
+                };
 
-                const result = await response.json();
-
-                if (result.success) {
-                    showAlert('設定を保存しました', 'success');
-                } else {
-                    showAlert('保存に失敗しました: ' + result.message, 'error');
-                }
+                await api.saveSettings(AppState.currentStoreId, settings);
+                showAlert('設定を保存しました', 'success');
             } catch (error) {
                 console.error('設定保存エラー:', error);
                 showAlert('保存中にエラーが発生しました', 'error');
@@ -1350,24 +1341,10 @@
             }
 
             try {
-                const response = await fetch('store-settings.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        action: 'create_store',
-                        store_name: storeName,
-                        store_code: storeCode
-                    })
-                });
-
-                const result = await response.json();
-                if (result.success) {
-                    showAlert('新規店舗を登録しました', 'success');
-                    closeNewStoreModal();
-                    loadStores();
-                } else {
-                    showAlert(result.message || '店舗の登録に失敗しました', 'error');
-                }
+                await api.createStore(storeName, storeCode);
+                showAlert('新規店舗を登録しました', 'success');
+                closeNewStoreModal();
+                loadStores();
             } catch (error) {
                 console.error('店舗登録エラー:', error);
                 showAlert('店舗の登録中にエラーが発生しました', 'error');
@@ -1389,29 +1366,13 @@
             }
 
             try {
-                const response = await fetch('store-settings.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        action: 'update_store_info',
-                        store_id: AppState.currentStoreId,
-                        store_name: storeName,
-                        store_code: storeCode
-                    })
-                });
-
-                const result = await response.json();
-                if (result.success) {
-                    loadStores();
-                } else {
-                    showAlert(result.message || '店舗情報の更新に失敗しました', 'error');
-                }
+                await api.updateStoreInfo(AppState.currentStoreId, storeName, storeCode);
+                loadStores();
             } catch (error) {
                 console.error('店舗情報更新エラー:', error);
                 showAlert('店舗情報の更新中にエラーが発生しました', 'error');
             }
         }
-
         // ローディング表示/非表示
         function showLoading(show) {
             const loading = document.getElementById('loading');
@@ -1502,25 +1463,8 @@
         // 削除済み店舗一覧を取得
         async function loadDeletedStores() {
             try {
-                const response = await fetch('store-settings.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        action: 'get_deleted_stores'
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                const result = await response.json();
-                if (!result.success) {
-                    throw new Error(result.message || '削除済み店舗一覧の取得に失敗しました');
-                }
-
+                const result = await api.getDeletedStores();
                 displayDeletedStores(result.stores || []);
-
             } catch (error) {
                 console.error('削除済み店舗一覧取得エラー:', error);
                 document.getElementById('deletedStoresList').innerHTML = `
@@ -1601,24 +1545,7 @@
             try {
                 showLoading(true);
 
-                const response = await fetch('store-settings.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        action: 'restore_store',
-                        store_id: storeId
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                const result = await response.json();
-                if (!result.success) {
-                    throw new Error(result.message || '店舗の復活に失敗しました');
-                }
-
+                await api.restoreStore(storeId);
                 showAlert(`店舗「${storeName}」を復活させました`, 'success');
                 
                 await loadDeletedStores();
