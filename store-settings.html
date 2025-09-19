@@ -901,7 +901,136 @@
             }
         }
 
+
+        // UI制御専用クラス
+        class StoreUIController {
+            constructor() {
+                this.elements = {
+                    storeInfo: document.getElementById('storeInfoSection'),
+                    payment: document.getElementById('paymentMethodsSection'),
+                    point: document.getElementById('pointPaymentSection'),
+                    actions: document.getElementById('actionButtons')
+                };
+            }
+            
+            hideAllSections() {
+                this.elements.storeInfo.classList.remove('show');
+                this.elements.payment.style.display = 'none';
+                this.elements.point.style.display = 'none';
+                this.elements.actions.style.display = 'none';
+            }
+            
+            showAllSections() {
+                this.elements.storeInfo.classList.add('show');
+                this.elements.payment.style.display = 'block';
+                this.elements.point.style.display = 'block';
+                this.elements.actions.style.display = 'flex';
+            }
+        }
+
+        // メインコントローラー
+        class StoreController {
+            constructor() {
+                this.ui = new StoreUIController();
+            }
+            
+            async changeStore() {
+                const storeId = this.getSelectedStoreId();
+                AppState.updateState({ currentStoreId: storeId });
+                
+                if (!storeId) {
+                    this.ui.hideAllSections();
+                    return;
+                }
+                
+                await this.loadAndDisplayStore(storeId);
+            }
+            
+            getSelectedStoreId() {
+                return document.getElementById('storeSelector').value;
+            }
+            
+            async loadAndDisplayStore(storeId) {
+                showLoading(true);
+                
+                try {
+                    await loadStoreSettings(storeId);
+                    this.ui.showAllSections();
+                    showAlert('店舗設定を読み込みました', 'success');
+                } catch (error) {
+                    console.error('店舗設定読み込みエラー:', error);
+                    showAlert(`店舗設定の読み込みに失敗しました: ${error.message}`, 'error');
+                    this.ui.hideAllSections();
+                } finally {
+                    showLoading(false);
+                }
+            }
+        }
+
+        // モーダル管理クラス
+        class ModalManager {
+            constructor() {
+                this.modals = new Map();
+                this.setupGlobalListeners();
+            }
+            
+            register(modalId, handlers = {}) {
+                const element = document.getElementById(modalId);
+                if (!element) return;
+                
+                this.modals.set(modalId, { element, handlers });
+                
+                // モーダル外クリックで閉じる
+                element.addEventListener('click', (e) => {
+                    if (e.target === element) {
+                        this.close(modalId);
+                    }
+                });
+            }
+            
+            open(modalId, data = {}) {
+                const modal = this.modals.get(modalId);
+                if (!modal) return;
+                
+                if (modal.handlers.onOpen) {
+                    modal.handlers.onOpen(data);
+                }
+                
+                modal.element.classList.add('show');
+            }
+            
+            close(modalId) {
+                const modal = this.modals.get(modalId);
+                if (!modal) return;
+                
+                if (modal.handlers.onClose) {
+                    modal.handlers.onClose();
+                }
+                
+                modal.element.classList.remove('show');
+            }
+            
+            setupGlobalListeners() {
+                // ESCキーですべてのモーダルを閉じる
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        this.closeAll();
+                    }
+                });
+            }
+            
+            closeAll() {
+                this.modals.forEach((modal, id) => {
+                    if (modal.element.classList.contains('show')) {
+                        this.close(id);
+                    }
+                });
+            }
+        }
+
         const api = new APIClient();
+        const storeController = new StoreController();
+        const modalManager = new ModalManager();
 
 
         // 初期化
@@ -922,6 +1051,35 @@
                 showAlert('アプリケーションの初期化に失敗しました', 'error');
             }
         }
+
+        // モーダル登録（初期化時に実行）
+        modalManager.register('newStoreModal', {
+            onOpen: () => {
+                document.getElementById('newStoreName').value = '';
+                document.getElementById('newStoreCode').value = '';
+            }
+        });
+
+        modalManager.register('deleteStoreModal', {
+            onOpen: (data) => {
+                if (data.storeName) {
+                    document.getElementById('deleteStoreName').textContent = data.storeName;
+                }
+                document.getElementById('deleteConfirmInput').value = '';
+                document.getElementById('confirmDeleteBtn').disabled = true;
+            }
+        });
+
+        modalManager.register('deletedStoresModal', {
+            onOpen: async () => {
+                try {
+                    await loadDeletedStores();
+                } catch (error) {
+                    console.error('削除済み店舗一覧の表示エラー:', error);
+                    showAlert('削除済み店舗一覧の取得に失敗しました', 'error');
+                }
+            }
+        });
 
 
         // 初期ローディングの表示/非表示
@@ -988,49 +1146,7 @@
 
         // 店舗変更時の処理
         async function changeStore() {
-            const selector = document.getElementById('storeSelector');
-            const storeId = selector.value;
-            
-            // 修正：正しいオブジェクト記法を使用
-            AppState.updateState({ currentStoreId: storeId });
-            
-            // UI表示制御
-            const storeInfoSection = document.getElementById('storeInfoSection');
-            const paymentSection = document.getElementById('paymentMethodsSection');
-            const pointSection = document.getElementById('pointPaymentSection');
-            const actionButtons = document.getElementById('actionButtons');
-            
-            if (!storeId) {
-                storeInfoSection.classList.remove('show');
-                paymentSection.style.display = 'none';
-                pointSection.style.display = 'none';
-                actionButtons.style.display = 'none';
-                return;
-            }
-
-            showLoading(true);
-
-            try {
-                await loadStoreSettings(storeId);
-                
-                storeInfoSection.classList.add('show');
-                paymentSection.style.display = 'block';
-                pointSection.style.display = 'block';
-                actionButtons.style.display = 'flex';
-                
-                showAlert('店舗設定を読み込みました', 'success');
-                
-            } catch (error) {
-                console.error('店舗設定読み込みエラー:', error);
-                showAlert(`店舗設定の読み込みに失敗しました: ${error.message}`, 'error');
-                
-                storeInfoSection.classList.remove('show');
-                paymentSection.style.display = 'none';
-                pointSection.style.display = 'none';
-                actionButtons.style.display = 'none';
-            } finally {
-                showLoading(false);
-            }
+            await storeController.changeStore();
         }
 
         // 店舗設定の読み込み
@@ -1188,21 +1304,12 @@
                 return;
             }
 
-            document.getElementById('deleteStoreName').textContent = storeName;
-            document.getElementById('deleteConfirmInput').value = '';
-            document.getElementById('confirmDeleteBtn').disabled = true;
-            
-            const modal = document.getElementById('deleteStoreModal');
-            modal.classList.add('show');
+            modalManager.open('deleteStoreModal', { storeName });
         }
 
         // 店舗削除モーダルを閉じる
         function closeDeleteStoreModal() {
-            const modal = document.getElementById('deleteStoreModal');
-            modal.classList.remove('show');
-            
-            document.getElementById('deleteConfirmInput').value = '';
-            document.getElementById('confirmDeleteBtn').disabled = true;
+            modalManager.close('deleteStoreModal');
         }
 
         // 削除入力の検証
@@ -1317,17 +1424,11 @@
 
         // 新規店舗フォームの表示
         function showNewStoreForm() {
-            const modal = document.getElementById('newStoreModal');
-            modal.classList.add('show');
-            
-            document.getElementById('newStoreName').value = '';
-            document.getElementById('newStoreCode').value = '';
-        }
-
+            modalManager.open('newStoreModal');
+}
         // 新規店舗フォームを閉じる
         function closeNewStoreModal() {
-            const modal = document.getElementById('newStoreModal');
-            modal.classList.remove('show');
+            modalManager.close('newStoreModal');
         }
 
         // 新規店舗の作成
@@ -1442,22 +1543,12 @@
 
         // 削除済み店舗管理モーダルの表示
         async function showDeletedStoresModal() {
-            try {
-                const modal = document.getElementById('deletedStoresModal');
-                modal.classList.add('show');
-                
-                await loadDeletedStores();
-                
-            } catch (error) {
-                console.error('削除済み店舗一覧の表示エラー:', error);
-                showAlert('削除済み店舗一覧の取得に失敗しました', 'error');
-            }
+            modalManager.open('deletedStoresModal');
         }
 
         // 削除済み店舗管理モーダルを閉じる
         function closeDeletedStoresModal() {
-            const modal = document.getElementById('deletedStoresModal');
-            modal.classList.remove('show');
+            modalManager.close('deletedStoresModal');
         }
 
         // 削除済み店舗一覧を取得
@@ -1558,29 +1649,6 @@
                 showLoading(false);
             }
         }
-
-        // ESCキーで削除済み店舗モーダルを閉じる
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                const deletedStoresModal = document.getElementById('deletedStoresModal');
-                
-                if (deletedStoresModal && deletedStoresModal.classList.contains('show')) {
-                    closeDeletedStoresModal();
-                }
-            }
-        });
-
-        // 削除済み店舗モーダルの外クリックで閉じる
-        document.addEventListener('DOMContentLoaded', function() {
-            const deletedStoresModal = document.getElementById('deletedStoresModal');
-            if (deletedStoresModal) {
-                deletedStoresModal.addEventListener('click', function(e) {
-                    if (e.target === deletedStoresModal) {
-                        closeDeletedStoresModal();
-                    }
-                });
-            }
-        });
     </script>
 </body>
 </html>
