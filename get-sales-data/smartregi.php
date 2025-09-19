@@ -82,7 +82,9 @@ const INTERNAL_TO_RESPONSE_MAPPING = [
         'id4' => 'hitosara10', 
         'id5' => 'Uber10',    
         'id6' => 'urikake10', 
-        'id7' => 'menu10',     
+        'id7' => 'menu10',
+        'tax8Total' => 'manualPercent8',
+        'tax10Total' => 'manualPercent10',     
         // 必要な内部変数を追加
     ],
     
@@ -341,8 +343,33 @@ function convertSmaregiToInternal($targetData) {
             } else {
                 writeSmaregiLog("ℹ️ フィールド '{$smaregiField}' はデータに存在しません");
             }
-        }
+        } 
         
+        // 🚀 追加：税率詳細リスト（taxDetailList）の処理
+        writeSmaregiLog("📋 taxDetailList の内部変数変換開始");
+        $taxDetailList = $targetData['taxDetailList'] ?? [];
+        
+        if (is_array($taxDetailList) && !empty($taxDetailList)) {
+            foreach ($taxDetailList as $taxDetail) {
+                $taxRate = $taxDetail['taxRate'] ?? 0;
+                $taxTotal = (float)($taxDetail['taxTotal'] ?? 0);
+                $taxTargetTotal = (float)($taxDetail['taxTargetTotal'] ?? 0);
+                
+                // 税率別の合計金額を計算
+                $totalAmount = $taxTotal + $taxTargetTotal;
+                
+                if ($taxRate == 8) {
+                    $internalData['tax8Total'] = $totalAmount;
+                    writeSmaregiLog("✅ 8%税率合計変換: taxTotal({$taxTotal}) + taxTargetTotal({$taxTargetTotal}) = {$totalAmount} → tax8Total");
+                } elseif ($taxRate == 10) {
+                    $internalData['tax10Total'] = $totalAmount;
+                    writeSmaregiLog("✅ 10%税率合計変換: taxTotal({$taxTotal}) + taxTargetTotal({$taxTargetTotal}) = {$totalAmount} → tax10Total");
+                }
+            }
+        } else {
+            writeSmaregiLog("ℹ️ taxDetailList データなし");
+        }
+
         // otherSalseListの変換（id1, id2, id3...）
         writeSmaregiLog("📋 otherSalseList の内部変数変換開始");
         $otherSalesList = $targetData['otherSalseList'] ?? [];

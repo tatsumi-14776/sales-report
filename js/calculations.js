@@ -164,8 +164,8 @@ function updateSummaryCalculation() {
     updateElementValue('summaryTotalSales', totalSales);
 
     // 手動入力値をチェック
-    const manual10Input = document.getElementById('manual10Percent');
-    const manual8Input = document.getElementById('manual8Percent');
+    const manual10Input = document.getElementById('manualPercent10');
+    const manual8Input = document.getElementById('manualPercent8');
 
     const manual10Value = manual10Input && manual10Input.value !== '' ? parseFloat(manual10Input.value) || 0 : null;
     const manual8Value = manual8Input && manual8Input.value !== '' ? parseFloat(manual8Input.value) || 0 : null;
@@ -396,24 +396,24 @@ function clearManualTaxInputs() {
 
 // 手動税率入力の処理
 function clearManualTaxInputs() {
-    document.getElementById('manual10Percent').value = '';
-    document.getElementById('manual8Percent').value = '';
+    document.getElementById('manualPercent10').value = '';
+    document.getElementById('manualPercent8').value = '';
     updateAllCalculations();
 }
 
 // 手動税率入力時の処理（片方に値を入力したら相手側が空の場合は0にする）
 function handleManualTaxInput(inputId) {
-    const manual10Input = document.getElementById('manual10Percent');
-    const manual8Input = document.getElementById('manual8Percent');
-    
-    if (inputId === 'manual10Percent') {
+    const manual10Input = document.getElementById('manualPercent10');
+    const manual8Input = document.getElementById('manualPercent8');
+
+    if (inputId === 'manualPercent10') {
         if (manual10Input.value && manual10Input.value !== '') {
             // 10%に値が入力された場合、8%が空欄なら0にする
             if (!manual8Input.value || manual8Input.value === '') {
                 manual8Input.value = '0';
             }
         }
-    } else if (inputId === 'manual8Percent') {
+    } else if (inputId === 'manualPercent8') {
         if (manual8Input.value && manual8Input.value !== '') {
             // 8%に値が入力された場合、10%が空欄なら0にする
             if (!manual10Input.value || manual10Input.value === '') {

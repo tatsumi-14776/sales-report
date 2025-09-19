@@ -760,66 +760,46 @@ async function fetchSalesDataFromAPI(storeId, date) {
 }
 
 /**
- * 売上データをフォームに適用（要素待機対応版）
+ * 売上データをフォームに適用（汎用版）
+ * @param {Object} salesData 売上データ
  */
-async function applySalesDataToForm(salesData) {
+function applySalesDataToForm(salesData) {
     try {
-        console.log('📝 売上データをフォームに適用開始:', salesData);
-        
-        // 🚀 追加：要素が存在するまで待機する関数
-        function waitForElement(selector, timeout = 3000) {
-            return new Promise((resolve) => {
-                const element = document.getElementById(selector);
-                if (element) {
-                    return resolve(element);
-                }
-                
-                console.log(`⏳ 要素を待機中: ${selector}`);
-                const observer = new MutationObserver(() => {
-                    const element = document.getElementById(selector);
-                    if (element) {
-                        console.log(`✅ 要素を発見: ${selector}`);
-                        observer.disconnect();
-                        resolve(element);
-                    }
-                });
-                
-                observer.observe(document.body, {
-                    childList: true,
-                    subtree: true
-                });
-                
-                // タイムアウト処理
-                setTimeout(() => {
-                    observer.disconnect();
-                    console.warn(`⚠️ 要素待機タイムアウト: ${selector}`);
-                    resolve(null);
-                }, timeout);
-            });
-        }
+        console.log('売上データをフォームに適用開始:', salesData);
         
         let appliedCount = 0;
         
-        // 🔧 修正：要素待機付きで設定
-        console.log('🎯 方法1: 直接フィールド設定（要素待機付き）');
-        for (const fieldName of Object.keys(salesData)) {
-            const element = await waitForElement(fieldName); // ← 修正：await で要素を待機
+        // 🚀 汎用処理：レスポンスキーに対応するinput要素を探して自動設定
+        Object.keys(salesData).forEach(fieldName => {
+            const element = document.getElementById(fieldName);
             if (element) {
                 const value = salesData[fieldName] || 0;
+                
+                // 値を設定
                 element.value = value;
-                console.log(`✅ 直接設定: ${fieldName} = ${value}`);
+                
+                // 手動税率フィールドの場合は視覚的フィードバック
+                if (fieldName === 'manualPercent8' || fieldName === 'manualPercent10') {
+                    if (value > 0) {
+                        element.style.backgroundColor = '#fef3c7';
+                        console.log(`✅ 手動税率設定: ${fieldName} = ${value}`);
+                    }
+                } else {
+                    console.log(`✅ 自動設定: ${fieldName} = ${value}`);
+                }
+                
                 appliedCount++;
             } else {
-                console.warn(`⚠️ フィールドが見つかりません（タイムアウト）: ${fieldName}`);
+                console.log(`ℹ️ 要素が見つかりません: ${fieldName}`);
             }
-        }
+        });
         
-        console.log(`📊 売上データ適用完了: ${appliedCount}個のフィールドに値を設定`);
+        console.log(`売上データ適用完了: ${appliedCount}個のフィールドに値を設定`);
         
         // 計算を更新
         if (typeof updateAllCalculations === 'function') {
             updateAllCalculations();
-            console.log('🔄 計算を更新しました');
+            console.log('計算を更新しました');
         }
         
     } catch (error) {
@@ -959,89 +939,6 @@ async function fetchSalesDataFromAPI(storeId, date) {
         throw error;
     }
 }
-
-/**
- * 売上データをフォームに適用
- * @param {Object} salesData 売上データ
- */
-function applySalesDataToForm(salesData) {
-    try {
-        console.log('売上データをフォームに適用開始:', salesData);
-        
-        let appliedCount = 0;
-        
-        // paymentMethodConfigの各項目に対してデータを設定
-        if (paymentMethodConfig && Array.isArray(paymentMethodConfig)) {
-            paymentMethodConfig.forEach(method => {
-                // 10%と8%のフィールドを確認
-                const field10 = `${method.id}10`;
-                const field8 = `${method.id}8`;
-                
-                const element10 = document.getElementById(field10);
-                const element8 = document.getElementById(field8);
-                
-                // 10%フィールドの設定
-                if (element10 && salesData.hasOwnProperty(field10)) {
-                    const value = salesData[field10] || 0;
-                    element10.value = value;
-                    console.log(`設定: ${field10} = ${value}`);
-                    appliedCount++;
-                }
-                
-                // 8%フィールドの設定
-                if (element8 && salesData.hasOwnProperty(field8)) {
-                    const value = salesData[field8] || 0;
-                    element8.value = value;
-                    console.log(`設定: ${field8} = ${value}`);
-                    appliedCount++;
-                }
-            });
-        }
-        
-        // 🚀 追加：pointPaymentConfigの各項目に対してデータを設定
-        if (pointPaymentConfig && Array.isArray(pointPaymentConfig)) {
-            pointPaymentConfig.forEach(payment => {
-                // 10%と8%のフィールドを確認
-                const field10 = `${payment.id}10`;
-                const field8 = `${payment.id}8`;
-                
-                const element10 = document.getElementById(field10);
-                const element8 = document.getElementById(field8);
-                
-                // 10%フィールドの設定
-                if (element10 && salesData.hasOwnProperty(field10)) {
-                    const value = salesData[field10] || 0;
-                    element10.value = value;
-                    console.log(`ポイント設定: ${field10} = ${value} (${payment.label})`);
-                    appliedCount++;
-                }
-                
-                // 8%フィールドの設定
-                if (element8 && salesData.hasOwnProperty(field8)) {
-                    const value = salesData[field8] || 0;
-                    element8.value = value;
-                    console.log(`ポイント設定: ${field8} = ${value} (${payment.label})`);
-                    appliedCount++;
-                }
-            });
-        }
-        
-        console.log(`売上データ適用完了: ${appliedCount}個のフィールドに値を設定`);
-        
-        // 計算を更新
-        if (typeof updateAllCalculations === 'function') {
-            updateAllCalculations();
-            console.log('計算を更新しました');
-        } else {
-            console.warn('updateAllCalculations関数が見つかりません');
-        }
-        
-    } catch (error) {
-        console.error('売上データフォーム適用エラー:', error);
-        throw error;
-    }
-}
-
 
 /**
  * データベースにレポートデータを保存（添付ファイル対応版）
