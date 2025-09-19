@@ -833,6 +833,42 @@
 
     <script>
         // グローバル変数を統一管理
+        const CONSTANTS = {
+            ALERT_TIMEOUT: 5000,
+            ENABLED: 1,
+            DISABLED: 0,
+            PAYMENT_TYPES: {
+                CASH: 'cash',
+                CASHLESS: 'cashless'
+            },
+            TYPE_LABELS: {
+                CASH: '💰 現金',
+                CASHLESS: '💳 キャッシュレス',
+                POINT: '🎯 ポイント・クーポン'
+            },
+            TYPE_CLASSES: {
+                CASH: 'type-cash',
+                CASHLESS: 'type-cashless',
+                POINT: 'type-point'
+            }
+        };
+
+        class ErrorHandler {
+            static async handleAsyncOperation(operation, context = '') {
+                try {
+                    showLoading(true);
+                    const result = await operation();
+                    return result;
+                } catch (error) {
+                    console.error(`${context}エラー:`, error);
+                    showAlert(`${context}に失敗しました: ${error.message}`, 'error');
+                    throw error;
+                } finally {
+                    showLoading(false);
+                }
+            }
+        }
+
         const AppState = {
             currentStoreId: null,
             paymentMasterData: [],
@@ -909,7 +945,16 @@
                     storeInfo: document.getElementById('storeInfoSection'),
                     payment: document.getElementById('paymentMethodsSection'),
                     point: document.getElementById('pointPaymentSection'),
-                    actions: document.getElementById('actionButtons')
+                    actions: document.getElementById('actionButtons'),
+                    totalPaymentMethods: document.getElementById('totalPaymentMethods'),
+                    enabledPaymentMethods: document.getElementById('enabledPaymentMethods'),
+                    cashPaymentMethods: document.getElementById('cashPaymentMethods'),
+                    totalPointMethods: document.getElementById('totalPointMethods'),
+                    enabledPointMethods: document.getElementById('enabledPointMethods'),
+                    alertContainer: document.getElementById('alertContainer'),
+                    storeSelector: document.getElementById('storeSelector'),
+                    storeName: document.getElementById('storeName'),
+                    storeCode: document.getElementById('storeCode')
                 };
             }
             
@@ -1247,20 +1292,21 @@
 
         // 統計情報の更新
         function updateStats() {
-            // 修正：AppState.AppState → AppState
-            const totalPayment = AppState.storePaymentSettings.length;
-            const enabledPayment = AppState.storePaymentSettings.filter(s => s.is_enabled == 1).length;
-            const cashPayment = AppState.storePaymentSettings.filter(s => s.method_type === 'cash' && s.is_enabled == 1).length;
+            const ui = storeController.ui;
             
-            document.getElementById('totalPaymentMethods').textContent = totalPayment;
-            document.getElementById('enabledPaymentMethods').textContent = enabledPayment;
-            document.getElementById('cashPaymentMethods').textContent = cashPayment;
+            const totalPayment = AppState.storePaymentSettings.length;
+            const enabledPayment = AppState.storePaymentSettings.filter(s => s.is_enabled == CONSTANTS.ENABLED).length;
+            const cashPayment = AppState.storePaymentSettings.filter(s => s.method_type === CONSTANTS.PAYMENT_TYPES.CASH && s.is_enabled == CONSTANTS.ENABLED).length;
+            
+            ui.elements.totalPaymentMethods.textContent = totalPayment;
+            ui.elements.enabledPaymentMethods.textContent = enabledPayment;
+            ui.elements.cashPaymentMethods.textContent = cashPayment;
 
             const totalPoint = AppState.storePointSettings.length;
-            const enabledPoint = AppState.storePointSettings.filter(s => s.is_enabled == 1).length;
+            const enabledPoint = AppState.storePointSettings.filter(s => s.is_enabled == CONSTANTS.ENABLED).length;
             
-            document.getElementById('totalPointMethods').textContent = totalPoint;
-            document.getElementById('enabledPointMethods').textContent = enabledPoint;
+            ui.elements.totalPointMethods.textContent = totalPoint;
+            ui.elements.enabledPointMethods.textContent = enabledPoint;
         }
 
         // 支払方法の有効/無効切り替え
@@ -1382,32 +1428,28 @@
                 return;
             }
 
-            try {
-                showLoading(true);
-
+            await ErrorHandler.handleAsyncOperation(async () => {
                 await updateStoreInfo();
 
-                const settings = {
-                    payment_settings: AppState.storePaymentSettings.map(setting => ({
-                        master_id: setting.master_id,
-                        is_enabled: setting.is_enabled,
-                        display_name: setting.display_name !== setting.method_name ? setting.display_name : null
-                    })),
-                    point_settings: AppState.storePointSettings.map(setting => ({
-                        master_id: setting.master_id,
-                        is_enabled: setting.is_enabled,
-                        display_name: setting.display_name !== setting.method_name ? setting.display_name : null
-                    }))
-                };
-
+                const settings = buildSettingsData();
                 await api.saveSettings(AppState.currentStoreId, settings);
                 showAlert('設定を保存しました', 'success');
-            } catch (error) {
-                console.error('設定保存エラー:', error);
-                showAlert('保存中にエラーが発生しました', 'error');
-            } finally {
-                showLoading(false);
-            }
+            }, '設定保存');
+        }
+        
+        function buildSettingsData() {
+            return {
+                payment_settings: AppState.storePaymentSettings.map(setting => ({
+                    master_id: setting.master_id,
+                    is_enabled: setting.is_enabled,
+                    display_name: setting.display_name !== setting.method_name ? setting.display_name : null
+                })),
+                point_settings: AppState.storePointSettings.map(setting => ({
+                    master_id: setting.master_id,
+                    is_enabled: setting.is_enabled,
+                    display_name: setting.display_name !== setting.method_name ? setting.display_name : null
+                }))
+            };
         }
 
         // 設定リセット
@@ -1486,7 +1528,7 @@
 
         // アラート表示
         function showAlert(message, type) {
-            const container = document.getElementById('alertContainer');
+            const container = storeController.ui.elements.alertContainer;
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${type}`;
             alertDiv.textContent = message;
@@ -1496,7 +1538,7 @@
             
             setTimeout(() => {
                 alertDiv.remove();
-            }, 5000);
+            }, CONSTANTS.ALERT_TIMEOUT); // ← 定数を使用
         }
 
         // HTMLエスケープ
@@ -1505,41 +1547,6 @@
             div.textContent = text;
             return div.innerHTML;
         }
-
-        // モーダル外クリックで閉じる機能
-        document.addEventListener('DOMContentLoaded', function() {
-            const newStoreModal = document.getElementById('newStoreModal');
-            if (newStoreModal) {
-                newStoreModal.addEventListener('click', function(e) {
-                    if (e.target === newStoreModal) {
-                        closeNewStoreModal();
-                    }
-                });
-            }
-            
-            const deleteStoreModal = document.getElementById('deleteStoreModal');
-            if (deleteStoreModal) {
-                deleteStoreModal.addEventListener('click', function(e) {
-                    if (e.target === deleteStoreModal) {
-                        closeDeleteStoreModal();
-                    }
-                });
-            }
-        });
-
-        // ESCキーでモーダルを閉じる
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                const newStoreModal = document.getElementById('newStoreModal');
-                const deleteStoreModal = document.getElementById('deleteStoreModal');
-                
-                if (newStoreModal && newStoreModal.classList.contains('show')) {
-                    closeNewStoreModal();
-                } else if (deleteStoreModal && deleteStoreModal.classList.contains('show')) {
-                    closeDeleteStoreModal();
-                }
-            }
-        });
 
         // 削除済み店舗管理モーダルの表示
         async function showDeletedStoresModal() {
