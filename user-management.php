@@ -130,6 +130,43 @@ function handleGetUsers($pdo) {
     }
 }
 
+function validateUserData($data, $isUpdate = false) {
+    $errors = [];
+    
+    $user_id = trim($data['user_id'] ?? '');
+    $store_id = intval($data['store_id'] ?? 0);
+    $password = $data['password'] ?? '';
+    $role = $data['role'] ?? 'user';
+    
+    // ユーザーID検証
+    if (empty($user_id)) {
+        $errors[] = 'ユーザーIDは必須です';
+    } elseif (strlen($user_id) < 3) {
+        $errors[] = 'ユーザーIDは3文字以上で入力してください';
+    } elseif (!preg_match('/^[a-zA-Z0-9_-]+$/', $user_id)) {
+        $errors[] = 'ユーザーIDは英数字、ハイフン、アンダースコアのみ使用できます';
+    }
+    
+    // 店舗ID検証
+    if ($store_id <= 0) {
+        $errors[] = '店舗を選択してください';
+    }
+    
+    // パスワード検証
+    if (!$isUpdate && empty($password)) {
+        $errors[] = 'パスワードは必須です';
+    } elseif (!empty($password) && strlen($password) < 6) {
+        $errors[] = 'パスワードは6文字以上で入力してください';
+    }
+    
+    // 権限検証
+    if (!in_array($role, ['admin', 'manager', 'user'])) {
+        $errors[] = '無効な権限が指定されています';
+    }
+    
+    return $errors;
+}
+
 /**
  * ユーザー追加（店舗ID対応）
  */
@@ -378,38 +415,4 @@ function handleDeleteUser($pdo, $data) {
     }
 }
 
-/**
- * バリデーション：安全な文字列チェック
- */
-function validateSafeString($string) {
-    // SQLインジェクション対策の基本チェック
-    $dangerous_patterns = [
-        '/(\bSELECT\b|\bINSERT\b|\bUPDATE\b|\bDELETE\b|\bDROP\b|\bCREATE\b|\bALTER\b)/i',
-        '/[;<>"\']/',
-        '/\-\-/',
-        '/\/\*|\*\//'
-    ];
-    
-    foreach ($dangerous_patterns as $pattern) {
-        if (preg_match($pattern, $string)) {
-            return false;
-        }
-    }
-    
-    return true;
-}
-
-/**
- * ロギング機能（オプション）
- */
-function logUserAction($pdo, $action, $user_id, $details = '') {
-    try {
-        $sql = "INSERT INTO user_activity_logs (action, user_id, details, created_at) VALUES (?, ?, ?, NOW())";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([$action, $user_id, $details]);
-    } catch (Exception $e) {
-        // ログ記録エラーは無視（メイン処理に影響させない）
-        error_log("ログ記録エラー: " . $e->getMessage());
-    }
-}
 ?>

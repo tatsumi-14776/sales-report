@@ -308,7 +308,8 @@
             border-color: #4CAF50;
         }
 
-        .form-input.error {
+        .form-input.error,
+        .form-select.error {
             border-color: #dc2626;
         }
 
@@ -671,6 +672,31 @@
             loadUsers();
         });
 
+        async function apiCall(action, data = {}) {
+            try {
+                const response = await fetch('user-management.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action, ...data })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                if (!result.success) {
+                    throw new Error(result.message || 'サーバーエラーが発生しました');
+                }
+                
+                return result;
+            } catch (error) {
+                console.error(`API呼び出しエラー (${action}):`, error);
+                throw error;
+            }
+        }
+
         // 認証チェック
         function checkAuth() {
             const userSession = JSON.parse(sessionStorage.getItem('userSession') || 'null');
@@ -700,24 +726,14 @@
         // 店舗一覧読み込み
         async function loadStores() {
             try {
-                const response = await fetch('user-management.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'get_stores' })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    stores = result.stores || [];
-                    updateStoreSelect();
-                } else {
-                    console.error('店舗データの読み込みに失敗:', result.message);
-                }
+                const result = await apiCall('get_stores');
+                stores = result.stores || [];
+                updateStoreSelect();
             } catch (error) {
                 console.error('店舗読み込みエラー:', error);
             }
         }
+        
 
         // 店舗選択肢を更新
         function updateStoreSelect() {
@@ -739,25 +755,14 @@
             DOM.emptyState.style.display = 'none';
 
             try {
-                const response = await fetch('user-management.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'get_users' })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    users = result.users || [];
-                    renderUsers();
-                    updateStats();
-                } else {
-                    showAlert('ユーザーデータの読み込みに失敗しました: ' + result.message, 'error');
-                }
+                const result = await apiCall('get_users');
+                users = result.users || [];
+                renderUsers();
+                updateStats();
             } catch (error) {
                 console.error('ユーザー読み込みエラー:', error);
                 showAlert('サーバーエラーが発生しました', 'error');
-            } finally {
+            }finally {
                 DOM.loading.classList.remove('show');
             }
         }
