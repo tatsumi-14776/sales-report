@@ -733,7 +733,7 @@
                 console.error('店舗読み込みエラー:', error);
             }
         }
-        
+
 
         // 店舗選択肢を更新
         function updateStoreSelect() {
@@ -860,23 +860,9 @@
             }
 
             try {
-                const response = await fetch('user-management.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        action: 'delete_user',
-                        user_id: userId
-                    })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    showAlert('ユーザーを削除しました', 'success');
-                    loadUsers();
-                } else {
-                    showAlert('削除に失敗しました: ' + result.message, 'error');
-                }
+                await apiCall('delete_user', { user_id: userId });
+                showAlert('ユーザーを削除しました', 'success');
+                loadUsers();
             } catch (error) {
                 console.error('削除エラー:', error);
                 showAlert('削除中にエラーが発生しました', 'error');
@@ -890,7 +876,6 @@
             }
 
             const formData = {
-                action: editingUserId ? 'update_user' : 'add_user',
                 user_id: document.getElementById('userId').value.trim(),
                 store_id: document.getElementById('storeSelect').value,
                 password: document.getElementById('userPassword').value,
@@ -903,21 +888,11 @@
             }
 
             try {
-                const response = await fetch('user-management.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formData)
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    showAlert(editingUserId ? 'ユーザーを更新しました' : 'ユーザーを追加しました', 'success');
-                    hideUserModal();
-                    loadUsers();
-                } else {
-                    showAlert('保存に失敗しました: ' + result.message, 'error');
-                }
+                const action = editingUserId ? 'update_user' : 'add_user';
+                await apiCall(action, formData);
+                showAlert(editingUserId ? 'ユーザーを更新しました' : 'ユーザーを追加しました', 'success');
+                hideUserModal();
+                loadUsers();
             } catch (error) {
                 console.error('保存エラー:', error);
                 showAlert('保存中にエラーが発生しました', 'error');

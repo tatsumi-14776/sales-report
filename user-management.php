@@ -172,40 +172,17 @@ function validateUserData($data, $isUpdate = false) {
  */
 function handleAddUser($pdo, $data) {
     try {
-        // バリデーション
-        $user_id = trim($data['user_id'] ?? '');
-        $store_id = intval($data['store_id'] ?? 0);
-        $password = $data['password'] ?? '';
-        $role = $data['role'] ?? 'user';
+        // バリデーション実行
+        $errors = validateUserData($data, false);
+        if (!empty($errors)) {
+            throw new Exception(implode(', ', $errors));
+        }
+
+        $user_id = trim($data['user_id']);
+        $store_id = intval($data['store_id']);
+        $password = $data['password'];
+        $role = $data['role'];
         $is_active = intval($data['is_active'] ?? 1);
-
-        if (empty($user_id)) {
-            throw new Exception('ユーザーIDは必須です');
-        }
-
-        if (strlen($user_id) < 3) {
-            throw new Exception('ユーザーIDは3文字以上で入力してください');
-        }
-
-        if (!preg_match('/^[a-zA-Z0-9_-]+$/', $user_id)) {
-            throw new Exception('ユーザーIDは英数字、ハイフン、アンダースコアのみ使用できます');
-        }
-
-        if ($store_id <= 0) {
-            throw new Exception('店舗を選択してください');
-        }
-
-        if (empty($password)) {
-            throw new Exception('パスワードは必須です');
-        }
-
-        if (strlen($password) < 6) {
-            throw new Exception('パスワードは6文字以上で入力してください');
-        }
-
-        if (!in_array($role, ['admin', 'manager', 'user'])) {
-            throw new Exception('無効な権限が指定されています');
-        }
 
         // 店舗の存在確認
         $sql = "SELECT id, store_name FROM stores WHERE id = ? AND is_deleted = 0 LIMIT 1";
@@ -226,7 +203,7 @@ function handleAddUser($pdo, $data) {
             throw new Exception('このユーザーIDは既に使用されています');
         }
 
-        // パスワードハッシュ化（既存システムとの互換性を保つため平文も対応）
+        // パスワードハッシュ化
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
         // ユーザー挿入
@@ -250,40 +227,21 @@ function handleAddUser($pdo, $data) {
  */
 function handleUpdateUser($pdo, $data) {
     try {
-        // バリデーション
+        // バリデーション実行
+        $errors = validateUserData($data, true);
+        if (!empty($errors)) {
+            throw new Exception(implode(', ', $errors));
+        }
+
         $original_user_id = trim($data['original_user_id'] ?? '');
-        $user_id = trim($data['user_id'] ?? '');
-        $store_id = intval($data['store_id'] ?? 0);
-        $password = $data['password'] ?? '';
-        $role = $data['role'] ?? 'user';
+        $user_id = trim($data['user_id']);
+        $store_id = intval($data['store_id']);
+        $password = $data['password'];
+        $role = $data['role'];
         $is_active = intval($data['is_active'] ?? 1);
 
         if (empty($original_user_id)) {
             throw new Exception('更新対象のユーザーIDが指定されていません');
-        }
-
-        if (empty($user_id)) {
-            throw new Exception('ユーザーIDは必須です');
-        }
-
-        if (strlen($user_id) < 3) {
-            throw new Exception('ユーザーIDは3文字以上で入力してください');
-        }
-
-        if (!preg_match('/^[a-zA-Z0-9_-]+$/', $user_id)) {
-            throw new Exception('ユーザーIDは英数字、ハイフン、アンダースコアのみ使用できます');
-        }
-
-        if ($store_id <= 0) {
-            throw new Exception('店舗を選択してください');
-        }
-
-        if (!empty($password) && strlen($password) < 6) {
-            throw new Exception('パスワードは6文字以上で入力してください');
-        }
-
-        if (!in_array($role, ['admin', 'manager', 'user'])) {
-            throw new Exception('無効な権限が指定されています');
         }
 
         // 既存ユーザー確認
@@ -308,7 +266,6 @@ function handleUpdateUser($pdo, $data) {
 
         // 管理者権限変更の制限チェック
         if ($existing_user['role'] === 'admin' && $role !== 'admin') {
-            // 管理者数をチェック
             $sql = "SELECT COUNT(*) as admin_count FROM users WHERE role = 'admin'";
             $stmt = $pdo->prepare($sql);
             $stmt->execute();
