@@ -832,7 +832,7 @@
     </div>
 
     <script>
-        // グローバル変数を統一管理
+        // グローバル変数
         const AppState = {
             currentStoreId: null,
             paymentMasterData: [],
@@ -840,10 +840,13 @@
             storePaymentSettings: [],
             storePointSettings: [],
             
+            // 状態を更新するメソッド
             updateState(newState) {
                 Object.assign(this, newState);
+                console.log('状態更新:', this); // デバッグ用
             },
             
+            // 状態をリセットするメソッド
             reset() {
                 this.currentStoreId = null;
                 this.paymentMasterData = [];
@@ -862,8 +865,13 @@
         // アプリケーション初期化
         async function initializeApp() {
             try {
+                // 初期ローディング画面を表示
                 showInitialLoading(true);
+                
+                // 店舗データを読み込み
                 await loadStores();
+                
+                // 読み込み完了
                 showInitialLoading(false);
             } catch (error) {
                 console.error('初期化エラー:', error);
@@ -953,7 +961,6 @@
             const selector = document.getElementById('storeSelector');
             const storeId = selector.value;
             
-            // 修正：正しいオブジェクト記法を使用
             AppState.updateState({ currentStoreId: storeId });
             
             // UI表示制御
@@ -963,6 +970,7 @@
             const actionButtons = document.getElementById('actionButtons');
             
             if (!storeId) {
+                // 店舗が選択されていない場合は全て非表示
                 storeInfoSection.classList.remove('show');
                 paymentSection.style.display = 'none';
                 pointSection.style.display = 'none';
@@ -970,11 +978,14 @@
                 return;
             }
 
+            // ローディング表示
             showLoading(true);
 
             try {
+                // 店舗設定を読み込み
                 await loadStoreSettings(storeId);
                 
+                // UI要素を表示
                 storeInfoSection.classList.add('show');
                 paymentSection.style.display = 'block';
                 pointSection.style.display = 'block';
@@ -986,6 +997,7 @@
                 console.error('店舗設定読み込みエラー:', error);
                 showAlert(`店舗設定の読み込みに失敗しました: ${error.message}`, 'error');
                 
+                // エラー時は非表示に戻す
                 storeInfoSection.classList.remove('show');
                 paymentSection.style.display = 'none';
                 pointSection.style.display = 'none';
@@ -1014,15 +1026,17 @@
                 const result = await response.json();
                 
                 if (result.success) {
+                    // 店舗情報を表示
                     document.getElementById('storeName').value = result.store.store_name;
                     document.getElementById('storeCode').value = result.store.store_code;
                     
-                    // 修正：正しいオブジェクト記法を使用
+                    // 設定データを保存
                     AppState.updateState({
                         storePaymentSettings: result.payment_settings || [],
                         storePointSettings: result.point_settings || []
                     });
                     
+                    // UI描画
                     renderPaymentMethods();
                     renderPointMethods();
                     updateStats();
@@ -1041,7 +1055,6 @@
             const container = document.getElementById('paymentMethodsGrid');
             container.innerHTML = '';
 
-            // 修正：AppState.AppState → AppState
             AppState.storePaymentSettings.forEach((setting, index) => {
                 const card = document.createElement('div');
                 card.className = `payment-method-card ${setting.is_enabled == 1 ? 'enabled' : ''}`;
@@ -1078,10 +1091,11 @@
             const container = document.getElementById('pointPaymentGrid');
             container.innerHTML = '';
 
-            AppState.storePointSettings.forEach((setting, index) => {
+            storePointSettings.forEach((setting, index) => {
                 const card = document.createElement('div');
                 card.className = `payment-method-card ${setting.is_enabled == 1 ? 'enabled' : ''}`;
                 
+                // ポイント種別のバッジ
                 const typeClass = 'type-point';
                 const typeLabel = '🎯 ポイント・クーポン';
                 
@@ -1094,15 +1108,15 @@
                         </div>
                         <label class="toggle-switch">
                             <input type="checkbox" ${setting.is_enabled == 1 ? 'checked' : ''} 
-                                onchange="togglePointMethod(${index})">
+                                   onchange="togglePointMethod(${index})">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
                     <div class="method-settings">
                         <label style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem;">店舗での表示名</label>
                         <input type="text" class="method-input" value="${escapeHtml(setting.display_name)}" 
-                            onchange="updatePointMethodDisplayName(${index}, this.value)"
-                            placeholder="空欄の場合は標準名「${escapeHtml(setting.method_name)}」を使用">
+                               onchange="updatePointMethodDisplayName(${index}, this.value)"
+                               placeholder="空欄の場合は標準名「${escapeHtml(setting.method_name)}」を使用">
                     </div>
                 `;
                 container.appendChild(card);
@@ -1111,7 +1125,7 @@
 
         // 統計情報の更新
         function updateStats() {
-            // 修正：AppState.AppState → AppState
+            //支払
             const totalPayment = AppState.storePaymentSettings.length;
             const enabledPayment = AppState.storePaymentSettings.filter(s => s.is_enabled == 1).length;
             const cashPayment = AppState.storePaymentSettings.filter(s => s.method_type === 'cash' && s.is_enabled == 1).length;
@@ -1120,6 +1134,7 @@
             document.getElementById('enabledPaymentMethods').textContent = enabledPayment;
             document.getElementById('cashPaymentMethods').textContent = cashPayment;
 
+            //ポイント
             const totalPoint = AppState.storePointSettings.length;
             const enabledPoint = AppState.storePointSettings.filter(s => s.is_enabled == 1).length;
             
@@ -1129,7 +1144,6 @@
 
         // 支払方法の有効/無効切り替え
         function togglePaymentMethod(index) {
-            // 修正：AppState.AppState → AppState
             AppState.storePaymentSettings[index].is_enabled = 
                 AppState.storePaymentSettings[index].is_enabled == 1 ? 0 : 1;
             
@@ -1147,17 +1161,17 @@
 
         // 支払方法の表示名更新
         function updatePaymentMethodDisplayName(index, newName) {
-            AppState.storePaymentSettings[index].display_name = newName.trim() || AppState.storePaymentSettings[index].method_name;
+            storePaymentSettings[index].display_name = newName.trim() || storePaymentSettings[index].method_name;
         }
 
         // ポイント・クーポンの表示名更新
         function updatePointMethodDisplayName(index, newName) {
-            AppState.storePointSettings[index].display_name = newName.trim() || AppState.storePointSettings[index].method_name;
+            storePointSettings[index].display_name = newName.trim() || storePointSettings[index].method_name;
         }
 
         // 店舗削除モーダルの表示
         function showDeleteStoreModal() {
-            if (!AppState.currentStoreId) {
+            if (!currentStoreId) {
                 showAlert('店舗を選択してください', 'error');
                 return;
             }
@@ -1168,10 +1182,14 @@
                 return;
             }
 
+            // モーダルに店舗名を設定
             document.getElementById('deleteStoreName').textContent = storeName;
             document.getElementById('deleteConfirmInput').value = '';
+            
+            // 削除ボタンを無効化
             document.getElementById('confirmDeleteBtn').disabled = true;
             
+            // モーダルを表示
             const modal = document.getElementById('deleteStoreModal');
             modal.classList.add('show');
         }
@@ -1181,6 +1199,7 @@
             const modal = document.getElementById('deleteStoreModal');
             modal.classList.remove('show');
             
+            // フォームをクリア
             document.getElementById('deleteConfirmInput').value = '';
             document.getElementById('confirmDeleteBtn').disabled = true;
         }
@@ -1191,6 +1210,7 @@
             const inputName = document.getElementById('deleteConfirmInput').value;
             const deleteBtn = document.getElementById('confirmDeleteBtn');
             
+            // 完全一致の場合のみ削除ボタンを有効化
             if (inputName === expectedName) {
                 deleteBtn.disabled = false;
             } else {
@@ -1202,6 +1222,7 @@
         async function confirmDeleteStore() {
             const storeName = document.getElementById('deleteStoreName').textContent;
             
+            // 最終確認
             if (!confirm(`本当に店舗「${storeName}」を完全に削除しますか？\n\nこの操作は元に戻すことができません。\n\n削除される内容：\n• 店舗基本情報\n• 支払方法設定\n• ポイント・クーポン設定\n• 関連する全ての設定データ\n\n「OK」をクリックすると削除を実行します。`)) {
                 return;
             }
@@ -1210,13 +1231,15 @@
                 closeDeleteStoreModal();
                 showLoading(true);
                 
-                await deleteStore(AppState.currentStoreId);
+                await deleteStore(currentStoreId);
                 
                 showAlert('店舗を削除しました', 'success');
                 
+                // 店舗選択をリセット
                 document.getElementById('storeSelector').value = '';
-                AppState.currentStoreId = null;
+                currentStoreId = null;
                 
+                // UIを初期状態に戻す
                 const storeInfoSection = document.getElementById('storeInfoSection');
                 const paymentSection = document.getElementById('paymentMethodsSection');
                 const pointSection = document.getElementById('pointPaymentSection');
@@ -1227,6 +1250,7 @@
                 pointSection.style.display = 'none';
                 actionButtons.style.display = 'none';
                 
+                // 店舗一覧を再読み込み
                 await loadStores();
                 
             } catch (error) {
@@ -1267,7 +1291,6 @@
 
         // 設定保存
         async function saveSettings() {
-            // 修正：AppState.AppState → AppState
             if (!AppState.currentStoreId) {
                 showAlert('店舗を選択してください', 'error');
                 return;
@@ -1283,13 +1306,13 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         action: 'save_store_settings',
-                        store_id: AppState.currentStoreId,
-                        payment_settings: AppState.storePaymentSettings.map(setting => ({
+                        store_id: AppState.currentStoreId, // 修正済み
+                        payment_settings: AppState.storePaymentSettings.map(setting => ({ // 修正済み
                             master_id: setting.master_id,
                             is_enabled: setting.is_enabled,
                             display_name: setting.display_name !== setting.method_name ? setting.display_name : null
                         })),
-                        point_settings: AppState.storePointSettings.map(setting => ({
+                        point_settings: AppState.storePointSettings.map(setting => ({ // 修正済み
                             master_id: setting.master_id,
                             is_enabled: setting.is_enabled,
                             display_name: setting.display_name !== setting.method_name ? setting.display_name : null
@@ -1314,13 +1337,13 @@
 
         // 設定リセット
         function resetSettings() {
-            if (!AppState.currentStoreId) {
+            if (!currentStoreId) {
                 showAlert('店舗を選択してください', 'error');
                 return;
             }
             
             if (confirm('設定をリセットしますか？未保存の変更は失われます。')) {
-                changeStore();
+                changeStore(); // 再読み込み
             }
         }
 
@@ -1329,6 +1352,7 @@
             const modal = document.getElementById('newStoreModal');
             modal.classList.add('show');
             
+            // フォームをクリア
             document.getElementById('newStoreName').value = '';
             document.getElementById('newStoreCode').value = '';
         }
@@ -1364,7 +1388,7 @@
                 if (result.success) {
                     showAlert('新規店舗を登録しました', 'success');
                     closeNewStoreModal();
-                    loadStores();
+                    loadStores(); // 店舗一覧を再読み込み
                 } else {
                     showAlert(result.message || '店舗の登録に失敗しました', 'error');
                 }
@@ -1376,7 +1400,7 @@
 
         // 店舗情報更新
         async function updateStoreInfo() {
-            if (!AppState.currentStoreId) {
+            if (!currentStoreId) {
                 return;
             }
 
@@ -1394,7 +1418,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         action: 'update_store_info',
-                        store_id: AppState.currentStoreId,
+                        store_id: currentStoreId,
                         store_name: storeName,
                         store_code: storeCode
                     })
@@ -1402,7 +1426,7 @@
 
                 const result = await response.json();
                 if (result.success) {
-                    loadStores();
+                    loadStores(); // 店舗一覧を再読み込み
                 } else {
                     showAlert(result.message || '店舗情報の更新に失敗しました', 'error');
                 }
@@ -1446,6 +1470,7 @@
 
         // モーダル外クリックで閉じる機能
         document.addEventListener('DOMContentLoaded', function() {
+            // 新規店舗モーダル
             const newStoreModal = document.getElementById('newStoreModal');
             if (newStoreModal) {
                 newStoreModal.addEventListener('click', function(e) {
@@ -1455,6 +1480,7 @@
                 });
             }
             
+            // 削除確認モーダル
             const deleteStoreModal = document.getElementById('deleteStoreModal');
             if (deleteStoreModal) {
                 deleteStoreModal.addEventListener('click', function(e) {
@@ -1485,6 +1511,7 @@
                 const modal = document.getElementById('deletedStoresModal');
                 modal.classList.add('show');
                 
+                // 削除済み店舗一覧を取得
                 await loadDeletedStores();
                 
             } catch (error) {
@@ -1599,7 +1626,7 @@
             }
 
             try {
-                showLoading(true);
+                showLoading(true, '店舗を復活中...');
 
                 const response = await fetch('store-settings.php', {
                     method: 'POST',
@@ -1621,7 +1648,10 @@
 
                 showAlert(`店舗「${storeName}」を復活させました`, 'success');
                 
+                // 削除済み店舗一覧を再読み込み
                 await loadDeletedStores();
+                
+                // 店舗一覧も再読み込み
                 await loadStores();
 
             } catch (error) {
