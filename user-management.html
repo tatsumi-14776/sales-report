@@ -644,8 +644,28 @@
         let editingUserId = null;
         let isPasswordVisible = false;
 
+        const DOM = {
+            alertContainer: null,
+            usersTableBody: null,
+            usersTableContainer: null,
+            emptyState: null,
+            loading: null,
+            userModal: null,
+            
+            // 初期化関数
+            init() {
+                this.alertContainer = document.getElementById('alertContainer');
+                this.usersTableBody = document.getElementById('usersTableBody');
+                this.usersTableContainer = document.getElementById('usersTableContainer');
+                this.emptyState = document.getElementById('emptyState');
+                this.loading = document.getElementById('loading');
+                this.userModal = document.getElementById('userModal');
+            }
+        };
+
         // 初期化
         document.addEventListener('DOMContentLoaded', function() {
+            DOM.init();
             checkAuth();
             loadStores();
             loadUsers();
@@ -714,13 +734,9 @@
 
         // ユーザー一覧読み込み
         async function loadUsers() {
-            const loading = document.getElementById('loading');
-            const usersTable = document.getElementById('usersTableContainer');
-            const emptyState = document.getElementById('emptyState');
-
-            loading.classList.add('show');
-            usersTable.style.display = 'none';
-            emptyState.style.display = 'none';
+            DOM.loading.classList.add('show');
+            DOM.usersTableContainer.style.display = 'none';
+            DOM.emptyState.style.display = 'none';
 
             try {
                 const response = await fetch('user-management.php', {
@@ -742,26 +758,22 @@
                 console.error('ユーザー読み込みエラー:', error);
                 showAlert('サーバーエラーが発生しました', 'error');
             } finally {
-                loading.classList.remove('show');
+                DOM.loading.classList.remove('show');
             }
         }
 
         // ユーザーテーブル描画
         function renderUsers() {
-            const tbody = document.getElementById('usersTableBody');
-            const usersTable = document.getElementById('usersTableContainer');
-            const emptyState = document.getElementById('emptyState');
-
             if (users.length === 0) {
-                usersTable.style.display = 'none';
-                emptyState.style.display = 'block';
+                DOM.usersTableContainer.style.display = 'none'; // ←DOM.を使用
+                DOM.emptyState.style.display = 'block';
                 return;
             }
 
-            usersTable.style.display = 'block';
-            emptyState.style.display = 'none';
+            DOM.usersTableContainer.style.display = 'block';
+            DOM.emptyState.style.display = 'none';
 
-            tbody.innerHTML = users.map(user => `
+            DOM.usersTableBody.innerHTML = users.map(user => `
                 <tr>
                     <td><strong>${escapeHtml(user.id)}</strong></td>
                     <td>${escapeHtml(user.store_name || '-')}</td>
@@ -960,7 +972,6 @@
 
             return isValid;
         }
-
         // エラー表示
         function showFieldError(fieldId, message) {
             const field = document.getElementById(fieldId);
@@ -1003,13 +1014,12 @@
 
         // アラート表示
         function showAlert(message, type) {
-            const container = document.getElementById('alertContainer');
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${type}`;
             alertDiv.textContent = message;
             
-            container.innerHTML = '';
-            container.appendChild(alertDiv);
+            DOM.alertContainer.innerHTML = ''; // ←DOM.alertContainerを使用
+            DOM.alertContainer.appendChild(alertDiv);
             
             setTimeout(() => {
                 alertDiv.remove();
