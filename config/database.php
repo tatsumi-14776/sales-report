@@ -18,10 +18,10 @@ class DatabaseConfig {
     
     // 本番環境の設定（必要に応じて変更）
     private static $productionConfig = [
-        'host' => 'localhost',
-        'dbname' => 'sales_report',
-        'username' => 'sales_user',
-        'password' => 'secure_password_here',
+        'host' => 'mysql10080.xserver.jp',
+        'dbname' => 'xs506451_salesreport',
+        'username' => 'xs506451_yanagi',
+        'password' => 'atya38565690',
         'charset' => 'utf8mb4'
     ];
     

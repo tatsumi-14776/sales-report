@@ -1074,13 +1074,6 @@
                 if (!element) return;
                 
                 this.modals.set(modalId, { element, handlers });
-                
-                // モーダル外クリックで閉じる
-                element.addEventListener('click', (e) => {
-                    if (e.target === element) {
-                        this.close(modalId);
-                    }
-                });
             }
             
             open(modalId, data = {}) {
