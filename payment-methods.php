@@ -132,11 +132,18 @@ function handleAddMethod($pdo, $data) {
         $displayOrder = $data['display_order'] ?? 100;
         $isActive = $data['is_active'] ?? 1;
         
+        // デバッグ情報を配列に保存
+        $debugInfo = [];
+        $debugInfo['received_data'] = $data;
+        $debugInfo['type'] = $type;
+        
         // typeに応じた処理分岐
         if ($type === 'point') {
             // ポイント・クーポンの場合
-            $methodType = $data['point_type'] ?? 'point'; // point_type を method_type にマッピング
-            $colorCode = 'blue'; // ポイントはデフォルト色
+            $methodType = $data['point_type'] ?? 'point';
+            $colorCode = 'blue';
+            $debugInfo['point_type_received'] = $data['point_type'] ?? 'NOT_SET';
+            $debugInfo['method_type_set'] = $methodType;
         } else {
             // 支払方法の場合
             $methodType = $data['method_type'] ?? 'cashless';
@@ -147,7 +154,7 @@ function handleAddMethod($pdo, $data) {
             throw new Exception('名前とIDは必須です');
         }
 
-        // 重複チェック（統合テーブルで）
+        // 重複チェック
         $stmt = $pdo->prepare("
             SELECT COUNT(*) FROM payment_method_masters 
             WHERE method_id = ? OR (method_name = ? AND method_category = ?)
@@ -158,6 +165,16 @@ function handleAddMethod($pdo, $data) {
             throw new Exception('同じIDまたは名称が既に存在します');
         }
 
+        $debugInfo['insert_values'] = [
+            'method_id' => $methodId,
+            'method_name' => $methodName,
+            'method_category' => $type,
+            'method_type' => $methodType,
+            'color_code' => $colorCode,
+            'display_order' => $displayOrder,
+            'is_active' => $isActive
+        ];
+
         // payment_method_masters に統合して追加
         $stmt = $pdo->prepare("
             INSERT INTO payment_method_masters 
@@ -165,27 +182,35 @@ function handleAddMethod($pdo, $data) {
             VALUES (?, ?, ?, ?, ?, ?, 0, ?, NOW(), NOW())
         ");
         
-        $stmt->execute([
+        $result = $stmt->execute([
             $methodId, 
             $methodName, 
-            $type, // 'payment' または 'point'
+            $type,
             $methodType, 
             $colorCode, 
             $displayOrder, 
             $isActive
         ]);
+        
+        if (!$result) {
+            $debugInfo['sql_error'] = $stmt->errorInfo();
+            throw new Exception('データベースへの挿入に失敗しました');
+        }
+        
+        $insertId = $pdo->lastInsertId();
 
         echo json_encode([
             'success' => true,
             'message' => ($type === 'point' ? 'ポイント・クーポン' : '支払方法') . 'を追加しました',
-            'id' => $pdo->lastInsertId()
+            'id' => $insertId,
+            'debug' => $debugInfo  // デバッグ情報を含める
         ]);
 
     } catch (Exception $e) {
-        error_log('追加エラー: ' . $e->getMessage());
         echo json_encode([
             'success' => false,
-            'message' => $e->getMessage()
+            'message' => $e->getMessage(),
+            'debug' => $debugInfo ?? []  // エラー時もデバッグ情報を含める
         ]);
     }
 }
@@ -202,11 +227,18 @@ function handleUpdateMethod($pdo, $data) {
         $displayOrder = $data['display_order'] ?? 100;
         $isActive = $data['is_active'] ?? 1;
         
+        // デバッグログ追加
+        error_log("=== handleUpdateMethod Debug ===");
+        error_log("Type: " . $type);
+        error_log("Received data: " . json_encode($data));
+        
         // typeに応じた処理分岐
         if ($type === 'point') {
             // ポイント・クーポンの場合
             $methodType = $data['point_type'] ?? 'point';
             $colorCode = 'blue'; // ポイントはデフォルト色を維持
+            error_log("Point type received: " . ($data['point_type'] ?? 'NOT SET'));
+            error_log("Method type set to: " . $methodType);
         } else {
             // 支払方法の場合
             $methodType = $data['method_type'] ?? 'cashless';

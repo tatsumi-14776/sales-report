@@ -1387,6 +1387,12 @@
                 formData.id = editingPointId;
             }
 
+            // デバッグ: 送信前のデータを確認
+            console.log('=== 送信データ ===');
+            console.log('formData:', formData);
+            console.log('point_type:', formData.point_type);
+            console.log('================');
+
             try {
                 const response = await fetch('payment-methods.php', {
                     method: 'POST',
@@ -1394,7 +1400,26 @@
                     body: JSON.stringify(formData)
                 });
 
-                const result = await response.json();
+                // レスポンステキストを先に取得
+                const responseText = await response.text();
+                console.log('=== サーバーレスポンス（生） ===');
+                console.log(responseText);
+                console.log('========================');
+
+                // JSONパースを試行
+                let result;
+                try {
+                    result = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error('JSON parse error:', parseError);
+                    console.error('Response text:', responseText);
+                    showAlert('サーバーレスポンスの解析に失敗しました', 'error');
+                    return;
+                }
+
+                console.log('=== パース後のレスポンス ===');
+                console.log(result);
+                console.log('====================');
 
                 if (result.success) {
                     showAlert(editingPointId ? 'ポイント・クーポンを更新しました' : 'ポイント・クーポンを追加しました', 'success');

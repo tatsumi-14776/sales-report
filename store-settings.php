@@ -313,7 +313,7 @@ function handleGetStoreSettings($pdo, $data) {
                 pmm.id as master_id,
                 pmm.method_id,
                 pmm.method_name,
-                pmm.method_type as point_type,
+                pmm.method_type,
                 pmm.display_order,
                 pmm.method_category,
                 COALESCE(sps.is_enabled, 0) as is_enabled,

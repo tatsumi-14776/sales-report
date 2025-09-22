@@ -1269,7 +1269,8 @@
                 const meta = { 
                     cash:     { cls: 'type-cash',     label: '💰 現金' },
                     cashless: { cls: 'type-cashless', label: '💳 キャッシュレス' },
-                    point:    { cls: 'type-point',    label: '🎯 ポイント・クーポン' }
+                    point:    { cls: 'type-point',    label: '🎯 ポイント・クーポン' },
+                    discount: { cls: 'type-discount', label: '💰 割引' }
                   }[setting.method_type] || { cls: 'type-cashless', label: '💳 不明' };
 
                 card.innerHTML = `
