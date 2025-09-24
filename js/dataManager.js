@@ -98,8 +98,33 @@ function handleLoadData() {
     console.log('データ読込処理を開始');
     
     try {
+        // 最初に要素を取得
         const dateElement = document.getElementById('date');
         const storeNameElement = document.getElementById('storeName');
+        
+        // **データ読み込み前に全フォームをクリア**
+        console.log('🧹 データ読み込み前のフォームクリア実行');
+        
+        // 日付と店舗名を一時保存
+        const currentDate = dateElement ? dateElement.value : '';
+        const currentStoreName = storeNameElement ? storeNameElement.value : '';
+        
+        resetAllFormFields();
+        
+        // 日付と店舗名を復元（データ読み込みで必要な値は保持）
+        if (dateElement && currentDate) {
+            dateElement.value = currentDate;
+        }
+        if (storeNameElement && currentStoreName) {
+            storeNameElement.value = currentStoreName;
+        }
+        
+        // 計算結果もクリア
+        if (typeof updateAllCalculations === 'function') {
+            updateAllCalculations();
+        }
+        
+        console.log('✅ フォームクリア完了 - 日付・店舗名は保持');
         
         // URLパラメータから値を取得
         const urlParams = new URLSearchParams(window.location.search);
@@ -1585,10 +1610,7 @@ function validateFormData(data) {
                 if (inputDate > today) {
                     errors.push('未来の日付は入力できません');
                 }
-                
-                if (inputDate < oneWeekAgo) {
-                    errors.push('1週間より前の日付は入力できません（過去データの修正が必要な場合は管理者にお問い合わせください）');
-                }
+
             } catch (dateError) {
                 console.error('日付バリデーションでエラー:', dateError);
                 errors.push('日付の形式が正しくありません');
