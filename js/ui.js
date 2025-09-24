@@ -206,10 +206,21 @@ function addExpenseRecord() {
         const newRecord = document.createElement('div');
         newRecord.className = 'expense-record';
         
-        // 勘定科目のオプションを生成
-        const accountOptions = accountCategories.map(category => 
+        // 勘定科目のオプションを生成（現在 + 過去の項目）
+        let accountOptions = accountCategories.map(category => 
             `<option value="${category.value}">${category.label}</option>`
         ).join('');
+        
+        // 過去の勘定科目も追加（重複を避ける）
+        if (window.historicalAccountCategories) {
+            const currentValues = accountCategories.map(cat => cat.value);
+            const historicalOptions = window.historicalAccountCategories
+                .filter(historical => !currentValues.includes(historical))
+                .map(historical => 
+                    `<option value="${historical}" style="font-style: italic; color: #6b7280;">${historical} (過去の項目)</option>`
+                ).join('');
+            accountOptions += historicalOptions;
+        }
         
         newRecord.innerHTML = `
             <input type="text" class="expense-input" placeholder="購入先" data-field="vendor" data-id="${nextExpenseId}">
@@ -221,6 +232,11 @@ function addExpenseRecord() {
                 <span class="expense-amount-symbol">¥</span>
                 <input type="number" class="expense-amount-input" placeholder="0" data-field="amount" data-id="${nextExpenseId}">
             </div>
+            <select class="expense-select" data-field="taxRate" data-id="${nextExpenseId}">
+                <option value="">税率</option>
+                <option value="10">10%</option>
+                <option value="8">8%</option>
+            </select>
             <input type="text" class="expense-input" placeholder="適格請求書登録番号" data-field="invoiceNumber" data-id="${nextExpenseId}">
             <button class="delete-button" onclick="removeExpenseRecord(${nextExpenseId})">
                 <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24">
@@ -230,7 +246,7 @@ function addExpenseRecord() {
         `;
         container.appendChild(newRecord);
         
-        expenseRecords.push({id: nextExpenseId, vendor: '', account: '', item: '', invoiceNumber: '', amount: ''});
+        expenseRecords.push({id: nextExpenseId, vendor: '', account: '', item: '', invoiceNumber: '', amount: '', taxRate: ''});
         console.log(`経費レコード ID:${nextExpenseId} を追加しました`);
         nextExpenseId++;
         
@@ -608,12 +624,59 @@ function loadDataIntoForm(data) {
                 const itemInput = document.querySelector(`[data-field="item"][data-id="${currentId}"]`);
                 const invoiceNumberInput = document.querySelector(`[data-field="invoiceNumber"][data-id="${currentId}"]`);
                 const amountInput = document.querySelector(`[data-field="amount"][data-id="${currentId}"]`);
+                const taxRateSelect = document.querySelector(`[data-field="taxRate"][data-id="${currentId}"]`);
                 
                 if (vendorInput) vendorInput.value = expense.vendor || '';
-                if (accountSelect) accountSelect.value = expense.account || '';
+                
+                // 勘定科目の安全な復元処理
+                if (accountSelect && expense.account) {
+                    // 選択肢が存在するかチェック
+                    const optionExists = Array.from(accountSelect.options).some(option => option.value === expense.account);
+                    if (optionExists) {
+                        accountSelect.value = expense.account;
+                    } else {
+                        console.log(`過去の勘定科目 "${expense.account}" を選択肢に追加して復元します。`);
+                        
+                        // 過去の勘定科目をグローバルリストに追加
+                        if (!window.historicalAccountCategories) {
+                            window.historicalAccountCategories = [];
+                        }
+                        if (!window.historicalAccountCategories.includes(expense.account)) {
+                            window.historicalAccountCategories.push(expense.account);
+                            console.log(`過去の勘定科目をリストに追加: ${expense.account}`);
+                        }
+                        
+                        // 過去の勘定科目を選択肢に追加
+                        const newOption = document.createElement('option');
+                        newOption.value = expense.account;  // データ保存用：元の勘定科目名のみ
+                        newOption.textContent = `${expense.account} (過去の項目)`;  // 表示用：区別のため(過去の項目)を追加
+                        newOption.style.fontStyle = 'italic';
+                        newOption.style.color = '#6b7280';
+                        
+                        console.log(`過去項目追加: value="${newOption.value}", display="${newOption.textContent}"`);
+                        
+                        // 「その他」の前に挿入（存在する場合）
+                        const otherOption = Array.from(accountSelect.options).find(option => option.value === 'その他');
+                        if (otherOption) {
+                            accountSelect.insertBefore(newOption, otherOption);
+                        } else {
+                            accountSelect.appendChild(newOption);
+                        }
+                        
+                        // 値を設定
+                        accountSelect.value = expense.account;
+                        
+                        // 過去項目であることを示すスタイル
+                        accountSelect.style.borderColor = '#9ca3af';
+                        accountSelect.style.backgroundColor = '#f9fafb';
+                        accountSelect.setAttribute('title', `過去に使用された勘定科目: "${expense.account}"`);
+                    }
+                }
+                
                 if (itemInput) itemInput.value = expense.item || '';
                 if (invoiceNumberInput) invoiceNumberInput.value = expense.invoiceNumber || '';
                 if (amountInput) amountInput.value = expense.amount || 0;
+                if (taxRateSelect) taxRateSelect.value = expense.taxRate || '';
             });
         }
         
@@ -657,14 +720,14 @@ function loadDataIntoForm(data) {
 
         // 手動税率入力データ
         if (data.manualTaxInputs) {
-            const manual10Input = document.getElementById('manual10Percent');
-            const manual8Input = document.getElementById('manual8Percent');
+            const manual10Input = document.getElementById('manualPercent10');
+            const manual8Input = document.getElementById('manualPercent8');
             
-            if (manual10Input && data.manualTaxInputs.manual10Percent !== null && data.manualTaxInputs.manual10Percent !== undefined) {
-                manual10Input.value = data.manualTaxInputs.manual10Percent;
+            if (manual10Input && data.manualTaxInputs.manualPercent10 !== null && data.manualTaxInputs.manualPercent10 !== undefined) {
+                manual10Input.value = data.manualTaxInputs.manualPercent10;
             }
-            if (manual8Input && data.manualTaxInputs.manual8Percent !== null && data.manualTaxInputs.manual8Percent !== undefined) {
-                manual8Input.value = data.manualTaxInputs.manual8Percent;
+            if (manual8Input && data.manualTaxInputs.manualPercent8 !== null && data.manualTaxInputs.manualPercent8 !== undefined) {
+                manual8Input.value = data.manualTaxInputs.manualPercent8;
             }
             console.log('手動税率入力データを復元しました:', data.manualTaxInputs);
         }
@@ -700,6 +763,18 @@ function loadDataIntoForm(data) {
             setFormReadOnly(false);
             hideConfirmedMessage();
             updateSubmitButtonForNormal();
+        }
+        
+        // 存在しない勘定科目の通知
+        if (window.missingAccountCategories && window.missingAccountCategories.length > 0) {
+            const missingCategories = window.missingAccountCategories.join('、');
+            showWarning(
+                `以下の勘定科目は現在の設定にありません：${missingCategories}\n` +
+                '該当する経費レコードは黄色でハイライトされています。\n' +
+                '勘定科目を再選択してください。'
+            );
+            // 通知後はクリア
+            window.missingAccountCategories = [];
         }
         
         console.log('フォームへのデータ読み込み完了');
@@ -1040,6 +1115,15 @@ function displayConfirmationStatus(status, date, storeName) {
     } catch (error) {
         console.error('確定状態表示でエラー:', error);
     }
+}
+
+/**
+ * 警告メッセージを表示
+ * @param {string} message - 警告メッセージ
+ */
+function showWarning(message) {
+    console.warn('警告:', message);
+    alert('⚠️ 警告\n\n' + message);
 }
 
 

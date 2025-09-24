@@ -370,8 +370,8 @@ if (typeof window !== 'undefined') {
  */
 function clearManualTaxInputs() {
     try {
-        const manual10Input = document.getElementById('manual10Percent');
-        const manual8Input = document.getElementById('manual8Percent');
+        const manual10Input = document.getElementById('manualPercent10');
+        const manual8Input = document.getElementById('manualPercent8');
         
         if (manual10Input) {
             manual10Input.value = '';

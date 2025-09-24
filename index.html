@@ -414,8 +414,8 @@
                                 <input type="text" class="expense-input" placeholder="購入先" data-field="vendor" data-id="1">
                                 <select class="expense-select" data-field="account" data-id="1">
                                     <option value="">勘定科目</option>
-                                    <option value="消耗品費">消耗品費</option>
                                     <option value="雑費">雑費</option>
+                                    <option value="雑費">消耗品</option>
                                     <option value="通信費">通信費</option>
                                     <option value="水道光熱費">水道光熱費</option>
                                     <option value="修繕費">修繕費</option>
@@ -427,6 +427,11 @@
                                     <span class="expense-amount-symbol">¥</span>
                                     <input type="number" class="expense-amount-input" placeholder="0" data-field="amount" data-id="1">
                                 </div>
+                                <select class="expense-select" data-field="taxRate" data-id="1">
+                                    <option value="">税率</option>
+                                    <option value="10">10%</option>
+                                    <option value="8">8%</option>
+                                </select>
                                 <input type="text" class="expense-input" placeholder="適格請求書登録番号" data-field="invoiceNumber" data-id="1">
                                 <button class="delete-button" onclick="removeExpenseRecord(1)" disabled>
                                     <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24">

@@ -16,7 +16,7 @@ let hasUsedUrlParams = false;
 // 勘定科目設定
 const accountCategories = [
     {value: '', label: '勘定科目'},
-    {value: '消耗品費', label: '消耗品費'},
+    //{value: '消耗品費', label: '消耗品費'},
     {value: '雑費', label: '雑費'},
     {value: '通信費', label: '通信費'},
     {value: '水道光熱費', label: '水道光熱費'},

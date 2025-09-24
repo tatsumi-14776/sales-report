@@ -471,10 +471,10 @@ function convertDatabaseToFormData(dbData) {
                 console.log('手動税率入力データ復元完了:', formData.manualTaxInputs);
             } catch (e) {
                 console.warn('手動税率入力データのパースに失敗:', e);
-                formData.manualTaxInputs = { manual10Percent: null, manual8Percent: null };
+                formData.manualTaxInputs = { manualPercent10: null, manualPercent8: null };
             }
         } else {
-            formData.manualTaxInputs = { manual10Percent: null, manual8Percent: null };
+            formData.manualTaxInputs = { manualPercent10: null, manualPercent8: null };
         }
         
         console.log('変換完了（全体）:', formData);
@@ -609,8 +609,8 @@ function resetAllFormFields() {
         }
         
         // 手動税率入力のリセット
-        const manual10Input = document.getElementById('manual10Percent');
-        const manual8Input = document.getElementById('manual8Percent');
+        const manual10Input = document.getElementById('manualPercent10');
+        const manual8Input = document.getElementById('manualPercent8');
         if (manual10Input) {
             manual10Input.value = '';
             manual10Input.style.backgroundColor = '';
@@ -1095,18 +1095,18 @@ function getUserSession() {
  */
 function getManualTaxInputs() {
     try {
-        const manual10Element = document.getElementById('manual10Percent');
-        const manual8Element = document.getElementById('manual8Percent');
+        const manual10Element = document.getElementById('manualPercent10');
+        const manual8Element = document.getElementById('manualPercent8');
         
         return {
-            manual10Percent: manual10Element && manual10Element.value.trim() !== '' ? parseFloat(manual10Element.value) : null,
-            manual8Percent: manual8Element && manual8Element.value.trim() !== '' ? parseFloat(manual8Element.value) : null
+            manualPercent10: manual10Element && manual10Element.value.trim() !== '' ? parseFloat(manual10Element.value) : null,
+            manualPercent8: manual8Element && manual8Element.value.trim() !== '' ? parseFloat(manual8Element.value) : null
         };
     } catch (error) {
         console.error('手動税率入力データの取得でエラー:', error);
         return {
-            manual10Percent: null,
-            manual8Percent: null
+            manualPercent10: null,
+            manualPercent8: null
         };
     }
 }
@@ -1296,21 +1296,29 @@ function collectExpenseData() {
                 const itemInput = record.querySelector('[data-field="item"]');
                 const invoiceNumberInput = record.querySelector('[data-field="invoiceNumber"]');
                 const amountInput = record.querySelector('[data-field="amount"]');
+                const taxRateSelect = record.querySelector('[data-field="taxRate"]');
                 
-                if (vendorInput && accountSelect && itemInput && invoiceNumberInput && amountInput) {
+                if (vendorInput && accountSelect && itemInput && invoiceNumberInput && amountInput && taxRateSelect) {
                     const expense = {
                         id: parseInt(vendorInput.dataset.id) || index + 1,
                         vendor: vendorInput.value.trim(),
                         account: accountSelect.value,
                         item: itemInput.value.trim(),
                         invoiceNumber: invoiceNumberInput.value.trim(),
-                        amount: parseFloat(amountInput.value) || 0
+                        amount: parseFloat(amountInput.value) || 0,
+                        taxRate: taxRateSelect.value
                     };
                     
                     // 空の経費レコードは除外（金額が0でない、またはいずれかのフィールドに入力がある場合のみ追加）
-                    if (expense.amount > 0 || expense.vendor || expense.account || expense.item || expense.invoiceNumber) {
+                    if (expense.amount > 0 || expense.vendor || expense.account || expense.item || expense.invoiceNumber || expense.taxRate) {
                         expenses.push(expense);
                         console.log(`経費レコード ${index + 1} を収集:`, expense);
+                        
+                        // 勘定科目の保存値を明確に表示
+                        if (expense.account) {
+                            const selectedOption = accountSelect.options[accountSelect.selectedIndex];
+                            console.log(`  └ 勘定科目: 保存値="${expense.account}", 表示テキスト="${selectedOption?.textContent}"`);
+                        }
                     }
                 } else {
                     console.warn(`経費レコード ${index + 1} の必要な要素が見つかりません`);
