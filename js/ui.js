@@ -483,14 +483,14 @@ function setupRemarksListeners() {
 }
 
 /**
- * フォームにデータを読み込む（税率対応版）
+ * フォームにデータを読み込む（データ基準復元版）
  * @param {Object} data 読み込むデータ
  */
 function loadDataIntoForm(data) {
-    console.log('フォームへのデータ読み込みを開始');
+    console.log('フォームへのデータ読み込みを開始（データ基準復元版）');
     
     try {
-        // 基本情報
+        // 基本情報の設定
         const dateElement = document.getElementById('date');
         const storeNameElement = document.getElementById('storeName');
         const inputByElement = document.getElementById('inputBy');
@@ -533,246 +533,84 @@ function loadDataIntoForm(data) {
             console.log('担当者を設定しました:', data.inputBy);
         }
         
-        // データ全体の確認
-        console.log('=== loadDataIntoForm で受け取った全データ ===');
-        console.log('data:', data);
-        console.log('data.sales:', data.sales);
-        console.log('data.pointPayments:', data.pointPayments);
-        
-        // 売上情報（動的に対応）
-        console.log('=== 売上データ復元処理（修正版） ===');
-        console.log('復元対象の売上データ:', data.sales);
-        console.log('現在のpaymentMethodConfig:', paymentMethodConfig?.length || 0, '件');
-
+        // 売上情報（データ基準で復元）
+        console.log('=== 売上データ復元処理（データ基準版） ===');
         if (data.sales && typeof data.sales === 'object') {
             const salesDataKeys = Object.keys(data.sales);
             console.log('復元対象の売上データキー:', salesDataKeys);
+            console.log('復元対象の売上データ:', data.sales);
             
             let successCount = 0;
             let failureCount = 0;
-            let retryList = []; // 失敗したキーを記録
             
-            // 🔧 修正：1回目の適用（通常のDOM要素に対して）
+            // データ基準で直接復元（再試行処理を簡素化）
             salesDataKeys.forEach(dataKey => {
                 const element = document.getElementById(dataKey);
                 const value = data.sales[dataKey];
                 
                 if (element && value !== undefined) {
                     element.value = value || 0;
-                    console.log(`✅ ${dataKey} に値を設定: ${element.value}`);
+                    console.log(`✅ 売上データ復元: ${dataKey} = ${element.value}`);
                     successCount++;
                 } else {
-                    console.warn(`❌ ${dataKey} の復元に失敗 (1回目):`, {
+                    console.warn(`❌ 売上データ復元失敗: ${dataKey}`, {
                         elementExists: !!element,
                         value: value,
                         valueType: typeof value
                     });
-                    retryList.push({ key: dataKey, value: value });
                     failureCount++;
                 }
             });
             
-            console.log(`📊 売上データ復元結果（1回目）: 成功 ${successCount}件 / 失敗 ${failureCount}件`);
+            console.log(`📊 売上データ復元結果: 成功 ${successCount}件 / 失敗 ${failureCount}件`);
             
-            // 🔧 修正：失敗したキーに対してDOM要素の再検索と再試行
-            if (retryList.length > 0 && paymentMethodConfig && Array.isArray(paymentMethodConfig)) {
-                console.log('🔄 失敗したキーに対して再試行を実行...');
-                
-                retryList.forEach(retry => {
-                    // paymentMethodConfigから該当する設定を探す
-                    const methodId = retry.key.replace(/10$|8$/, ''); // 末尾の10または8を除去
-                    const matchedMethod = paymentMethodConfig.find(method => method.id === methodId);
-                    
-                    if (matchedMethod) {
-                        const element = document.getElementById(retry.key);
-                        if (element) {
-                            element.value = retry.value || 0;
-                            console.log(`✅ 再試行成功: ${retry.key} = ${element.value}`);
-                            successCount++;
-                            failureCount--;
-                        } else {
-                            console.warn(`❌ 再試行失敗: ${retry.key} の要素が見つかりません`);
-                        }
-                    }
-                });
-                
-                console.log(`📊 売上データ復元結果（最終）: 成功 ${successCount}件 / 失敗 ${failureCount}件`);
-            }
-            
-            // 🔧 修正：paymentMethodConfig基準での追加確認とフォールバック処理
-            if (paymentMethodConfig && Array.isArray(paymentMethodConfig)) {
-                console.log('=== paymentMethodConfig 基準での確認・補完処理 ===');
-                
-                paymentMethodConfig.forEach(method => {
-                    const key10 = `${method.id}10`;
-                    const key8 = `${method.id}8`;
-                    const element10 = document.getElementById(key10);
-                    const element8 = document.getElementById(key8);
-                    
-                    // データが存在するが要素に値が設定されていない場合の補完
-                    if (element10 && data.sales[key10] !== undefined && (!element10.value || element10.value == '0')) {
-                        element10.value = data.sales[key10] || 0;
-                        console.log(`🔧 補完設定: ${key10} = ${element10.value}`);
-                    }
-                    
-                    if (element8 && data.sales[key8] !== undefined && (!element8.value || element8.value == '0')) {
-                        element8.value = data.sales[key8] || 0;
-                        console.log(`🔧 補完設定: ${key8} = ${element8.value}`);
-                    }
-                    
-                    // 設定復元状況の詳細ログ
-                    console.log(`支払方法 ${method.label} (${method.id}) の復元状況:`, {
-                        element10Found: !!element10,
-                        element8Found: !!element8,
-                        element10Value: element10?.value || '未設定',
-                        element8Value: element8?.value || '未設定',
-                        dataValue10: data.sales[key10] !== undefined ? data.sales[key10] : 'データなし',
-                        dataValue8: data.sales[key8] !== undefined ? data.sales[key8] : 'データなし'
-                    });
-                });
+            // 失敗が多い場合の警告
+            if (failureCount > 0 && failureCount >= successCount) {
+                console.warn('⚠️ 売上データの復元で多数の失敗が発生しました。UI構築に問題がある可能性があります。');
             }
         } else {
             console.warn('売上データが空または無効です');
         }
 
-        // ポイント・クーポン支払情報 - 修正版
-        console.log('=== ポイント・クーポンデータ復元処理（修正版） ===');
-        console.log('復元対象のポイントデータ:', data.pointPayments);
-        console.log('現在のpointPaymentConfig:', pointPaymentConfig?.length || 0, '件');
-
+        // ポイント・クーポン支払情報（データ基準で復元）
+        console.log('=== ポイント・クーポンデータ復元処理（データ基準版） ===');
         if (data.pointPayments && typeof data.pointPayments === 'object') {
             const pointDataKeys = Object.keys(data.pointPayments);
             console.log('復元対象のポイントデータキー:', pointDataKeys);
+            console.log('復元対象のポイントデータ:', data.pointPayments);
             
             let successCount = 0;
             let failureCount = 0;
-            let retryList = [];
             
-            // 1回目の適用
+            // データ基準で直接復元
             pointDataKeys.forEach(dataKey => {
                 const element = document.getElementById(dataKey);
                 const value = data.pointPayments[dataKey];
                 
                 if (element && value !== undefined) {
                     element.value = value || 0;
-                    console.log(`✅ ${dataKey} に値を設定: ${element.value}`);
+                    console.log(`✅ ポイントデータ復元: ${dataKey} = ${element.value}`);
                     successCount++;
                 } else {
-                    console.warn(`❌ ${dataKey} の復元に失敗 (1回目):`, {
+                    console.warn(`❌ ポイントデータ復元失敗: ${dataKey}`, {
                         elementExists: !!element,
                         value: value,
                         valueType: typeof value
                     });
-                    retryList.push({ key: dataKey, value: value });
                     failureCount++;
                 }
             });
             
-            console.log(`🎫 ポイントデータ復元結果（1回目）: 成功 ${successCount}件 / 失敗 ${failureCount}件`);
+            console.log(`🎫 ポイントデータ復元結果: 成功 ${successCount}件 / 失敗 ${failureCount}件`);
             
-            // 失敗したキーに対する再試行
-            if (retryList.length > 0 && pointPaymentConfig && Array.isArray(pointPaymentConfig)) {
-                console.log('🔄 失敗したポイントキーに対して再試行を実行...');
-                
-                retryList.forEach(retry => {
-                    const methodId = retry.key.replace(/10$|8$/, '');
-                    const matchedPayment = pointPaymentConfig.find(payment => payment.id === methodId);
-                    
-                    if (matchedPayment) {
-                        const element = document.getElementById(retry.key);
-                        if (element) {
-                            element.value = retry.value || 0;
-                            console.log(`✅ ポイント再試行成功: ${retry.key} = ${element.value}`);
-                            successCount++;
-                            failureCount--;
-                        } else {
-                            console.warn(`❌ ポイント再試行失敗: ${retry.key} の要素が見つかりません`);
-                        }
-                    }
-                });
-                
-                console.log(`🎫 ポイントデータ復元結果（最終）: 成功 ${successCount}件 / 失敗 ${failureCount}件`);
-            }
-            
-            // pointPaymentConfig基準での確認・補完
-            if (pointPaymentConfig && Array.isArray(pointPaymentConfig)) {
-                console.log('=== pointPaymentConfig 基準での確認・補完処理 ===');
-                
-                pointPaymentConfig.forEach(payment => {
-                    const key10 = `${payment.id}10`;
-                    const key8 = `${payment.id}8`;
-                    const element10 = document.getElementById(key10);
-                    const element8 = document.getElementById(key8);
-                    
-                    // データが存在するが要素に値が設定されていない場合の補完
-                    if (element10 && data.pointPayments[key10] !== undefined && (!element10.value || element10.value == '0')) {
-                        element10.value = data.pointPayments[key10] || 0;
-                        console.log(`🔧 ポイント補完設定: ${key10} = ${element10.value}`);
-                    }
-                    
-                    if (element8 && data.pointPayments[key8] !== undefined && (!element8.value || element8.value == '0')) {
-                        element8.value = data.pointPayments[key8] || 0;
-                        console.log(`🔧 ポイント補完設定: ${key8} = ${element8.value}`);
-                    }
-                    
-                    console.log(`ポイント支払 ${payment.label} (${payment.id}) の復元状況:`, {
-                        element10Found: !!element10,
-                        element8Found: !!element8,
-                        element10Value: element10?.value || '未設定',
-                        element8Value: element8?.value || '未設定',
-                        dataValue10: data.pointPayments[key10] !== undefined ? data.pointPayments[key10] : 'データなし',
-                        dataValue8: data.pointPayments[key8] !== undefined ? data.pointPayments[key8] : 'データなし'
-                    });
-                });
+            // 失敗が多い場合の警告
+            if (failureCount > 0 && failureCount >= successCount) {
+                console.warn('⚠️ ポイントデータの復元で多数の失敗が発生しました。UI構築に問題がある可能性があります。');
             }
         } else {
             console.warn('ポイント・クーポン支払データが空または無効です');
         }
 
-        // 🔧 修正：データ復元後の計算処理を段階的に実行
-        console.log('=== データ復元後の計算処理（段階的実行） ===');
-
-        // 段階1: DOM要素の値設定完了を待つ
-        setTimeout(() => {
-            console.log('🧮 段階1: DOM要素設定後の計算実行');
-            if (typeof updateAllCalculations === 'function') {
-                updateAllCalculations();
-                
-                // 段階2: 計算結果の確認
-                setTimeout(() => {
-                    const totalSales = document.getElementById('salesTotal')?.textContent || '不明';
-                    const pointTotal = document.getElementById('pointTotal')?.textContent || '不明';
-                    console.log('📊 計算結果確認:', {
-                        売上合計: totalSales,
-                        ポイント合計: pointTotal
-                    });
-                    
-                    // 段階3: 最終確認
-                    setTimeout(() => {
-                        console.log('✅ データ復元と計算処理が完了しました');
-                        
-                        // 復元結果のサマリー
-                        const finalSummary = {
-                            売上項目数: Object.keys(data.sales || {}).length,
-                            ポイント項目数: Object.keys(data.pointPayments || {}).length,
-                            設定復元: {
-                                支払方法: window.paymentMethodConfig?.length || 0,
-                                ポイント支払: window.pointPaymentConfig?.length || 0
-                            },
-                            計算結果: {
-                                売上合計: document.getElementById('salesTotal')?.textContent || '不明',
-                                ポイント合計: document.getElementById('pointTotal')?.textContent || '不明'
-                            }
-                        };
-                        
-                        console.log('📋 最終復元サマリー:', finalSummary);
-                    }, 100);
-                }, 100);
-            } else {
-                console.error('❌ updateAllCalculations 関数が見つかりません');
-            }
-        }, 50);
-        
         // 入金・雑収入
         if (data.income) {
             const nyukinElement = document.getElementById('nyukin');
@@ -781,12 +619,15 @@ function loadDataIntoForm(data) {
             
             if (nyukinElement && data.income.nyukin !== undefined) {
                 nyukinElement.value = data.income.nyukin || 0;
+                console.log('入金を設定:', data.income.nyukin);
             }
             if (miscIncomeElement && data.income.miscIncome !== undefined) {
                 miscIncomeElement.value = data.income.miscIncome || 0;
+                console.log('雑収入を設定:', data.income.miscIncome);
             }
             if (foundMoneyElement && data.income.foundMoney !== undefined) {
                 foundMoneyElement.value = data.income.foundMoney || 0;
+                console.log('拾得金を設定:', data.income.foundMoney);
             }
         }
         
@@ -795,6 +636,7 @@ function loadDataIntoForm(data) {
             const previousCashElement = document.getElementById('previousCashBalance');
             if (previousCashElement) {
                 previousCashElement.value = data.previousCashBalance || 0;
+                console.log('前日現金残を設定:', data.previousCashBalance);
             }
         }
         
@@ -828,6 +670,8 @@ function loadDataIntoForm(data) {
         
         // 経費データ
         if (data.expenses && Array.isArray(data.expenses) && data.expenses.length > 0) {
+            console.log('経費データの復元を開始:', data.expenses.length, '件');
+            
             expenseRecords = [];
             nextExpenseId = 1;
             const expenseContainer = document.getElementById('expenseRecords');
@@ -868,12 +712,10 @@ function loadDataIntoForm(data) {
                         
                         // 過去の勘定科目を選択肢に追加
                         const newOption = document.createElement('option');
-                        newOption.value = expense.account;  // データ保存用：元の勘定科目名のみ
-                        newOption.textContent = `${expense.account} (過去の項目)`;  // 表示用：区別のため(過去の項目)を追加
+                        newOption.value = expense.account;
+                        newOption.textContent = `${expense.account} (過去の項目)`;
                         newOption.style.fontStyle = 'italic';
                         newOption.style.color = '#6b7280';
-                        
-                        console.log(`過去項目追加: value="${newOption.value}", display="${newOption.textContent}"`);
                         
                         // 「その他」の前に挿入（存在する場合）
                         const otherOption = Array.from(accountSelect.options).find(option => option.value === 'その他');
@@ -898,6 +740,8 @@ function loadDataIntoForm(data) {
                 if (amountInput) amountInput.value = expense.amount || 0;
                 if (taxRateSelect) taxRateSelect.value = expense.taxRate || '';
             });
+            
+            console.log('経費データの復元完了');
         }
         
         // 備考・報告事項
@@ -909,33 +753,49 @@ function loadDataIntoForm(data) {
                 if (charCount) {
                     charCount.textContent = data.remarks.length;
                 }
+                console.log('備考を設定しました');
             }
         }
 
         // 添付ファイル復元
         if (data.attachedFiles && Array.isArray(data.attachedFiles) && data.attachedFiles.length > 0) {
-            generateFileInputs();
+            console.log('添付ファイルの復元を開始:', data.attachedFiles.length, '件');
+            
+            // ファイル入力欄を初期化
+            if (typeof generateFileInputs === 'function') {
+                generateFileInputs();
+            }
             
             data.attachedFiles.forEach((fileData, index) => {
                 if (fileData && fileData.attachmentNumber && fileData.fileName) {
                     const attachmentIndex = fileData.attachmentNumber - 1;
                     if (attachmentIndex >= 0 && attachmentIndex < attachedFiles.length) {
-                        const restoredFile = createFileFromBase64(fileData);
-                        
-                        if (restoredFile) {
-                            attachedFiles[attachmentIndex] = {
-                                id: fileData.attachmentNumber,
-                                file: restoredFile,
-                                fileName: fileData.fileName,
-                                fileSize: fileData.fileSize,
-                                hasFile: true
-                            };
+                        // Base64からファイルオブジェクトを作成
+                        if (typeof createFileFromBase64 === 'function') {
+                            const restoredFile = createFileFromBase64(fileData);
                             
-                            updateFileDisplayFromData(fileData.attachmentNumber, fileData);
+                            if (restoredFile) {
+                                attachedFiles[attachmentIndex] = {
+                                    id: fileData.attachmentNumber,
+                                    file: restoredFile,
+                                    fileName: fileData.fileName,
+                                    fileSize: fileData.fileSize,
+                                    hasFile: true
+                                };
+                                
+                                // ファイル表示を更新
+                                if (typeof updateFileDisplayFromData === 'function') {
+                                    updateFileDisplayFromData(fileData.attachmentNumber, fileData);
+                                }
+                                
+                                console.log(`添付ファイル${fileData.attachmentNumber}を復元: ${fileData.fileName}`);
+                            }
                         }
                     }
                 }
             });
+            
+            console.log('添付ファイルの復元完了');
         }
 
         // 手動税率入力データ
@@ -945,59 +805,111 @@ function loadDataIntoForm(data) {
             
             if (manual10Input && data.manualTaxInputs.manualPercent10 !== null && data.manualTaxInputs.manualPercent10 !== undefined) {
                 manual10Input.value = data.manualTaxInputs.manualPercent10;
+                manual10Input.style.backgroundColor = '#fef3c7'; // 手動入力の視覚的フィードバック
             }
             if (manual8Input && data.manualTaxInputs.manualPercent8 !== null && data.manualTaxInputs.manualPercent8 !== undefined) {
                 manual8Input.value = data.manualTaxInputs.manualPercent8;
+                manual8Input.style.backgroundColor = '#fef3c7'; // 手動入力の視覚的フィードバック
             }
             console.log('手動税率入力データを復元しました:', data.manualTaxInputs);
         }
         
-        // 計算を更新
-        updateAllCalculations();
-    
-        // *** 重要：ステータスに応じた処理 ***
+        // ステータスに応じた処理
         if (data.status) {
             console.log('読み込まれたデータのステータス:', data.status);
             console.log('現在のユーザー種別:', window.isAdminUser ? '管理者' : '一般ユーザー');
             
             // 確定ボタンの状態を更新
-            updateConfirmButtonState(data.status);
+            if (typeof updateConfirmButtonState === 'function') {
+                updateConfirmButtonState(data.status);
+            }
             
             // 確定済みの場合は全フォームを読み取り専用にする
             if (data.status === 'approved') {
-                console.log('確定済みのため、確定済みデータが読み込まれました');
-                setFormReadOnly(true);
-                // 管理者・一般ユーザー問わず統一メッセージを表示
-                showConfirmedMessage();
-                updateSubmitButtonForConfirmed();
+                console.log('確定済みのため、フォームを読み取り専用に設定');
+                if (typeof setFormReadOnly === 'function') {
+                    setFormReadOnly(true);
+                }
+                if (typeof showConfirmedMessage === 'function') {
+                    showConfirmedMessage();
+                }
+                if (typeof updateSubmitButtonForConfirmed === 'function') {
+                    updateSubmitButtonForConfirmed();
+                }
             } else {
                 // 確定済みでない場合は編集可能
-                setFormReadOnly(false);
-                hideConfirmedMessage();
-                updateSubmitButtonForNormal();
+                if (typeof setFormReadOnly === 'function') {
+                    setFormReadOnly(false);
+                }
+                if (typeof hideConfirmedMessage === 'function') {
+                    hideConfirmedMessage();
+                }
+                if (typeof updateSubmitButtonForNormal === 'function') {
+                    updateSubmitButtonForNormal();
+                }
                 console.log('編集可能状態に設定しました');
             }
-        }else {
+        } else {
             console.log('ステータス情報がありません。編集可能状態にします。');
             // ステータス情報がない場合は編集可能
-            setFormReadOnly(false);
-            hideConfirmedMessage();
-            updateSubmitButtonForNormal();
+            if (typeof setFormReadOnly === 'function') {
+                setFormReadOnly(false);
+            }
+            if (typeof hideConfirmedMessage === 'function') {
+                hideConfirmedMessage();
+            }
+            if (typeof updateSubmitButtonForNormal === 'function') {
+                updateSubmitButtonForNormal();
+            }
         }
         
-        // 存在しない勘定科目の通知
-        if (window.missingAccountCategories && window.missingAccountCategories.length > 0) {
-            const missingCategories = window.missingAccountCategories.join('、');
-            showWarning(
-                `以下の勘定科目は現在の設定にありません：${missingCategories}\n` +
-                '該当する経費レコードは黄色でハイライトされています。\n' +
-                '勘定科目を再選択してください。'
-            );
-            // 通知後はクリア
-            window.missingAccountCategories = [];
-        }
+        // 🔧 修正：データ復元後の計算処理を段階的に実行
+        console.log('=== データ復元後の計算処理実行 ===');
         
-        console.log('フォームへのデータ読み込み完了');
+        // 段階1: DOM要素の値設定完了を待つ
+        setTimeout(() => {
+            console.log('🧮 段階1: DOM要素設定後の計算実行');
+            if (typeof updateAllCalculations === 'function') {
+                updateAllCalculations();
+                
+                // 段階2: 計算結果の確認
+                setTimeout(() => {
+                    const totalSales = document.getElementById('salesTotal')?.textContent || '不明';
+                    const pointTotal = document.getElementById('pointTotal')?.textContent || '不明';
+                    console.log('📊 計算結果確認:', {
+                        売上合計: totalSales,
+                        ポイント合計: pointTotal
+                    });
+                    
+                    // 段階3: 最終確認
+                    setTimeout(() => {
+                        console.log('✅ データ復元と計算処理が完了しました');
+                        
+                        // 復元結果のサマリー
+                        const finalSummary = {
+                            売上項目数: Object.keys(data.sales || {}).length,
+                            ポイント項目数: Object.keys(data.pointPayments || {}).length,
+                            経費項目数: data.expenses ? data.expenses.length : 0,
+                            添付ファイル数: data.attachedFiles ? data.attachedFiles.length : 0,
+                            設定復元: {
+                                支払方法: window.paymentMethodConfig?.length || 0,
+                                ポイント支払: window.pointPaymentConfig?.length || 0
+                            },
+                            計算結果: {
+                                売上合計: document.getElementById('salesTotal')?.textContent || '不明',
+                                ポイント合計: document.getElementById('pointTotal')?.textContent || '不明'
+                            }
+                        };
+                        
+                        console.log('📋 最終復元サマリー:', finalSummary);
+                    }, 100);
+                }, 100);
+            } else {
+                console.error('❌ updateAllCalculations 関数が見つかりません');
+            }
+        }, 50);
+        
+        console.log('フォームへのデータ読み込み完了（データ基準復元版）');
         
     } catch (error) {
         console.error('フォームデータ読み込みでエラー:', error);
