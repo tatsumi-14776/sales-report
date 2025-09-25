@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- ホスト: 127.0.0.1
--- 生成日時: 2025-09-25 02:46:29
+-- 生成日時: 2025-09-25 05:12:44
 -- サーバのバージョン： 10.4.32-MariaDB
 -- PHP のバージョン: 8.2.12
 
@@ -49,7 +49,7 @@ CREATE TABLE `daily_reports` (
 --
 
 INSERT INTO `daily_reports` (`id`, `report_date`, `store_id`, `user_id`, `sales_data`, `point_payments_data`, `income_data`, `expense_data`, `cash_data`, `payment_method_config`, `point_payment_config`, `manual_tax_inputs`, `previous_cash_balance`, `cash_difference`, `remarks`, `attached_files`, `status`, `submitted_at`, `created_at`, `updated_at`) VALUES
-(1141, '2025-09-24', 2, '1111', '\"{\\\"cash10\\\":1,\\\"cash8\\\":1,\\\"urikake10\\\":1,\\\"urikake8\\\":1,\\\"stera10\\\":1,\\\"stera8\\\":1,\\\"habatanpay10\\\":1,\\\"habatanpay8\\\":0,\\\"other_pay10\\\":1,\\\"other_pay8\\\":1,\\\"Uber10\\\":1,\\\"Uber8\\\":1,\\\"menu10\\\":1,\\\"menu8\\\":1}\"', '\"{\\\"hotpepper10\\\":1,\\\"hotpepper8\\\":1,\\\"ikkyu10\\\":1,\\\"ikkyu8\\\":1,\\\"tabelog10\\\":1,\\\"tabelog8\\\":1,\\\"hitosara10\\\":1,\\\"hitosara8\\\":1}\"', '\"{\\\"nyukin\\\":1,\\\"miscIncome\\\":0,\\\"foundMoney\\\":0}\"', '\"[]\"', '\"{\\\"bill10000\\\":{\\\"register\\\":0,\\\"safe\\\":0},\\\"bill5000\\\":{\\\"register\\\":0,\\\"safe\\\":0},\\\"bill2000\\\":{\\\"register\\\":0,\\\"safe\\\":0},\\\"bill1000\\\":{\\\"register\\\":0,\\\"safe\\\":0},\\\"coin500\\\":{\\\"register\\\":0,\\\"safe\\\":0},\\\"coin100\\\":{\\\"register\\\":0,\\\"safe\\\":0},\\\"coin50\\\":{\\\"register\\\":0,\\\"safe\\\":0},\\\"coin10\\\":{\\\"register\\\":0,\\\"safe\\\":0},\\\"coin5\\\":{\\\"register\\\":0,\\\"safe\\\":0},\\\"coin1\\\":{\\\"register\\\":0,\\\"safe\\\":0},\\\"totals\\\":{\\\"registerTotal\\\":0,\\\"safeTotal\\\":0,\\\"totalCash\\\":0}}\"', '[{\"id\":\"cash\",\"label\":\"\\u73fe\\u91d1\",\"color\":\"blue\",\"isCash\":true,\"enabled\":true},{\"id\":\"urikake\",\"label\":\"\\u58f2\\u639b\\u91d1\",\"color\":\"blue\",\"isCash\":false,\"enabled\":true},{\"id\":\"stera\",\"label\":\"stera\",\"color\":\"red\",\"isCash\":false,\"enabled\":true},{\"id\":\"habatanpay\",\"label\":\"\\u306f\\u3070\\u305f\\u3093pay\",\"color\":\"blue\",\"isCash\":false,\"enabled\":true},{\"id\":\"other_pay\",\"label\":\"\\u305d\\u306e\\u4ed6\\u652f\\u6255\",\"color\":\"blue\",\"isCash\":false,\"enabled\":true},{\"id\":\"Uber\",\"label\":\"Uber\",\"color\":\"blue\",\"isCash\":false,\"enabled\":true},{\"id\":\"menu\",\"label\":\"menu\",\"color\":\"blue\",\"isCash\":false,\"enabled\":true}]', '[{\"id\":\"hotpepper\",\"label\":\"HOT PPEPER\",\"enabled\":true},{\"id\":\"ikkyu\",\"label\":\"\\u4e00\\u4f11\",\"enabled\":true},{\"id\":\"tabelog\",\"label\":\"\\u98df\\u3079\\u30ed\\u30b0\",\"enabled\":true},{\"id\":\"hitosara\",\"label\":\"\\u30d2\\u30c8\\u30b5\\u30e9\",\"enabled\":true}]', '\"{\\\"manualPercent10\\\":null,\\\"manualPercent8\\\":null}\"', 0.00, 0.00, '', NULL, 'draft', '2025-09-25 00:44:02', '2025-09-25 00:44:02', '2025-09-25 00:44:02');
+(1141, '2025-09-24', 2, '6666', '\"{\\\"cash10\\\":11,\\\"cash8\\\":0,\\\"cash210\\\":0,\\\"cash28\\\":0,\\\"habatanpay10\\\":0,\\\"habatanpay8\\\":0,\\\"other_pay10\\\":0,\\\"other_pay8\\\":0,\\\"Uber10\\\":0,\\\"Uber8\\\":0,\\\"menu10\\\":0,\\\"menu8\\\":0}\"', '\"{\\\"hotpepper10\\\":0,\\\"hotpepper8\\\":0,\\\"ikkyu10\\\":0,\\\"ikkyu8\\\":0,\\\"tabelog10\\\":0,\\\"tabelog8\\\":0}\"', '\"{\\\"nyukin\\\":0,\\\"miscIncome\\\":0,\\\"foundMoney\\\":0}\"', '\"[]\"', '\"{\\\"bill10000\\\":{\\\"register\\\":0,\\\"safe\\\":0},\\\"bill5000\\\":{\\\"register\\\":0,\\\"safe\\\":0},\\\"bill2000\\\":{\\\"register\\\":0,\\\"safe\\\":0},\\\"bill1000\\\":{\\\"register\\\":0,\\\"safe\\\":0},\\\"coin500\\\":{\\\"register\\\":0,\\\"safe\\\":0},\\\"coin100\\\":{\\\"register\\\":0,\\\"safe\\\":0},\\\"coin50\\\":{\\\"register\\\":0,\\\"safe\\\":0},\\\"coin10\\\":{\\\"register\\\":0,\\\"safe\\\":0},\\\"coin5\\\":{\\\"register\\\":0,\\\"safe\\\":0},\\\"coin1\\\":{\\\"register\\\":0,\\\"safe\\\":0},\\\"totals\\\":{\\\"registerTotal\\\":0,\\\"safeTotal\\\":0,\\\"totalCash\\\":0}}\"', '\"[{\\\"id\\\":\\\"cash\\\",\\\"label\\\":\\\"\\u73fe\\u91d1\\\",\\\"color\\\":\\\"blue\\\",\\\"isCash\\\":true,\\\"enabled\\\":true},{\\\"id\\\":\\\"cash2\\\",\\\"label\\\":\\\"\\u73fe\\u91d12\\\",\\\"color\\\":\\\"green\\\",\\\"isCash\\\":true,\\\"enabled\\\":true},{\\\"id\\\":\\\"habatanpay\\\",\\\"label\\\":\\\"\\u306f\\u3070\\u305f\\u3093pay\\\",\\\"color\\\":\\\"blue\\\",\\\"isCash\\\":false,\\\"enabled\\\":true},{\\\"id\\\":\\\"other_pay\\\",\\\"label\\\":\\\"\\u305d\\u306e\\u4ed6\\u652f\\u6255\\\",\\\"color\\\":\\\"blue\\\",\\\"isCash\\\":false,\\\"enabled\\\":true},{\\\"id\\\":\\\"Uber\\\",\\\"label\\\":\\\"Uber\\\",\\\"color\\\":\\\"blue\\\",\\\"isCash\\\":false,\\\"enabled\\\":true},{\\\"id\\\":\\\"menu\\\",\\\"label\\\":\\\"menu\\\",\\\"color\\\":\\\"blue\\\",\\\"isCash\\\":false,\\\"enabled\\\":true}]\"', '\"[{\\\"id\\\":\\\"hotpepper\\\",\\\"label\\\":\\\"HOT PPEPER\\\",\\\"enabled\\\":true},{\\\"id\\\":\\\"ikkyu\\\",\\\"label\\\":\\\"\\u4e00\\u4f11\\\",\\\"enabled\\\":true},{\\\"id\\\":\\\"tabelog\\\",\\\"label\\\":\\\"\\u98df\\u3079\\u30ed\\u30b0\\\",\\\"enabled\\\":true}]\"', '\"{\\\"manualPercent10\\\":null,\\\"manualPercent8\\\":null}\"', 0.00, 0.00, '', NULL, 'draft', '2025-09-25 03:06:29', '2025-09-25 00:44:02', '2025-09-25 03:06:29');
 
 -- --------------------------------------------------------
 
@@ -119,7 +119,7 @@ CREATE TABLE `stores` (
 
 INSERT INTO `stores` (`id`, `store_name`, `store_code`, `created_at`, `updated_at`, `is_deleted`, `deleted_at`) VALUES
 (1, '本社', 'honsya', '2025-09-05 07:51:23', '2025-09-09 06:41:12', 1, '2025-09-09 06:41:12'),
-(2, '四代目菊川　三ノ宮店', 'kikukawa_san', '2025-09-05 07:52:09', '2025-09-25 00:44:37', 0, NULL),
+(2, '四代目菊川　三ノ宮店', 'kikukawa_san', '2025-09-05 07:52:09', '2025-09-25 03:07:09', 0, NULL),
 (3, 'ダンダダン　元町店', 'dan_motomachi', '2025-09-05 07:52:28', '2025-09-05 08:03:40', 0, NULL),
 (5, 'ストランド垂水店だよ', 'st_tarumi', '2025-09-08 08:12:54', '2025-09-19 08:19:52', 0, NULL),
 (6, 'ストランド須磨店', 'st_suma', '2025-09-09 04:18:15', '2025-09-09 07:00:03', 0, NULL),
@@ -220,24 +220,24 @@ INSERT INTO `store_payment_settings` (`id`, `store_id`, `payment_method_id`, `is
 (383, 9, 53, 1, NULL, '2025-09-19 08:20:55', '2025-09-19 08:20:55', 0, NULL),
 (384, 9, 54, 1, NULL, '2025-09-19 08:20:55', '2025-09-19 08:20:55', 0, NULL),
 (385, 9, 57, 1, NULL, '2025-09-19 08:20:55', '2025-09-19 08:20:55', 0, NULL),
-(404, 2, 45, 1, NULL, '2025-09-25 00:44:39', '2025-09-25 00:44:39', 0, NULL),
-(405, 2, 46, 0, NULL, '2025-09-25 00:44:39', '2025-09-25 00:44:39', 0, NULL),
-(406, 2, 60, 1, NULL, '2025-09-25 00:44:39', '2025-09-25 00:44:39', 0, NULL),
-(407, 2, 47, 1, NULL, '2025-09-25 00:44:39', '2025-09-25 00:44:39', 0, NULL),
-(408, 2, 58, 0, NULL, '2025-09-25 00:44:39', '2025-09-25 00:44:39', 0, NULL),
-(409, 2, 48, 0, NULL, '2025-09-25 00:44:39', '2025-09-25 00:44:39', 0, NULL),
-(410, 2, 49, 0, NULL, '2025-09-25 00:44:39', '2025-09-25 00:44:39', 0, NULL),
-(411, 2, 50, 0, NULL, '2025-09-25 00:44:39', '2025-09-25 00:44:39', 0, NULL),
-(412, 2, 55, 0, NULL, '2025-09-25 00:44:39', '2025-09-25 00:44:39', 0, NULL),
-(413, 2, 56, 1, NULL, '2025-09-25 00:44:39', '2025-09-25 00:44:39', 0, NULL),
-(414, 2, 51, 1, NULL, '2025-09-25 00:44:39', '2025-09-25 00:44:39', 0, NULL),
-(415, 2, 52, 1, NULL, '2025-09-25 00:44:39', '2025-09-25 00:44:39', 0, NULL),
-(416, 2, 53, 1, NULL, '2025-09-25 00:44:39', '2025-09-25 00:44:39', 0, NULL),
-(417, 2, 54, 1, NULL, '2025-09-25 00:44:39', '2025-09-25 00:44:39', 0, NULL),
-(418, 2, 64, 0, NULL, '2025-09-25 00:44:39', '2025-09-25 00:44:39', 0, NULL),
-(419, 2, 65, 0, NULL, '2025-09-25 00:44:39', '2025-09-25 00:44:39', 0, NULL),
-(420, 2, 61, 0, NULL, '2025-09-25 00:44:39', '2025-09-25 00:44:39', 0, NULL),
-(421, 2, 57, 0, NULL, '2025-09-25 00:44:39', '2025-09-25 00:44:39', 0, NULL);
+(476, 2, 45, 1, NULL, '2025-09-25 03:07:11', '2025-09-25 03:07:11', 0, NULL),
+(477, 2, 46, 1, NULL, '2025-09-25 03:07:11', '2025-09-25 03:07:11', 0, NULL),
+(478, 2, 60, 0, NULL, '2025-09-25 03:07:11', '2025-09-25 03:07:11', 0, NULL),
+(479, 2, 47, 0, NULL, '2025-09-25 03:07:11', '2025-09-25 03:07:11', 0, NULL),
+(480, 2, 58, 0, NULL, '2025-09-25 03:07:11', '2025-09-25 03:07:11', 0, NULL),
+(481, 2, 48, 0, NULL, '2025-09-25 03:07:11', '2025-09-25 03:07:11', 0, NULL),
+(482, 2, 49, 0, NULL, '2025-09-25 03:07:11', '2025-09-25 03:07:11', 0, NULL),
+(483, 2, 50, 0, NULL, '2025-09-25 03:07:11', '2025-09-25 03:07:11', 0, NULL),
+(484, 2, 55, 0, NULL, '2025-09-25 03:07:11', '2025-09-25 03:07:11', 0, NULL),
+(485, 2, 56, 0, NULL, '2025-09-25 03:07:11', '2025-09-25 03:07:11', 0, NULL),
+(486, 2, 51, 1, NULL, '2025-09-25 03:07:11', '2025-09-25 03:07:11', 0, NULL),
+(487, 2, 52, 0, NULL, '2025-09-25 03:07:11', '2025-09-25 03:07:11', 0, NULL),
+(488, 2, 53, 0, NULL, '2025-09-25 03:07:11', '2025-09-25 03:07:11', 0, NULL),
+(489, 2, 54, 0, NULL, '2025-09-25 03:07:11', '2025-09-25 03:07:11', 0, NULL),
+(490, 2, 64, 0, NULL, '2025-09-25 03:07:11', '2025-09-25 03:07:11', 0, NULL),
+(491, 2, 65, 0, NULL, '2025-09-25 03:07:11', '2025-09-25 03:07:11', 0, NULL),
+(492, 2, 61, 0, NULL, '2025-09-25 03:07:11', '2025-09-25 03:07:11', 0, NULL),
+(493, 2, 57, 0, NULL, '2025-09-25 03:07:11', '2025-09-25 03:07:11', 0, NULL);
 
 -- --------------------------------------------------------
 
@@ -261,11 +261,11 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `store_id`, `store_name`, `pass`, `role`, `is_active`, `created_at`, `updated_at`) VALUES
-('admin', 1, NULL, '$2y$10$a/fcOnjmSugf3uJ1GSQfIe.jgDhNfRFXCETlJ3fjfl695LmF4/E1K', 'admin', 1, '2025-09-05 07:50:48', '2025-09-25 00:44:14'),
+('admin', 1, NULL, '$2y$10$a/fcOnjmSugf3uJ1GSQfIe.jgDhNfRFXCETlJ3fjfl695LmF4/E1K', 'admin', 1, '2025-09-05 07:50:48', '2025-09-25 02:55:13'),
 ('okawa', 6, 'ストランド須磨店', '$2y$10$mJQATi34aWXSTkoTH1W0G.Lypt5ro35Omdco.SooDYZ/.24NvQRny', 'user', 1, '2025-09-08 08:11:25', '2025-09-11 03:58:31'),
 ('oya', 7, 'ストランド　米田店', '$2y$10$3ViP9S9aZIENL5vROgR6nuGjUE.Ho1FhOf2F.zIOkyNE8/04PZ/MC', 'user', 1, '2025-09-17 06:24:17', '2025-09-18 03:51:45'),
 ('susususu', 3, 'ダンダダン　元町店', '$2y$10$z2dpNTB1klcyKop3ujmOAO5okHAjTqrkF7wkcyiSHZukGi3pYtqnq', 'user', 1, '2025-09-19 05:19:27', '2025-09-19 05:19:27'),
-('user1', 2, '四代目菊川　三ノ宮店', '$2y$10$9pNP7mNlTuasrY62mjgcX.D.hopIkSO3VX3Vj1tGJ0wmf0wWpe0sO', 'user', 1, '2025-09-11 03:59:12', '2025-09-25 00:44:46'),
+('user1', 2, '四代目菊川　三ノ宮店', '$2y$10$9pNP7mNlTuasrY62mjgcX.D.hopIkSO3VX3Vj1tGJ0wmf0wWpe0sO', 'user', 1, '2025-09-11 03:59:12', '2025-09-25 02:36:47'),
 ('user2', 3, 'ダンダダン　元町店', '$2y$10$NTOBixRVdLb0Ocv1KGYwEOIlCwECVwwSUK/8UTcj0V83SVPQlKjWq', 'user', 1, '2025-09-05 07:54:39', '2025-09-05 08:06:57');
 
 --
@@ -344,7 +344,7 @@ ALTER TABLE `stores`
 -- テーブルの AUTO_INCREMENT `store_payment_settings`
 --
 ALTER TABLE `store_payment_settings`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=422;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=494;
 
 --
 -- ダンプしたテーブルの制約
