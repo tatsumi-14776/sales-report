@@ -523,33 +523,75 @@ function loadDataIntoForm(data) {
             console.log('担当者を設定しました:', data.inputBy);
         }
         
+        // データ全体の確認
+        console.log('=== loadDataIntoForm で受け取った全データ ===');
+        console.log('data:', data);
+        console.log('data.sales:', data.sales);
+        console.log('data.pointPayments:', data.pointPayments);
+        
         // 売上情報（動的に対応）
+        console.log('=== 売上データ復元処理 ===');
+        console.log('復元対象の売上データ:', data.sales);
+        console.log('現在のpaymentMethodConfig:', paymentMethodConfig);
+        
         if (data.sales && paymentMethodConfig) {
             paymentMethodConfig.forEach(method => {
                 const element10 = document.getElementById(`${method.id}10`);
                 const element8 = document.getElementById(`${method.id}8`);
                 
+                console.log(`支払方法 ${method.label} (${method.id}) の復元:`, {
+                    element10Found: !!element10,
+                    element8Found: !!element8,
+                    value10: data.sales[`${method.id}10`],
+                    value8: data.sales[`${method.id}8`]
+                });
+                
                 if (element10 && data.sales[`${method.id}10`] !== undefined) {
                     element10.value = data.sales[`${method.id}10`] || 0;
+                    console.log(`  ${method.id}10 に値を設定: ${element10.value}`);
                 }
                 if (element8 && data.sales[`${method.id}8`] !== undefined) {
                     element8.value = data.sales[`${method.id}8`] || 0;
+                    console.log(`  ${method.id}8 に値を設定: ${element8.value}`);
                 }
+            });
+        } else {
+            console.warn('売上データまたはpaymentMethodConfigが見つかりません:', {
+                hasSalesData: !!data.sales,
+                hasPaymentConfig: !!paymentMethodConfig
             });
         }
         
         // ポイント・クーポン支払情報
+        console.log('=== ポイント・クーポンデータ復元処理 ===');
+        console.log('復元対象のポイントデータ:', data.pointPayments);
+        console.log('現在のpointPaymentConfig:', pointPaymentConfig);
+        
         if (data.pointPayments && pointPaymentConfig) {
             pointPaymentConfig.forEach(payment => {
                 const element10 = document.getElementById(`${payment.id}10`);
                 const element8 = document.getElementById(`${payment.id}8`);
                 
+                console.log(`ポイント支払 ${payment.label} (${payment.id}) の復元:`, {
+                    element10Found: !!element10,
+                    element8Found: !!element8,
+                    value10: data.pointPayments[`${payment.id}10`],
+                    value8: data.pointPayments[`${payment.id}8`]
+                });
+                
                 if (element10 && data.pointPayments[`${payment.id}10`] !== undefined) {
                     element10.value = data.pointPayments[`${payment.id}10`] || 0;
+                    console.log(`  ${payment.id}10 に値を設定: ${element10.value}`);
                 }
                 if (element8 && data.pointPayments[`${payment.id}8`] !== undefined) {
                     element8.value = data.pointPayments[`${payment.id}8`] || 0;
+                    console.log(`  ${payment.id}8 に値を設定: ${element8.value}`);
                 }
+            });
+        } else {
+            console.warn('ポイントデータまたはpointPaymentConfigが見つかりません:', {
+                hasPointData: !!data.pointPayments,
+                hasPointConfig: !!pointPaymentConfig
             });
         }
         
