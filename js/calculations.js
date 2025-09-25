@@ -23,15 +23,30 @@ function updateAllCalculations() {
 function updateSalesCalculation() {
     let salesTotal = 0;
     
-    // 動的な支払い方法の計算
-    paymentMethodConfig.forEach(method => {
+    // 動的な支払い方法の計算（最新の設定を使用）
+    const currentPaymentConfig = window.paymentMethodConfig || paymentMethodConfig || [];
+    console.log('🔍 売上計算で使用する設定:', currentPaymentConfig.length, '件');
+    console.log('🔍 設定詳細:', currentPaymentConfig.map(m => m.id));
+
+    currentPaymentConfig.forEach(method => {
         const element10 = document.getElementById(`${method.id}10`);
         const element8 = document.getElementById(`${method.id}8`);
+
+        console.log(`🔍 ${method.id}: DOM要素存在チェック`, {
+            element10: !!element10,
+            element8: !!element8,
+            value10: element10?.value,
+            value8: element8?.value
+        });
         
         if (element10 && element8) {
             const amount10 = parseFloat(element10.value) || 0;
             const amount8 = parseFloat(element8.value) || 0;
             const methodTotal = amount10 + amount8;
+            // 🔧 追加：計算詳細ログ
+            if (methodTotal > 0) {
+                console.log(`✅ ${method.id}: 計算対象 ${methodTotal}円`);
+            }
             
             // 各支払い方法の合計を表示
             const totalElement = document.getElementById(`${method.id}Total`);
@@ -57,9 +72,20 @@ function updateSalesCalculation() {
 function updatePointPaymentCalculation() {
     let pointPaymentTotal = 0;
     
-    pointPaymentConfig.forEach(payment => {
+    // 最新のポイント支払設定を使用
+    const currentPointConfig = window.pointPaymentConfig || pointPaymentConfig || [];
+    console.log('🔍 ポイント計算で使用する設定:', currentPointConfig.length, '件');
+    
+    currentPointConfig.forEach(payment => {
         const element10 = document.getElementById(`${payment.id}10`);
         const element8 = document.getElementById(`${payment.id}8`);
+
+        console.log(`🔍 ポイント ${payment.id}: DOM要素存在チェック`, {
+            element10: !!element10,
+            element8: !!element8,
+            value10: element10?.value,
+            value8: element8?.value
+        });
         
         if (element10 && element8) {
             const amount10 = parseFloat(element10.value) || 0;
@@ -133,7 +159,8 @@ function updateSummaryCalculation() {
     let total8Percent = 0;
     
     // 通常の支払い方法
-    paymentMethodConfig.forEach(method => {
+    const currentPaymentConfig = window.paymentMethodConfig || paymentMethodConfig || [];
+    currentPaymentConfig.forEach(method => {
         const element10 = document.getElementById(`${method.id}10`);
         const element8 = document.getElementById(`${method.id}8`);
         
@@ -147,7 +174,8 @@ function updateSummaryCalculation() {
     });
     
     // ポイント・クーポン支払
-    pointPaymentConfig.forEach(payment => {
+    const currentPointConfig = window.pointPaymentConfig || pointPaymentConfig || [];
+    currentPointConfig.forEach(payment => {
         const element10 = document.getElementById(`${payment.id}10`);
         const element8 = document.getElementById(`${payment.id}8`);
         
@@ -187,7 +215,7 @@ function updateSummaryCalculation() {
 
     // 現金売上（現金項目のみを合計）
     let cashSales = 0;
-    paymentMethodConfig.forEach(method => {
+    currentPaymentConfig.forEach(method => {
         if (method.isCash) {
             const element10 = document.getElementById(`${method.id}10`);
             const element8 = document.getElementById(`${method.id}8`);

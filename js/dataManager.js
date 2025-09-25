@@ -775,11 +775,65 @@ async function rebuildUIWithSavedData(formData) {
         });
         
         console.log(`📊 DOM要素生成結果: ${foundElements}/${totalElements} 個の要素が生成されました`);
-        
+
         if (foundElements < totalElements) {
             console.warn('⚠️ 一部のDOM要素が生成されていません。');
         }
-        
+
+        // 🔧 修正：イベントリスナーの再設定を追加
+        console.log('🔗 イベントリスナーを再設定中...');
+
+        // 売上項目のイベントリスナー再設定
+        if (finalPaymentConfig && Array.isArray(finalPaymentConfig)) {
+            finalPaymentConfig.forEach(method => {
+                const element10 = document.getElementById(`${method.id}10`);
+                const element8 = document.getElementById(`${method.id}8`);
+                
+                if (element10) {
+                    // 重複防止のため既存リスナーを削除してから追加
+                    element10.removeEventListener('input', updateAllCalculations);
+                    element10.addEventListener('input', updateAllCalculations);
+                    console.log(`📊 ${method.id}10 のリスナーを再設定`);
+                } else {
+                    console.warn(`⚠️ ${method.id}10 の要素が見つかりません`);
+                }
+                
+                if (element8) {
+                    element8.removeEventListener('input', updateAllCalculations);
+                    element8.addEventListener('input', updateAllCalculations);
+                    console.log(`📊 ${method.id}8 のリスナーを再設定`);
+                } else {
+                    console.warn(`⚠️ ${method.id}8 の要素が見つかりません`);
+                }
+            });
+        }
+
+        // ポイント支払のイベントリスナー再設定
+        if (finalPointConfig && Array.isArray(finalPointConfig)) {
+            finalPointConfig.forEach(payment => {
+                const element10 = document.getElementById(`${payment.id}10`);
+                const element8 = document.getElementById(`${payment.id}8`);
+                
+                if (element10) {
+                    element10.removeEventListener('input', updateAllCalculations);
+                    element10.addEventListener('input', updateAllCalculations);
+                    console.log(`🎫 ${payment.id}10 のリスナーを再設定`);
+                } else {
+                    console.warn(`⚠️ ${payment.id}10 の要素が見つかりません`);
+                }
+                
+                if (element8) {
+                    element8.removeEventListener('input', updateAllCalculations);
+                    element8.addEventListener('input', updateAllCalculations);
+                    console.log(`🎫 ${payment.id}8 のリスナーを再設定`);
+                } else {
+                    console.warn(`⚠️ ${payment.id}8 の要素が見つかりません`);
+                }
+            });
+        }
+
+        console.log('✅ イベントリスナー再設定完了');
+
         console.log('🎯 完全復元処理完了（修正版）');
         
     } catch (error) {
