@@ -2171,9 +2171,27 @@ function collectAllFormData() {
         // 現在の設定データも含める（保存時に必要）
         const sendPaymentConfig = window.paymentMethodConfig || [];
         const sendPointConfig = window.pointPaymentConfig || [];
+        
+        // 🔧 修正: isCashフラグの保存状況をデバッグ
         console.log('📋 送信データに含める設定:', {
             paymentMethods: sendPaymentConfig.length + '件',
             pointPayments: sendPointConfig.length + '件'
+        });
+        
+        console.log('🔍 支払方法設定の詳細（isCashフラグ確認）:');
+        sendPaymentConfig.forEach((method, index) => {
+            console.log(`  ${index + 1}. ${method.label} (${method.id})`, {
+                enabled: method.enabled,
+                isCash: method.isCash,
+                color: method.color
+            });
+        });
+        
+        console.log('🔍 ポイント支払設定の詳細:');
+        sendPointConfig.forEach((payment, index) => {
+            console.log(`  ${index + 1}. ${payment.label} (${payment.id})`, {
+                enabled: payment.enabled
+            });
         });
 
         const allData = {
