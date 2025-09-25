@@ -666,6 +666,68 @@ function loadDataIntoForm(data) {
             });
             
             console.log('現金データの復元完了');
+
+            console.log('🔧 現金データ復元後の現金計算を実行');
+
+            // 🔧 修正: より確実な方法で現金計算を実行
+            const executeCashCalculations = () => {
+                console.log('🧮 現金計算関数の存在確認:');
+                console.log('  updateCashCalculation:', typeof updateCashCalculation);
+                console.log('  updateCashDifferenceCalculation:', typeof updateCashDifferenceCalculation);
+                console.log('  window.updateCashCalculation:', typeof window.updateCashCalculation);
+                console.log('  window.updateCashDifferenceCalculation:', typeof window.updateCashDifferenceCalculation);
+                
+                // 現金計算実行（複数の方法を試行）
+                let cashCalculationExecuted = false;
+                if (typeof updateCashCalculation === 'function') {
+                    updateCashCalculation();
+                    console.log('✅ updateCashCalculation実行完了（ローカル関数）');
+                    cashCalculationExecuted = true;
+                } else if (typeof window.updateCashCalculation === 'function') {
+                    window.updateCashCalculation();
+                    console.log('✅ updateCashCalculation実行完了（グローバル関数）');
+                    cashCalculationExecuted = true;
+                } else {
+                    console.error('❌ updateCashCalculation関数が見つかりません');
+                }
+                
+                // 現金過不足計算実行（複数の方法を試行）
+                let cashDiffCalculationExecuted = false;
+                if (typeof updateCashDifferenceCalculation === 'function') {
+                    updateCashDifferenceCalculation();
+                    console.log('✅ updateCashDifferenceCalculation実行完了（ローカル関数）');
+                    cashDiffCalculationExecuted = true;
+                } else if (typeof window.updateCashDifferenceCalculation === 'function') {
+                    window.updateCashDifferenceCalculation();
+                    console.log('✅ updateCashDifferenceCalculation実行完了（グローバル関数）');
+                    cashDiffCalculationExecuted = true;
+                } else {
+                    console.error('❌ updateCashDifferenceCalculation関数が見つかりません');
+                }
+                
+                // 実行結果の確認
+                setTimeout(() => {
+                    const totalCashElement = document.getElementById('totalCash');
+                    const cashDifferenceElement = document.getElementById('cashDifference');
+                    
+                    console.log('💰 現金計算結果確認:', {
+                        totalCashElement: !!totalCashElement,
+                        totalCashValue: totalCashElement?.textContent || 'なし',
+                        cashDifferenceElement: !!cashDifferenceElement,
+                        cashDifferenceValue: cashDifferenceElement?.textContent || 'なし'
+                    });
+                    
+                    if (!cashCalculationExecuted || !cashDiffCalculationExecuted) {
+                        console.warn('⚠️ 現金計算が正常に実行されませんでした。updateAllCalculationsを再実行します。');
+                        if (typeof updateAllCalculations === 'function') {
+                            updateAllCalculations();
+                        }
+                    }
+                }, 200);
+            };
+
+            // 段階的実行
+            setTimeout(executeCashCalculations, 50);
         }
         
         // 経費データ
@@ -863,22 +925,45 @@ function loadDataIntoForm(data) {
             }
         }
         
-        // 🔧 修正：データ復元後の計算処理を段階的に実行
-        console.log('=== データ復元後の計算処理実行 ===');
-        
+        console.log('=== データ復元後の計算処理実行（現金計算強化版） ===');
+
         // 段階1: DOM要素の値設定完了を待つ
         setTimeout(() => {
             console.log('🧮 段階1: DOM要素設定後の計算実行');
             if (typeof updateAllCalculations === 'function') {
                 updateAllCalculations();
                 
-                // 段階2: 計算結果の確認
+                // 段階2: 現金計算の個別実行と確認
                 setTimeout(() => {
+                    console.log('🧮 段階2: 現金計算の個別実行');
+                    
+                    // 現金計算を明示的に実行
+                    if (typeof updateCashCalculation === 'function') {
+                        updateCashCalculation();
+                        console.log('✅ 現金計算実行完了');
+                    }
+                    
+                    // 現金過不足計算を明示的に実行
+                    if (typeof updateCashDifferenceCalculation === 'function') {
+                        updateCashDifferenceCalculation();
+                        console.log('✅ 現金過不足計算実行完了');
+                    }
+                    
+                    // 計算結果の確認
                     const totalSales = document.getElementById('salesTotal')?.textContent || '不明';
                     const pointTotal = document.getElementById('pointTotal')?.textContent || '不明';
-                    console.log('📊 計算結果確認:', {
+                    const totalCash = document.getElementById('totalCash')?.textContent || '不明';
+                    const cashDifference = document.getElementById('cashDifference')?.textContent || '不明';
+                    
+                    console.log('📊 計算結果確認（現金強化版）:', {
                         売上合計: totalSales,
-                        ポイント合計: pointTotal
+                        ポイント合計: pointTotal,
+                        総現金: totalCash,
+                        現金過不足: cashDifference,
+                        レジ合計: document.getElementById('registerTotal')?.textContent || '不明',
+                        金庫合計: document.getElementById('safeTotal')?.textContent || '不明',
+                        理論残高: document.getElementById('theoreticalBalance')?.textContent || '不明',
+                        実際残高: document.getElementById('actualBalance')?.textContent || '不明'
                     });
                     
                     // 段階3: 最終確認
@@ -891,23 +976,26 @@ function loadDataIntoForm(data) {
                             ポイント項目数: Object.keys(data.pointPayments || {}).length,
                             経費項目数: data.expenses ? data.expenses.length : 0,
                             添付ファイル数: data.attachedFiles ? data.attachedFiles.length : 0,
+                            現金データ: data.cash ? '復元済み' : 'なし',
                             設定復元: {
                                 支払方法: window.paymentMethodConfig?.length || 0,
                                 ポイント支払: window.pointPaymentConfig?.length || 0
                             },
                             計算結果: {
                                 売上合計: document.getElementById('salesTotal')?.textContent || '不明',
-                                ポイント合計: document.getElementById('pointTotal')?.textContent || '不明'
+                                ポイント合計: document.getElementById('pointTotal')?.textContent || '不明',
+                                総現金: document.getElementById('totalCash')?.textContent || '不明',
+                                現金過不足: document.getElementById('cashDifference')?.textContent || '不明'
                             }
                         };
                         
                         console.log('📋 最終復元サマリー:', finalSummary);
-                    }, 100);
-                }, 100);
+                    }, 150);
+                }, 150);
             } else {
                 console.error('❌ updateAllCalculations 関数が見つかりません');
             }
-        }, 50);
+        }, 100);
         
         console.log('フォームへのデータ読み込み完了（データ基準復元版）');
         

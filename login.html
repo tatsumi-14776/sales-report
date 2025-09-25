@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ログイン - 日次売上報告書システム</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <style>
         * {
             margin: 0;
@@ -215,6 +218,50 @@
     </div>
 
     <script>
+
+        (function() {
+            console.log('🧹 キャッシュクリア処理開始...');
+            
+            // 開発モード判定（localhost等の場合は開発モード）
+            const isDevelopment = window.location.hostname === 'localhost' || 
+                                 window.location.hostname === '127.0.0.1' || 
+                                 window.location.hostname === '' ||
+                                 window.location.protocol === 'file:';
+            
+            if (isDevelopment) {
+                console.log('🔧 開発モード検出：キャッシュクリアを実行');
+                
+                try {
+                    // セッション/ローカルストレージの古いデータをクリア
+                    if (window.localStorage) {
+                        localStorage.removeItem('cachedPaymentMethods');
+                        localStorage.removeItem('cachedStoreConfig');
+                        console.log('✅ 開発用キャッシュデータをクリア');
+                    }
+                    
+                    if (window.sessionStorage) {
+                        sessionStorage.removeItem('tempFormData');
+                        console.log('✅ 一時フォームデータをクリア');
+                    }
+                    
+                    // Service Worker があればアンインストール（PWA対応時）
+                    if ('serviceWorker' in navigator) {
+                        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                            for(let registration of registrations) {
+                                registration.unregister();
+                                console.log('✅ Service Worker unregistered');
+                            }
+                        });
+                    }
+                    
+                } catch (error) {
+                    console.warn('⚠️ キャッシュクリア中にエラー:', error);
+                }
+            } else {
+                console.log('🏭 本番モード：キャッシュクリアをスキップ');
+            }
+        })();
+        
         // 既存セッション確認
         document.addEventListener('DOMContentLoaded', function() {
             const session = sessionStorage.getItem('userSession') || localStorage.getItem('userSession');
