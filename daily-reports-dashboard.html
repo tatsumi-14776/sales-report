@@ -1794,20 +1794,37 @@ function setLastMonthRange() {
         try {
             let total = 0;
             
+            // 売上データの処理（JSON文字列の場合はパース）
             if (reportData.sales_data) {
-                Object.values(reportData.sales_data).forEach(amount => {
+                let salesData;
+                if (typeof reportData.sales_data === 'string') {
+                    salesData = JSON.parse(reportData.sales_data);
+                } else {
+                    salesData = reportData.sales_data;
+                }
+                
+                Object.values(salesData).forEach(amount => {
                     total += parseFloat(amount) || 0;
                 });
             }
             
+            // ポイント支払データの処理（JSON文字列の場合はパース）
             if (reportData.point_payments_data) {
-                Object.values(reportData.point_payments_data).forEach(amount => {
+                let pointData;
+                if (typeof reportData.point_payments_data === 'string') {
+                    pointData = JSON.parse(reportData.point_payments_data);
+                } else {
+                    pointData = reportData.point_payments_data;
+                }
+                
+                Object.values(pointData).forEach(amount => {
                     total += parseFloat(amount) || 0;
                 });
             }
             
             return total;
         } catch (error) {
+            console.error('売上合計計算エラー:', error);
             return 0;
         }
     }
