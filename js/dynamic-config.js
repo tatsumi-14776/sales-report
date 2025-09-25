@@ -317,6 +317,14 @@ const ConfigLoader = {
                 enabled: payment.is_enabled == 1
             })).filter(payment => payment.enabled);
 
+            // window オブジェクトにも設定を保存
+            window.paymentMethodConfig = paymentMethodConfig;
+            window.pointPaymentConfig = pointPaymentConfig;
+            console.log('✅ 設定をwindowオブジェクトに保存完了:', {
+                paymentMethods: paymentMethodConfig.length,
+                pointMethods: pointPaymentConfig.length
+            });
+
             console.log('変換された支払方法:', paymentMethodConfig);
             console.log('変換されたポイント設定:', pointPaymentConfig);
             
@@ -400,6 +408,18 @@ const ConfigLoader = {
             { id: 'hotpepper', label: 'HOT PEPPER', enabled: true },
             { id: 'tabelog', label: '食べログ', enabled: true }
         ];
+
+        // window オブジェクトにも設定を保存
+        window.paymentMethodConfig = paymentMethodConfig;
+        window.pointPaymentConfig = pointPaymentConfig;
+        console.log('✅ フォールバック設定をwindowオブジェクトに保存完了:', {
+            paymentMethods: paymentMethodConfig.length,
+            pointMethods: pointPaymentConfig.length
+        });
+
+        // window オブジェクトにも設定を保存
+        window.paymentMethodConfig = paymentMethodConfig;
+        window.pointPaymentConfig = pointPaymentConfig;
         
         storeInfo = { 
             name: '店舗未設定', 

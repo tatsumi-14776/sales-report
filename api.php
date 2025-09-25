@@ -279,6 +279,11 @@ class APIController {
      */
     private function saveReport($data) {
         try {
+            // リクエストデータの詳細ログ
+            error_log('saveReport リクエストデータ: ' . json_encode($data, JSON_UNESCAPED_UNICODE));
+            error_log('payment_method_config受信: ' . (isset($data['payment_method_config']) ? 'あり' : 'なし'));
+            error_log('point_payment_config受信: ' . (isset($data['point_payment_config']) ? 'あり' : 'なし'));
+            
             $reportDate = $data['report_date'] ?? '';
             $storeId = $data['store_id'] ?? 0;
             $userId = $data['user_id'] ?? '';
@@ -312,6 +317,9 @@ class APIController {
             $paymentMethodConfig = $data['payment_method_config'] ?? null;
             $pointPaymentConfig = $data['point_payment_config'] ?? null;
             $manualTaxInputs = $data['manual_tax_inputs'] ?? null;
+            
+            // デバッグ用ログ
+            error_log('保存される設定データ: payment_method_config=' . ($paymentMethodConfig ?? 'NULL') . ', point_payment_config=' . ($pointPaymentConfig ?? 'NULL'));
             
             if ($existing) {
                 // 更新（ステータスは draft に設定）

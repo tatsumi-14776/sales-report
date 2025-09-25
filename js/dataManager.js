@@ -622,9 +622,13 @@ function convertDatabaseToFormData(dbData) {
             formData.manualTaxInputs = { manualPercent10: null, manualPercent8: null };
         }
         
-        // 設定データを追加（UI復元で使用）
+        // 設定データを追加（保存されていたものを使用）
         formData.paymentMethodConfig = paymentMethodConfig || [];
         formData.pointPaymentConfig = pointPaymentConfig || [];
+        
+        // 保存されていた設定を優先使用
+        formData.savedPaymentMethodConfig = paymentMethodConfig;
+        formData.savedPointPaymentConfig = pointPaymentConfig;
         
         console.log('設定データも含めて変換完了:', {
             paymentMethodConfigCount: formData.paymentMethodConfig.length,
@@ -671,98 +675,29 @@ async function rebuildUIWithSavedData(formData) {
     });
     
     try {
-        // 1. 保存されたデータから必要な支払方法を抽出
-        const requiredPaymentMethods = new Set();
-        const requiredPointMethods = new Set();
+        console.log('🔍 保存されていた設定をそのまま復元します');
         
-        // 売上データから使用されている支払方法を抽出
-        console.log('🔍 売上データ分析開始:', formData.sales);
-        if (formData.sales && typeof formData.sales === 'object') {
-            const salesKeys = Object.keys(formData.sales);
-            console.log('📋 売上データのキー一覧:', salesKeys);
-            
-            salesKeys.forEach(key => {
-                const value = formData.sales[key];
-                console.log(`🔍 検証中: ${key} = ${value} (型: ${typeof value})`);
-                
-                if (value && value > 0) { // 値が0より大きい項目のみ
-                    const methodId = key.replace(/10$|8$/, ''); // 末尾の10や8を削除してID抽出
-                    requiredPaymentMethods.add(methodId);
-                    console.log(`💰 売上データに ${methodId} が必要: ${value}`);
-                }
-            });
-        } else {
-            console.log('⚠️ 売上データが存在しないか無効です');
-        }
-        
-        // ポイント支払データから使用されているポイント方法を抽出
-        console.log('🔍 ポイントデータ分析開始:', formData.pointPayments);
-        if (formData.pointPayments && typeof formData.pointPayments === 'object') {
-            const pointKeys = Object.keys(formData.pointPayments);
-            console.log('📋 ポイントデータのキー一覧:', pointKeys);
-            
-            pointKeys.forEach(key => {
-                const value = formData.pointPayments[key];
-                console.log(`🔍 検証中: ${key} = ${value} (型: ${typeof value})`);
-                
-                if (value && value > 0) { // 値が0より大きい項目のみ
-                    const methodId = key.replace(/10$|8$/, ''); // 末尾の10や8を削除してID抽出
-                    requiredPointMethods.add(methodId);
-                    console.log(`🎫 ポイントデータに ${methodId} が必要: ${value}`);
-                }
-            });
-        } else {
-            console.log('⚠️ ポイントデータが存在しないか無効です');
-        }
-        
-        console.log('必要な支払方法:', Array.from(requiredPaymentMethods));
-        console.log('必要なポイント方法:', Array.from(requiredPointMethods));
-        
-        // 2. 保存された設定と現在の設定をマージして、不足項目を補完
+        // 2. 保存されていた設定をそのまま使用（データに必要な項目のみ抽出しない）
         let finalPaymentConfig = [];
         let finalPointConfig = [];
         
-        // 保存された支払方法設定をベースにする
+        // 保存された支払方法設定をそのまま使用
         if (formData.savedPaymentMethodConfig && Array.isArray(formData.savedPaymentMethodConfig)) {
             finalPaymentConfig = [...formData.savedPaymentMethodConfig];
-        } else if (window.paymentMethodConfig) {
-            finalPaymentConfig = [...window.paymentMethodConfig];
+            console.log('✅ 保存されていた支払方法設定を完全復元:', finalPaymentConfig.length, '件');
+        } else {
+            console.log('⚠️ 保存された支払方法設定が見つからない。現在の設定を使用');
+            finalPaymentConfig = window.paymentMethodConfig ? [...window.paymentMethodConfig] : [];
         }
         
-        // 必要な支払方法が設定に含まれていない場合は自動追加
-        requiredPaymentMethods.forEach(methodId => {
-            const exists = finalPaymentConfig.some(config => config.id === methodId);
-            if (!exists) {
-                console.log(`🔧 不足している支払方法を自動追加: ${methodId}`);
-                finalPaymentConfig.push({
-                    id: methodId,
-                    label: methodId,
-                    color: 'blue',
-                    isCash: methodId === 'cash',
-                    enabled: true
-                });
-            }
-        });
-        
-        // 保存されたポイント設定をベースにする
+        // 保存されたポイント設定をそのまま使用
         if (formData.savedPointPaymentConfig && Array.isArray(formData.savedPointPaymentConfig)) {
             finalPointConfig = [...formData.savedPointPaymentConfig];
-        } else if (window.pointPaymentConfig) {
-            finalPointConfig = [...window.pointPaymentConfig];
+            console.log('✅ 保存されていたポイント設定を完全復元:', finalPointConfig.length, '件');
+        } else {
+            console.log('⚠️ 保存されたポイント設定が見つからない。現在の設定を使用');
+            finalPointConfig = window.pointPaymentConfig ? [...window.pointPaymentConfig] : [];
         }
-        
-        // 必要なポイント方法が設定に含まれていない場合は自動追加
-        requiredPointMethods.forEach(methodId => {
-            const exists = finalPointConfig.some(config => config.id === methodId);
-            if (!exists) {
-                console.log(`🔧 不足しているポイント方法を自動追加: ${methodId}`);
-                finalPointConfig.push({
-                    id: methodId,
-                    label: methodId,
-                    enabled: true
-                });
-            }
-        });
         
         // 3. グローバル設定を更新
         window.paymentMethodConfig = finalPaymentConfig;
@@ -1677,8 +1612,8 @@ async function saveReportToDatabase(reportData) {
             cash_data: JSON.stringify(reportData.cash || {}),
             manual_tax_inputs: JSON.stringify(reportData.manualTaxInputs || {}),
             // 保存時の支払方法設定も一緒に保存
-            payment_method_config: JSON.stringify(window.paymentMethodConfig || []),
-            point_payment_config: JSON.stringify(window.pointPaymentConfig || []),
+            payment_method_config: JSON.stringify(window.paymentMethodConfig || paymentMethodConfig || []),
+            point_payment_config: JSON.stringify(window.pointPaymentConfig || pointPaymentConfig || []),
             previous_cash_balance: parseFloat(reportData.previousCashBalance) || 0,
             cash_difference: 0,
             remarks: reportData.remarks || '',
@@ -1687,8 +1622,21 @@ async function saveReportToDatabase(reportData) {
         
         console.log('APIリクエストデータ（詳細）:', requestData);
         console.log('💾 保存される設定データ:');
-        console.log('  payment_method_config:', window.paymentMethodConfig);
-        console.log('  point_payment_config:', window.pointPaymentConfig);
+        console.log('  window.paymentMethodConfig:', window.paymentMethodConfig);
+        console.log('  window.pointPaymentConfig:', window.pointPaymentConfig);
+        console.log('  ローカルpaymentMethodConfig:', typeof paymentMethodConfig !== 'undefined' ? paymentMethodConfig : 'undefined');
+        console.log('  ローカルpointPaymentConfig:', typeof pointPaymentConfig !== 'undefined' ? pointPaymentConfig : 'undefined');
+        
+        const finalPaymentConfig = window.paymentMethodConfig || paymentMethodConfig || [];
+        const finalPointConfig = window.pointPaymentConfig || pointPaymentConfig || [];
+        
+        console.log('  最終的に使用される設定:');
+        console.log('    payment_method_config:', finalPaymentConfig);
+        console.log('    point_payment_config:', finalPointConfig);
+        console.log('  JSONに変換された設定:', {
+            payment_method_config: JSON.stringify(finalPaymentConfig),
+            point_payment_config: JSON.stringify(finalPointConfig)
+        });
         
         // APIへのPOSTリクエスト
         const response = await fetch('api.php', {
@@ -2172,6 +2120,14 @@ function collectAllFormData() {
         const cash = collectCashData();
         const attachedFiles = typeof collectFileData === 'function' ? collectFileData() : [];
 
+        // 現在の設定データも含める（保存時に必要）
+        const sendPaymentConfig = window.paymentMethodConfig || [];
+        const sendPointConfig = window.pointPaymentConfig || [];
+        console.log('📋 送信データに含める設定:', {
+            paymentMethods: sendPaymentConfig.length + '件',
+            pointPayments: sendPointConfig.length + '件'
+        });
+
         const allData = {
             ...basicData,
             sales,
@@ -2183,6 +2139,8 @@ function collectAllFormData() {
             attachedFiles,
             remarks,
             manualTaxInputs,
+            paymentMethodConfig: sendPaymentConfig,
+            pointPaymentConfig: sendPointConfig,
             submittedAt: new Date().toISOString()
         };
         
