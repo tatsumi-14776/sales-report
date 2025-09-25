@@ -250,10 +250,13 @@ async function loadSampleData(date, storeName) {
                 console.log('=== convertDatabaseToFormData 呼び出し後 ===');
                 console.log('変換後のformData.attachedFiles:', formData.attachedFiles);
                 
-                // 保存時の設定がある場合は、それを使用してUIを再構築
-                if (formData.savedPaymentMethodConfig || formData.savedPointPaymentConfig) {
-                    console.log('保存時の設定でUIを再構築します');
-                    await rebuildUIWithSavedConfig(formData.savedPaymentMethodConfig, formData.savedPointPaymentConfig);
+                // 保存されたデータから項目を自動復元（必須処理）
+                console.log('📊 保存されたデータから項目を自動復元します');
+                try {
+                    await rebuildUIWithSavedData(formData);
+                } catch (error) {
+                    console.error('❌ UI復元処理でエラー:', error);
+                    console.warn('⚠️ UI復元に失敗しましたが処理を継続します');
                 }
                 
                 console.log('=== loadDataIntoForm 呼び出し前 ===');
@@ -435,31 +438,135 @@ function convertDatabaseToFormData(dbData) {
         
         // 保存時の支払方法設定を復元
         console.log('=== 支払方法設定復元開始 ===');
+        console.log('dbData.payment_method_config (生):', dbData.payment_method_config);
+        console.log('typeof:', typeof dbData.payment_method_config);
+
         if (dbData.payment_method_config) {
             try {
-                const savedPaymentConfig = typeof dbData.payment_method_config === 'string' ? 
-                    JSON.parse(dbData.payment_method_config) : dbData.payment_method_config;
-                formData.savedPaymentMethodConfig = savedPaymentConfig;
-                console.log('保存時の支払方法設定復元完了:', formData.savedPaymentMethodConfig);
+                let savedPaymentConfig;
+                
+                // 🔧 修正：データベースから取得した設定の適切な処理
+                if (typeof dbData.payment_method_config === 'string') {
+                    // 文字列の場合は2重エンコードの可能性をチェック
+                    let configString = dbData.payment_method_config;
+                    
+                    // 2重JSON文字列化のチェック（"[...]" → [...] に変換）
+                    if (configString.startsWith('"[') && configString.endsWith(']"')) {
+                        console.log('2重JSON文字列を検出、修正します');
+                        configString = JSON.parse(configString); // 外側のJSONをパース
+                    }
+                    
+                    savedPaymentConfig = JSON.parse(configString);
+                    console.log('📋 支払方法設定をパース完了:', savedPaymentConfig);
+                    
+                } else if (Array.isArray(dbData.payment_method_config)) {
+                    // 既に配列の場合
+                    savedPaymentConfig = dbData.payment_method_config;
+                    console.log('📋 支払方法設定は既に配列形式');
+                    
+                } else {
+                    console.warn('⚠️ 不明な支払方法設定形式');
+                    savedPaymentConfig = null;
+                }
+                
+                // 🔧 修正：設定データの妥当性をより厳密にチェック
+                if (Array.isArray(savedPaymentConfig) && savedPaymentConfig.length > 0) {
+                    const isValidConfig = savedPaymentConfig.every(item => 
+                        item && 
+                        typeof item === 'object' && 
+                        typeof item.id === 'string' && 
+                        typeof item.label === 'string' && 
+                        typeof item.enabled === 'boolean'
+                    );
+                    
+                    if (isValidConfig) {
+                        formData.savedPaymentMethodConfig = savedPaymentConfig;
+                        console.log('✅ 保存時の支払方法設定復元完了:', savedPaymentConfig.length + '件');
+                        
+                        // 詳細ログ出力
+                        savedPaymentConfig.forEach((config, index) => {
+                            console.log(`  ${index + 1}. ${config.label} (${config.id}) - 有効: ${config.enabled}`);
+                        });
+                        
+                    } else {
+                        console.warn('❌ 支払方法設定の構造が無効:', savedPaymentConfig);
+                        formData.savedPaymentMethodConfig = null;
+                    }
+                } else {
+                    console.log('📋 支払方法設定が空または無効');
+                    formData.savedPaymentMethodConfig = null;
+                }
+                
             } catch (e) {
-                console.warn('支払方法設定のパースに失敗:', e);
+                console.error('❌ 支払方法設定のパースに失敗:', e);
+                console.error('原データ:', dbData.payment_method_config);
                 formData.savedPaymentMethodConfig = null;
             }
         } else {
+            console.log('📋 保存時の支払方法設定なし');
             formData.savedPaymentMethodConfig = null;
         }
-        
+
+        // 🔧 修正：ポイント支払設定も同様の処理
+        console.log('=== ポイント支払設定復元開始 ===');
+        console.log('dbData.point_payment_config (生):', dbData.point_payment_config);
+
         if (dbData.point_payment_config) {
             try {
-                const savedPointConfig = typeof dbData.point_payment_config === 'string' ? 
-                    JSON.parse(dbData.point_payment_config) : dbData.point_payment_config;
-                formData.savedPointPaymentConfig = savedPointConfig;
-                console.log('保存時のポイント支払設定復元完了:', formData.savedPointPaymentConfig);
+                let savedPointConfig;
+                
+                if (typeof dbData.point_payment_config === 'string') {
+                    let configString = dbData.point_payment_config;
+                    
+                    // 2重JSON文字列化のチェック
+                    if (configString.startsWith('"[') && configString.endsWith(']"')) {
+                        console.log('ポイント設定で2重JSON文字列を検出、修正します');
+                        configString = JSON.parse(configString);
+                    }
+                    
+                    savedPointConfig = JSON.parse(configString);
+                    console.log('🎫 ポイント設定をパース完了:', savedPointConfig);
+                    
+                } else if (Array.isArray(dbData.point_payment_config)) {
+                    savedPointConfig = dbData.point_payment_config;
+                    console.log('🎫 ポイント設定は既に配列形式');
+                } else {
+                    console.warn('⚠️ 不明なポイント設定形式');
+                    savedPointConfig = null;
+                }
+                
+                if (Array.isArray(savedPointConfig) && savedPointConfig.length > 0) {
+                    const isValidConfig = savedPointConfig.every(item => 
+                        item && 
+                        typeof item === 'object' && 
+                        typeof item.id === 'string' && 
+                        typeof item.label === 'string' && 
+                        typeof item.enabled === 'boolean'
+                    );
+                    
+                    if (isValidConfig) {
+                        formData.savedPointPaymentConfig = savedPointConfig;
+                        console.log('✅ 保存時のポイント支払設定復元完了:', savedPointConfig.length + '件');
+                        
+                        savedPointConfig.forEach((config, index) => {
+                            console.log(`  ${index + 1}. ${config.label} (${config.id}) - 有効: ${config.enabled}`);
+                        });
+                    } else {
+                        console.warn('❌ ポイント支払設定の構造が無効:', savedPointConfig);
+                        formData.savedPointPaymentConfig = null;
+                    }
+                } else {
+                    console.log('🎫 ポイント支払設定が空または無効');
+                    formData.savedPointPaymentConfig = null;
+                }
+                
             } catch (e) {
-                console.warn('ポイント支払設定のパースに失敗:', e);
+                console.error('❌ ポイント支払設定のパースに失敗:', e);
+                console.error('原データ:', dbData.point_payment_config);
                 formData.savedPointPaymentConfig = null;
             }
         } else {
+            console.log('🎫 保存時のポイント支払設定なし');
             formData.savedPointPaymentConfig = null;
         }
         
@@ -515,6 +622,15 @@ function convertDatabaseToFormData(dbData) {
             formData.manualTaxInputs = { manualPercent10: null, manualPercent8: null };
         }
         
+        // 設定データを追加（UI復元で使用）
+        formData.paymentMethodConfig = paymentMethodConfig || [];
+        formData.pointPaymentConfig = pointPaymentConfig || [];
+        
+        console.log('設定データも含めて変換完了:', {
+            paymentMethodConfigCount: formData.paymentMethodConfig.length,
+            pointPaymentConfigCount: formData.pointPaymentConfig.length
+        });
+        
         console.log('変換完了（全体）:', formData);
         return formData;
         
@@ -525,64 +641,434 @@ function convertDatabaseToFormData(dbData) {
 }
 
 /**
- * 保存された設定でUIを再構築
+ * 保存されたデータから項目を動的復元してUIを再構築
+ * @param {Object} formData 保存されたフォームデータ
+ */
+async function rebuildUIWithSavedData(formData) {
+    console.log('=== 保存データから完全復元開始 ===');
+    
+    // formDataの詳細検証
+    if (!formData) {
+        console.error('❌ formDataがnullまたはundefined');
+        throw new Error('formDataが提供されていません');
+    }
+    
+    console.log('🔍 formDataの基本構造:', {
+        type: typeof formData,
+        isNull: formData === null,
+        isUndefined: formData === undefined,
+        hasPaymentMethodConfig: !!formData.paymentMethodConfig,
+        hasPointPaymentConfig: !!formData.pointPaymentConfig,
+        paymentConfigType: typeof formData.paymentMethodConfig,
+        pointConfigType: typeof formData.pointPaymentConfig
+    });
+    
+    console.log('🔍 受け取ったformData:', {
+        hasSales: !!formData.sales,
+        hasPointPayments: !!formData.pointPayments,
+        salesKeys: formData.sales ? Object.keys(formData.sales) : [],
+        pointKeys: formData.pointPayments ? Object.keys(formData.pointPayments) : []
+    });
+    
+    try {
+        // 1. 保存されたデータから必要な支払方法を抽出
+        const requiredPaymentMethods = new Set();
+        const requiredPointMethods = new Set();
+        
+        // 売上データから使用されている支払方法を抽出
+        console.log('🔍 売上データ分析開始:', formData.sales);
+        if (formData.sales && typeof formData.sales === 'object') {
+            const salesKeys = Object.keys(formData.sales);
+            console.log('📋 売上データのキー一覧:', salesKeys);
+            
+            salesKeys.forEach(key => {
+                const value = formData.sales[key];
+                console.log(`🔍 検証中: ${key} = ${value} (型: ${typeof value})`);
+                
+                if (value && value > 0) { // 値が0より大きい項目のみ
+                    const methodId = key.replace(/10$|8$/, ''); // 末尾の10や8を削除してID抽出
+                    requiredPaymentMethods.add(methodId);
+                    console.log(`💰 売上データに ${methodId} が必要: ${value}`);
+                }
+            });
+        } else {
+            console.log('⚠️ 売上データが存在しないか無効です');
+        }
+        
+        // ポイント支払データから使用されているポイント方法を抽出
+        console.log('🔍 ポイントデータ分析開始:', formData.pointPayments);
+        if (formData.pointPayments && typeof formData.pointPayments === 'object') {
+            const pointKeys = Object.keys(formData.pointPayments);
+            console.log('📋 ポイントデータのキー一覧:', pointKeys);
+            
+            pointKeys.forEach(key => {
+                const value = formData.pointPayments[key];
+                console.log(`🔍 検証中: ${key} = ${value} (型: ${typeof value})`);
+                
+                if (value && value > 0) { // 値が0より大きい項目のみ
+                    const methodId = key.replace(/10$|8$/, ''); // 末尾の10や8を削除してID抽出
+                    requiredPointMethods.add(methodId);
+                    console.log(`🎫 ポイントデータに ${methodId} が必要: ${value}`);
+                }
+            });
+        } else {
+            console.log('⚠️ ポイントデータが存在しないか無効です');
+        }
+        
+        console.log('必要な支払方法:', Array.from(requiredPaymentMethods));
+        console.log('必要なポイント方法:', Array.from(requiredPointMethods));
+        
+        // 2. 保存された設定と現在の設定をマージして、不足項目を補完
+        let finalPaymentConfig = [];
+        let finalPointConfig = [];
+        
+        // 保存された支払方法設定をベースにする
+        if (formData.savedPaymentMethodConfig && Array.isArray(formData.savedPaymentMethodConfig)) {
+            finalPaymentConfig = [...formData.savedPaymentMethodConfig];
+        } else if (window.paymentMethodConfig) {
+            finalPaymentConfig = [...window.paymentMethodConfig];
+        }
+        
+        // 必要な支払方法が設定に含まれていない場合は自動追加
+        requiredPaymentMethods.forEach(methodId => {
+            const exists = finalPaymentConfig.some(config => config.id === methodId);
+            if (!exists) {
+                console.log(`🔧 不足している支払方法を自動追加: ${methodId}`);
+                finalPaymentConfig.push({
+                    id: methodId,
+                    label: methodId,
+                    color: 'blue',
+                    isCash: methodId === 'cash',
+                    enabled: true
+                });
+            }
+        });
+        
+        // 保存されたポイント設定をベースにする
+        if (formData.savedPointPaymentConfig && Array.isArray(formData.savedPointPaymentConfig)) {
+            finalPointConfig = [...formData.savedPointPaymentConfig];
+        } else if (window.pointPaymentConfig) {
+            finalPointConfig = [...window.pointPaymentConfig];
+        }
+        
+        // 必要なポイント方法が設定に含まれていない場合は自動追加
+        requiredPointMethods.forEach(methodId => {
+            const exists = finalPointConfig.some(config => config.id === methodId);
+            if (!exists) {
+                console.log(`🔧 不足しているポイント方法を自動追加: ${methodId}`);
+                finalPointConfig.push({
+                    id: methodId,
+                    label: methodId,
+                    enabled: true
+                });
+            }
+        });
+        
+        // 3. グローバル設定を更新
+        window.paymentMethodConfig = finalPaymentConfig;
+        window.pointPaymentConfig = finalPointConfig;
+        
+        console.log('✅ 完全復元後の支払方法設定:', finalPaymentConfig.length + '件');
+        console.log('✅ 完全復元後のポイント設定:', finalPointConfig.length + '件');
+        
+        // 4. 設定を必要な項目に更新してからUIを再生成
+        console.log('🔄 設定を必要な項目に更新中...');
+        console.log('📋 生成予定の支払方法:', requiredPaymentMethods);
+        console.log('📋 生成予定のポイント方法:', requiredPointMethods);
+        
+        // 必要な支払方法で設定を更新
+        console.log('🔍 フィルタ前の支払方法設定:', formData.paymentMethodConfig?.length || 0, '件');
+        console.log('🔍 フィルタ対象:', Array.from(requiredPaymentMethods));
+        
+        // 保存されたデータから復元した設定を使用（現在の設定ではなく）
+        console.log('🔍 復元された支払方法設定:', finalPaymentConfig.length, '件');
+        console.log('🔍 復元されたポイント設定:', finalPointConfig.length, '件');
+        
+        window.paymentMethodConfig = finalPaymentConfig.filter(method => 
+            requiredPaymentMethods.has(method.id)
+        );
+        console.log('✅ 支払方法設定を必要な項目に更新:', window.paymentMethodConfig.length, '件');
+        
+        // 必要なポイント方法で設定を更新
+        window.pointPaymentConfig = finalPointConfig.filter(method => 
+            requiredPointMethods.has(method.id)
+        );
+        console.log('✅ ポイント設定を必要な項目に更新:', window.pointPaymentConfig.length, '件');
+        
+        // DOM更新を強制実行してから再生成
+        console.log('🔄 DOM更新を強制実行中...');
+        console.log('📋 更新後のwindow.paymentMethodConfig:', window.paymentMethodConfig.map(m => m.id));
+        console.log('📋 更新後のwindow.pointPaymentConfig:', window.pointPaymentConfig.map(m => m.id));
+        
+        if (typeof generatePaymentMethods === 'function') {
+            console.log('🔄 支払方法セクションを完全再生成中...');
+            generatePaymentMethods();
+            console.log('✅ 支払方法セクション再生成完了');
+        }
+        
+        if (typeof generateDiscountSection === 'function') {
+            console.log('🔄 ポイント支払セクションを完全再生成中...');
+            generateDiscountSection();
+            console.log('✅ ポイント支払セクション再生成完了');
+        }
+        
+        // 生成後の確認
+        console.log('🔍 生成後のDOM要素確認:');
+        requiredPaymentMethods.forEach(methodId => {
+            const element10 = document.getElementById(methodId + '10');
+            const element8 = document.getElementById(methodId + '8');
+            console.log(`  ${methodId}: 10%税率=${!!element10}, 8%税率=${!!element8}`);
+        });
+        
+        // 5. DOM要素生成を待機
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        console.log('🎯 完全復元処理完了');
+        
+    } catch (error) {
+        console.error('完全復元処理でエラー:', error);
+        console.error('エラーの詳細:', {
+            name: error.name,
+            message: error.message,
+            stack: error.stack,
+            formData: formData ? 'あり' : 'なし'
+        });
+        throw error;
+    }
+}
+
+/**
+ * 保存された設定でUIを再構築（旧版・互換性用）
  * @param {Array} savedPaymentConfig 保存時の支払方法設定
  * @param {Array} savedPointConfig 保存時のポイント支払設定
  */
 async function rebuildUIWithSavedConfig(savedPaymentConfig, savedPointConfig) {
-    console.log('=== 保存された設定でUIを再構築 ===');
+    console.log('=== 保存された設定でUIを再構築（完全版） ===');
     console.log('保存時の支払方法設定:', savedPaymentConfig);
     console.log('保存時のポイント支払設定:', savedPointConfig);
     
     try {
-        // 一時的にグローバル設定を保存された設定で置き換え
-        if (savedPaymentConfig) {
-            window.paymentMethodConfig = savedPaymentConfig;
-            console.log('支払方法設定を復元しました');
+        // 🔧 元の設定をバックアップ
+        const originalPaymentConfig = window.paymentMethodConfig;
+        const originalPointConfig = window.pointPaymentConfig;
+        
+        console.log('📋 現在の設定をバックアップ:', {
+            paymentMethods: originalPaymentConfig?.length || 0,
+            pointMethods: originalPointConfig?.length || 0
+        });
+        
+        // 🔧 修正：データが存在する項目を強制的に有効化
+        if (savedPaymentConfig && Array.isArray(savedPaymentConfig) && savedPaymentConfig.length > 0) {
+            const enabledConfig = savedPaymentConfig.map(item => {
+                const newItem = { ...item };
+                
+                // 保存データにこの項目のデータが存在するかチェック
+                if (savedData && savedData.sales) {
+                    const hasData10 = savedData.sales[`${item.id}10`] > 0;
+                    const hasData8 = savedData.sales[`${item.id}8`] > 0;
+                    
+                    if (hasData10 || hasData8) {
+                        console.log(`💾 支払方法 "${item.label}" (${item.id}) にデータが存在するため強制有効化`);
+                        newItem.enabled = true; // 🔧 ここが重要：データがある場合は強制有効化
+                    }
+                }
+                
+                return newItem;
+            });
+            
+            window.paymentMethodConfig = enabledConfig;
+            console.log('✅ 支払方法設定を復元（データ対応版）:', enabledConfig.length + '件');
+        } else {
+            console.warn('⚠️ 保存された支払方法設定が無効、現在の設定を継続使用');
         }
         
-        if (savedPointConfig) {
-            window.pointPaymentConfig = savedPointConfig;
-            console.log('ポイント支払設定を復元しました');
+        // 🔧 修正：ポイント支払設定も同様に処理
+        if (savedPointConfig && Array.isArray(savedPointConfig) && savedPointConfig.length > 0) {
+            const enabledPointConfig = savedPointConfig.map(item => {
+                const newItem = { ...item };
+                
+                // 保存データにこの項目のデータが存在するかチェック
+                if (savedData && savedData.pointPayments) {
+                    const hasData10 = savedData.pointPayments[`${item.id}10`] > 0;
+                    const hasData8 = savedData.pointPayments[`${item.id}8`] > 0;
+                    
+                    if (hasData10 || hasData8) {
+                        console.log(`💾 ポイント支払 "${item.label}" (${item.id}) にデータが存在するため強制有効化`);
+                        newItem.enabled = true; // 🔧 ここが重要：データがある場合は強制有効化
+                    }
+                }
+                
+                return newItem;
+            });
+            
+            window.pointPaymentConfig = enabledPointConfig;
+            console.log('✅ ポイント支払設定を復元（データ対応版）:', enabledPointConfig.length + '件');
+        }else {
+            console.warn('⚠️ 保存されたポイント支払設定が無効、現在の設定を継続使用');
         }
         
-        // 既存の動的生成関数を使用してUIを再構築
+        // 🔧 修正：既存UI要素を完全にクリア
+        console.log('🧹 既存UI要素の完全クリア中...');
+        
+        // 売上セクションの既存要素をクリア
+        const salesSection = document.querySelector('.section-green');
+        if (salesSection) {
+            const existingPaymentMethods = salesSection.querySelectorAll('.payment-method');
+            existingPaymentMethods.forEach(element => element.remove());
+            console.log(`売上セクション: ${existingPaymentMethods.length}件の既存要素を削除`);
+        }
+        
+        // ポイントセクションの既存要素をクリア
+        const pointSection = document.querySelector('.section-point');
+        if (pointSection) {
+            const existingPointMethods = pointSection.querySelectorAll('.payment-method');
+            existingPointMethods.forEach(element => element.remove());
+            console.log(`ポイントセクション: ${existingPointMethods.length}件の既存要素を削除`);
+        }
+        
+        // 🔧 修正：UI要素の再生成
+        console.log('🔄 UI要素を再生成中...');
+        
         if (typeof generatePaymentMethods === 'function') {
             try {
-                console.log('🔄 支払方法セクションを再生成中...');
                 generatePaymentMethods();
-                console.log('✅ 売上支払方法セクションを再構築しました');
+                console.log('✅ 売上支払方法セクションを再構築');
             } catch (error) {
-                console.error('支払方法セクション再構築でエラー:', error);
+                console.error('❌ 支払方法セクション再構築エラー:', error);
+                // エラー時は元の設定に戻す
+                window.paymentMethodConfig = originalPaymentConfig;
+                throw error;
             }
+        } else {
+            console.error('❌ generatePaymentMethods 関数が見つかりません');
+            throw new Error('generatePaymentMethods 関数が未定義');
         }
         
         if (typeof generateDiscountSection === 'function') {
             try {
-                console.log('🔄 ポイント支払セクションを再生成中...');
                 generateDiscountSection();
-                console.log('✅ ポイント支払セクションを再構築しました');
+                console.log('✅ ポイント支払セクションを再構築');
             } catch (error) {
-                console.error('ポイント支払セクション再構築でエラー:', error);
+                console.error('❌ ポイント支払セクション再構築エラー:', error);
+                // エラー時は元の設定に戻す
+                window.pointPaymentConfig = originalPointConfig;
+                throw error;
             }
+        } else {
+            console.error('❌ generateDiscountSection 関数が見つかりません');
+            throw new Error('generateDiscountSection 関数が未定義');
         }
         
-        // 注意メッセージを表示
+        // 🔧 修正：DOM要素生成の完了を待機
+        console.log('⏳ DOM要素生成の完了を待機...');
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // 🔧 修正：イベントリスナーの再設定
+        console.log('🔗 イベントリスナーを再設定中...');
+        
+        // 売上項目のイベントリスナー再設定
+        if (window.paymentMethodConfig && Array.isArray(window.paymentMethodConfig)) {
+            window.paymentMethodConfig.forEach(method => {
+                const element10 = document.getElementById(`${method.id}10`);
+                const element8 = document.getElementById(`${method.id}8`);
+                
+                if (element10) {
+                    // 重複防止のため既存リスナーを削除してから追加
+                    element10.removeEventListener('input', updateAllCalculations);
+                    element10.addEventListener('input', updateAllCalculations);
+                    console.log(`📊 ${method.id}10 のリスナーを再設定`);
+                } else {
+                    console.warn(`⚠️ ${method.id}10 の要素が見つかりません`);
+                }
+                
+                if (element8) {
+                    element8.removeEventListener('input', updateAllCalculations);
+                    element8.addEventListener('input', updateAllCalculations);
+                    console.log(`📊 ${method.id}8 のリスナーを再設定`);
+                } else {
+                    console.warn(`⚠️ ${method.id}8 の要素が見つかりません`);
+                }
+            });
+        }
+        
+        // ポイント支払のイベントリスナー再設定
+        if (window.pointPaymentConfig && Array.isArray(window.pointPaymentConfig)) {
+            window.pointPaymentConfig.forEach(payment => {
+                const element10 = document.getElementById(`${payment.id}10`);
+                const element8 = document.getElementById(`${payment.id}8`);
+                
+                if (element10) {
+                    element10.removeEventListener('input', updateAllCalculations);
+                    element10.addEventListener('input', updateAllCalculations);
+                    console.log(`🎫 ${payment.id}10 のリスナーを再設定`);
+                } else {
+                    console.warn(`⚠️ ${payment.id}10 の要素が見つかりません`);
+                }
+                
+                if (element8) {
+                    element8.removeEventListener('input', updateAllCalculations);
+                    element8.addEventListener('input', updateAllCalculations);
+                    console.log(`🎫 ${payment.id}8 のリスナーを再設定`);
+                } else {
+                    console.warn(`⚠️ ${payment.id}8 の要素が見つかりません`);
+                }
+            });
+        }
+        
+        // 🔧 修正：DOM要素の存在確認
+        console.log('✅ イベントリスナー再設定完了');
+        
+        let successElements = 0;
+        let totalElements = 0;
+        
+        // 支払方法要素の確認
+        if (window.paymentMethodConfig) {
+            window.paymentMethodConfig.forEach(method => {
+                totalElements += 2;
+                if (document.getElementById(`${method.id}10`)) successElements++;
+                if (document.getElementById(`${method.id}8`)) successElements++;
+            });
+        }
+        
+        // ポイント支払要素の確認
+        if (window.pointPaymentConfig) {
+            window.pointPaymentConfig.forEach(payment => {
+                totalElements += 2;
+                if (document.getElementById(`${payment.id}10`)) successElements++;
+                if (document.getElementById(`${payment.id}8`)) successElements++;
+            });
+        }
+        
+        console.log(`📊 DOM要素生成確認: ${successElements}/${totalElements} 個の要素が正常に生成されました`);
+        
+        // 🔧 修正：注意メッセージの改善
         const message = `
-            <div class="alert alert-warning" style="margin: 10px 0; padding: 10px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px;">
-                <strong>⚠️ 注意:</strong> この日報は保存時の支払方法設定で表示されています。現在の設定と異なる場合があります。
+            <div class="alert alert-info" style="margin: 15px 0; padding: 15px; background: linear-gradient(135deg, #e1f5fe, #b3e5fc); border: 2px solid #0288d1; border-radius: 8px; box-shadow: 0 2px 8px rgba(2, 136, 209, 0.15);">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 1.2em;">📋</span>
+                    <div>
+                        <strong style="color: #0277bd;">過去データの表示設定で復元中</strong><br>
+                        <span style="font-size: 0.9em; color: #0277bd;">
+                            この日報は保存時点の支払方法・ポイント設定（${window.paymentMethodConfig?.length || 0}項目 + ${window.pointPaymentConfig?.length || 0}項目）で表示されています。<br>
+                            現在の設定と異なる場合があります。
+                        </span>
+                    </div>
+                </div>
             </div>
         `;
         
-        const formContainer = document.querySelector('.form-container') || document.body;
-        const existingAlert = formContainer.querySelector('.alert-warning');
+        const formContainer = document.querySelector('.main-content') || document.querySelector('.container') || document.body;
+        const existingAlert = formContainer.querySelector('.alert-info');
         if (!existingAlert) {
             formContainer.insertAdjacentHTML('afterbegin', message);
+            console.log('✅ 注意メッセージを表示');
         }
         
+        console.log('✅ UI再構築とイベントリスナー再設定が完了しました');
+        
     } catch (error) {
-        console.error('UI再構築でエラー:', error);
-        showError('過去の設定での表示に失敗しました。現在の設定で表示します。');
+        console.error('❌ UI再構築でエラー:', error);
+        throw error;
     }
 }
 
@@ -913,20 +1399,137 @@ async function loadSampleDataByStoreId(date, storeId, storeName) {
                 
                 // 保存時の設定がある場合は、それを使用してUIを再構築
                 if (formData.savedPaymentMethodConfig || formData.savedPointPaymentConfig) {
-                    console.log('保存時の設定でUIを再構築します');
-                    await rebuildUIWithSavedConfig(formData.savedPaymentMethodConfig, formData.savedPointPaymentConfig);
+                    console.log('🔄 保存時の設定でUIを再構築します');
                     
-                    // UIの再構築後、DOM要素が確実に生成されるまで少し待機
-                    console.log('🔄 UIの再構築後、DOM要素生成を待機中...');
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    
-                    // 再構築後に設定を確認
-                    console.log('=== UI再構築後の設定確認 ===');
-                    console.log('paymentMethodConfig:', window.paymentMethodConfig);
-                    console.log('pointPaymentConfig:', window.pointPaymentConfig);
+                    try {
+                        // UI再構築の前にデータの妥当性を確認
+                        const hasValidPaymentConfig = formData.savedPaymentMethodConfig && 
+                                                    Array.isArray(formData.savedPaymentMethodConfig) && 
+                                                    formData.savedPaymentMethodConfig.length > 0;
+                                                    
+                        const hasValidPointConfig = formData.savedPointPaymentConfig && 
+                                                Array.isArray(formData.savedPointPaymentConfig) && 
+                                                formData.savedPointPaymentConfig.length > 0;
+                        
+                        console.log('設定データ妥当性チェック:', {
+                            支払方法設定: hasValidPaymentConfig ? `${formData.savedPaymentMethodConfig.length}件` : '無効',
+                            ポイント設定: hasValidPointConfig ? `${formData.savedPointPaymentConfig.length}件` : '無効'
+                        });
+                        
+                        if (hasValidPaymentConfig || hasValidPointConfig) {
+                            // UI再構築を実行
+                            await rebuildUIWithSavedConfig(
+                                hasValidPaymentConfig ? formData.savedPaymentMethodConfig : null,
+                                hasValidPointConfig ? formData.savedPointPaymentConfig : null
+                            );
+                            
+                            // 🔧 修正：UI再構築後の確実な待機時間
+                            console.log('⏳ UI再構築後のDOM安定化を待機中...');
+                            await new Promise(resolve => setTimeout(resolve, 300));
+                            
+                            // 🔧 修正：再構築後の設定とDOM要素の整合性チェック
+                            console.log('=== UI再構築後の整合性チェック ===');
+                            
+                            let paymentElementsOK = true;
+                            let pointElementsOK = true;
+                            
+                            // 支払方法要素のチェック
+                            if (window.paymentMethodConfig) {
+                                window.paymentMethodConfig.forEach(method => {
+                                    const element10 = document.getElementById(`${method.id}10`);
+                                    const element8 = document.getElementById(`${method.id}8`);
+                                    if (!element10 || !element8) {
+                                        console.warn(`❌ 支払方法 ${method.label} (${method.id}) の要素が不完全`);
+                                        paymentElementsOK = false;
+                                    }
+                                });
+                            }
+                            
+                            // ポイント支払要素のチェック
+                            if (window.pointPaymentConfig) {
+                                window.pointPaymentConfig.forEach(payment => {
+                                    const element10 = document.getElementById(`${payment.id}10`);
+                                    const element8 = document.getElementById(`${payment.id}8`);
+                                    if (!element10 || !element8) {
+                                        console.warn(`❌ ポイント支払 ${payment.label} (${payment.id}) の要素が不完全`);
+                                        pointElementsOK = false;
+                                    }
+                                });
+                            }
+                            
+                            if (paymentElementsOK && pointElementsOK) {
+                                console.log('✅ UI再構築後の整合性チェック: 全要素正常');
+                            } else {
+                                console.warn('⚠️ UI再構築後に一部要素が不完全です');
+                            }
+                            
+                        } else {
+                            console.warn('⚠️ 保存された設定データが全て無効のため、UI再構築をスキップ');
+                        }
+                        
+                    } catch (uiError) {
+                        console.error('❌ UI再構築でエラー:', uiError);
+                        showError('過去の設定での表示に失敗しました。現在の設定で表示します。');
+                        // エラー時は処理を続行（現在の設定で表示）
+                    }
                 }
-                
+
                 console.log('📝 loadDataIntoForm を呼び出します');
+
+                // 🔧 修正：データ適用前の最終確認を詳細化
+                console.log('=== loadDataIntoForm呼び出し前の最終確認 ===');
+                console.log('formData.sales keys:', Object.keys(formData.sales || {}));
+                console.log('formData.pointPayments keys:', Object.keys(formData.pointPayments || {}));
+                console.log('現在のDOM要素状況:');
+
+                // より詳細なDOM要素確認
+                let domCheckResults = {
+                    sales: { total: 0, found: 0, missing: [] },
+                    points: { total: 0, found: 0, missing: [] }
+                };
+
+                // 売上項目のDOM要素存在確認
+                if (formData.sales) {
+                    Object.keys(formData.sales).forEach(key => {
+                        domCheckResults.sales.total++;
+                        const element = document.getElementById(key);
+                        if (element) {
+                            domCheckResults.sales.found++;
+                            console.log(`  ✅ ${key}: 要素あり (値: ${formData.sales[key]})`);
+                        } else {
+                            domCheckResults.sales.missing.push(key);
+                            console.log(`  ❌ ${key}: 要素なし (値: ${formData.sales[key]})`);
+                        }
+                    });
+                }
+
+                // ポイント支払項目のDOM要素存在確認
+                if (formData.pointPayments) {
+                    Object.keys(formData.pointPayments).forEach(key => {
+                        domCheckResults.points.total++;
+                        const element = document.getElementById(key);
+                        if (element) {
+                            domCheckResults.points.found++;
+                            console.log(`  ✅ ${key}: 要素あり (値: ${formData.pointPayments[key]})`);
+                        } else {
+                            domCheckResults.points.missing.push(key);
+                            console.log(`  ❌ ${key}: 要素なし (値: ${formData.pointPayments[key]})`);
+                        }
+                    });
+                }
+
+                console.log('📊 DOM要素確認結果:');
+                console.log(`  売上: ${domCheckResults.sales.found}/${domCheckResults.sales.total} 見つかった`);
+                console.log(`  ポイント: ${domCheckResults.points.found}/${domCheckResults.points.total} 見つかった`);
+
+                if (domCheckResults.sales.missing.length > 0) {
+                    console.warn('⚠️ 見つからない売上要素:', domCheckResults.sales.missing);
+                }
+                if (domCheckResults.points.missing.length > 0) {
+                    console.warn('⚠️ 見つからないポイント要素:', domCheckResults.points.missing);
+                }
+
+                // データをフォームに適用
                 loadDataIntoForm(formData);
                 
                 // データ読み込み完了後にローディングを非表示
@@ -1074,8 +1677,8 @@ async function saveReportToDatabase(reportData) {
             cash_data: JSON.stringify(reportData.cash || {}),
             manual_tax_inputs: JSON.stringify(reportData.manualTaxInputs || {}),
             // 保存時の支払方法設定も一緒に保存
-            payment_method_config: paymentMethodConfig || null,
-            point_payment_config: pointPaymentConfig || null,
+            payment_method_config: JSON.stringify(window.paymentMethodConfig || []),
+            point_payment_config: JSON.stringify(window.pointPaymentConfig || []),
             previous_cash_balance: parseFloat(reportData.previousCashBalance) || 0,
             cash_difference: 0,
             remarks: reportData.remarks || '',
@@ -1083,6 +1686,9 @@ async function saveReportToDatabase(reportData) {
         };
         
         console.log('APIリクエストデータ（詳細）:', requestData);
+        console.log('💾 保存される設定データ:');
+        console.log('  payment_method_config:', window.paymentMethodConfig);
+        console.log('  point_payment_config:', window.pointPaymentConfig);
         
         // APIへのPOSTリクエスト
         const response = await fetch('api.php', {
@@ -1487,15 +2093,23 @@ function collectAllFormData() {
         const manualTaxInputs = getManualTaxInputs();
         console.log('手動税率入力データ収集完了:', manualTaxInputs);
 
-        // 動的な売上データ収集
+        // 動的な売上データ収集（最新の設定を使用）
         const sales = {};
-        if (paymentMethodConfig && Array.isArray(paymentMethodConfig)) {
-            paymentMethodConfig.forEach(method => {
+        const currentPaymentConfig = window.paymentMethodConfig || paymentMethodConfig;
+        console.log('🔍 データ収集時の支払方法設定:', currentPaymentConfig.length, '件');
+        
+        if (currentPaymentConfig && Array.isArray(currentPaymentConfig)) {
+            currentPaymentConfig.forEach(method => {
                 try {
                     const element10 = document.getElementById(`${method.id}10`);
                     const element8 = document.getElementById(`${method.id}8`);
-                    sales[`${method.id}10`] = element10 ? (parseFloat(element10.value) || 0) : 0;
-                    sales[`${method.id}8`] = element8 ? (parseFloat(element8.value) || 0) : 0;
+                    const value10 = element10 ? (parseFloat(element10.value) || 0) : 0;
+                    const value8 = element8 ? (parseFloat(element8.value) || 0) : 0;
+                    
+                    sales[`${method.id}10`] = value10;
+                    sales[`${method.id}8`] = value8;
+                    
+                    console.log(`💰 ${method.id}: 10%=${value10}, 8%=${value8} (要素存在: 10%=${!!element10}, 8%=${!!element8})`);
                 } catch (salesError) {
                     console.error(`売上データ ${method.id} の収集でエラー:`, salesError);
                     sales[`${method.id}10`] = 0;
@@ -1505,15 +2119,23 @@ function collectAllFormData() {
         }
         console.log('売上データ収集完了:', sales);
 
-        // 動的なポイント・クーポン支払データ収集
+        // 動的なポイント・クーポン支払データ収集（最新の設定を使用）
         const pointPayments = {};
-        if (pointPaymentConfig && Array.isArray(pointPaymentConfig)) {
-            pointPaymentConfig.forEach(payment => {
+        const currentPointConfig = window.pointPaymentConfig || pointPaymentConfig;
+        console.log('🔍 データ収集時のポイント設定:', currentPointConfig.length, '件');
+        
+        if (currentPointConfig && Array.isArray(currentPointConfig)) {
+            currentPointConfig.forEach(payment => {
                 try {
                     const element10 = document.getElementById(`${payment.id}10`);
                     const element8 = document.getElementById(`${payment.id}8`);
-                    pointPayments[`${payment.id}10`] = element10 ? (parseFloat(element10.value) || 0) : 0;
-                    pointPayments[`${payment.id}8`] = element8 ? (parseFloat(element8.value) || 0) : 0;
+                    const value10 = element10 ? (parseFloat(element10.value) || 0) : 0;
+                    const value8 = element8 ? (parseFloat(element8.value) || 0) : 0;
+                    
+                    pointPayments[`${payment.id}10`] = value10;
+                    pointPayments[`${payment.id}8`] = value8;
+                    
+                    console.log(`🎫 ${payment.id}: 10%=${value10}, 8%=${value8} (要素存在: 10%=${!!element10}, 8%=${!!element8})`);
                 } catch (pointError) {
                     console.error(`ポイント・クーポン支払データ ${payment.id} の収集でエラー:`, pointError);
                     pointPayments[`${payment.id}10`] = 0;
@@ -2243,3 +2865,7 @@ window.applySalesDataToForm = applySalesDataToForm;
 window.resetAllFormFields = resetAllFormFields;
 window.fetchSalesDataFromAPI = fetchSalesDataFromAPI;
 window.applySalesDataToForm = applySalesDataToForm;
+if (typeof window !== 'undefined') {
+    window.rebuildUIWithSavedConfig = rebuildUIWithSavedConfig;
+    window.rebuildUIWithSavedData = rebuildUIWithSavedData;
+}
