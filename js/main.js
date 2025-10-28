@@ -573,9 +573,19 @@ async function handleConfirm() {
         
         console.log('✅ 必須データチェック通過');
         
-        const confirmMessage = `以下の日報を確定します：\n\n` +
+        // バリデーション（経理課送信と同じ）
+        const validation = validateFormData(formData);
+        if (!validation.isValid) {
+            const errorMessage = '入力内容に問題があります：\n\n' + validation.errors.join('\n');
+            showError(errorMessage);
+            return;
+        }
+        
+        const confirmMessage = `以下の日報を保存・確定します：\n\n` +
             `日付: ${formData.date}\n` +
-            `店舗: ${formData.storeName}\n\n` +
+            `店舗: ${formData.storeName}\n` +
+            `担当者: ${formData.inputBy}\n\n` +
+            `現在の入力内容を保存してから確定します。\n` +
             `確定すると店舗ユーザーは編集できなくなります。\n` +
             `よろしいですか？`;
         
@@ -592,12 +602,41 @@ async function handleConfirm() {
         
         if (typeof showAdminLoadingIndicator === 'function') {
             console.log('🔄 ローディング表示開始');
-            showAdminLoadingIndicator(true, '日報を確定中...', '確定処理を実行しています');
+            showAdminLoadingIndicator(true, '日報を保存・確定中...', '現在の入力内容を保存してから確定処理を実行しています');
             console.log('🔄 ローディング表示完了');
         } else {
             console.error('❌ showAdminLoadingIndicator 関数が見つかりません');
             // フォールバック: 簡単なローディング表示
-            alert('処理中です。しばらくお待ちください...');
+            console.log('⚠️ ローディング表示をスキップ');
+        }
+        
+        // ステップ1: 現在の入力内容をデータベースに保存
+        console.log('💾 ステップ1: 入力内容の保存開始');
+        
+        // ファイルデータをエンコード（添付ファイルがある場合）
+        let encodedFiles = [];
+        try {
+            if (typeof collectEncodedFileData === 'function') {
+                encodedFiles = await collectEncodedFileData();
+                formData.attachedFiles = encodedFiles;
+                console.log('📎 添付ファイル処理完了:', encodedFiles.length, '件');
+            }
+        } catch (fileError) {
+            console.error('📎 ファイルエンコードでエラー:', fileError);
+            throw new Error('添付ファイルの処理中にエラーが発生しました。ファイルを確認してください。');
+        }
+        
+        // データベースに保存（経理課送信と同じ処理）
+        try {
+            console.log('💾 データベース保存実行...');
+            const saveSuccess = await saveReportToDatabase(formData);
+            if (!saveSuccess) {
+                throw new Error('データの保存に失敗しました');
+            }
+            console.log('✅ データベース保存完了');
+        } catch (saveError) {
+            console.error('💥 データベース保存エラー:', saveError);
+            throw new Error('データの保存に失敗しました: ' + saveError.message);
         }
         
         // 確定ボタンを無効化
@@ -611,6 +650,9 @@ async function handleConfirm() {
             console.warn('⚠️ 確定ボタンが見つかりません');
         }
         
+        // ステップ2: 確定フラグの設定
+        console.log('🔏 ステップ2: 確定フラグ設定開始');
+        
         // 店舗IDを取得（最適化版を使用）
         console.log('🏪 店舗ID取得開始（最適化版）');
         const storeId = await getStoreId(formData.storeName);
@@ -620,8 +662,8 @@ async function handleConfirm() {
             throw new Error('店舗情報の取得に失敗しました');
         }
         
-        // API呼び出し
-        console.log('📡 API呼び出し開始');
+        // 確定フラグ設定のAPI呼び出し
+        console.log('📡 確定API呼び出し開始');
         const response = await fetch('api.php', {
             method: 'POST',
             headers: {
@@ -642,7 +684,7 @@ async function handleConfirm() {
         if (result.success) {
             console.log('✅ 確定処理成功');
             // 成功時の処理
-            showSuccess('✅ 日報を確定しました');
+            showSuccess('✅ 入力内容を保存し、日報を確定しました');
             updateConfirmButtonState('approved');
             // フォームを読み取り専用に設定
             setFormReadOnly(true);
@@ -653,13 +695,15 @@ async function handleConfirm() {
                 displayConfirmationStatus('approved', formData.date, formData.storeName);
             }
             
+            console.log('🎉 保存・確定処理が完全に完了しました');
+            
         } else {
             throw new Error(result.message || '確定処理に失敗しました');
         }
         
     } catch (error) {
-        console.error('💥 確定処理エラー:', error);
-        showError('確定処理中にエラーが発生しました: ' + error.message);
+        console.error('💥 保存・確定処理エラー:', error);
+        showError('保存・確定処理中にエラーが発生しました: ' + error.message);
         
         // エラー時は確定ボタンを再有効化
         const confirmButton = document.getElementById('confirmButton');
@@ -742,6 +786,8 @@ async function handleUnconfirm() {
             updateConfirmButtonState('submitted');
             // フォームを編集可能に設定
             setFormReadOnly(false);
+            
+            console.log('🎉 確定解除処理が完全に完了しました');
             hideConfirmedMessage();
             
             // 確定解除後の状態表示を更新
