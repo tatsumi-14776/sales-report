@@ -7,6 +7,9 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
+    
+    <!-- バージョン管理・キャッシュ制御 -->
+    <script src="js/config.js"></script>
     <style>
         * {
             margin: 0;
@@ -375,6 +378,74 @@
             successElement.textContent = message;
             successElement.style.display = 'block';
         }
+
+        // 本番環境専用：キャッシュクリア機能
+        function clearProductionCache() {
+            try {
+                // 現在のURLが本番環境かチェック
+                const isProduction = window.location.hostname === 'xs506451.xsrv.jp';
+                
+                if (!isProduction) {
+                    console.log('🔧 開発環境のため、キャッシュクリアをスキップします');
+                    return;
+                }
+
+                console.log('🧹 本番環境でのキャッシュクリアを開始...');
+                
+                // Service Worker があれば削除
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.getRegistrations().then(registrations => {
+                        registrations.forEach(registration => {
+                            registration.unregister();
+                        });
+                    });
+                }
+                
+                // ブラウザキャッシュをクリア（可能な範囲で）
+                if ('caches' in window) {
+                    caches.keys().then(names => {
+                        names.forEach(name => {
+                            // 本番ドメインに関連するキャッシュのみクリア
+                            if (name.includes('xs506451.xsrv.jp') || name.includes('sales-report')) {
+                                caches.delete(name);
+                                console.log('🗑️ キャッシュクリア:', name);
+                            }
+                        });
+                    });
+                }
+                
+                // ローカルストレージの古いデータをクリア（設定データは保持）
+                const itemsToKeep = ['userSettings', 'authToken'];
+                const keysToRemove = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (!itemsToKeep.includes(key)) {
+                        keysToRemove.push(key);
+                    }
+                }
+                keysToRemove.forEach(key => localStorage.removeItem(key));
+                
+                // セッションストレージをクリア
+                sessionStorage.clear();
+                
+                console.log('✅ 本番環境キャッシュクリア完了');
+                
+                // ページ更新でキャッシュの影響を完全に排除
+                if (performance.navigation.type !== 1) { // リロードでない場合のみ
+                    setTimeout(() => {
+                        window.location.reload(true); // 強制リロード
+                    }, 500);
+                }
+                
+            } catch (error) {
+                console.error('❌ キャッシュクリアエラー:', error);
+            }
+        }
+
+        // ページ読み込み時にキャッシュクリア実行（本番環境のみ）
+        document.addEventListener('DOMContentLoaded', function() {
+            clearProductionCache();
+        });
     </script>
 </body>
 </html>
