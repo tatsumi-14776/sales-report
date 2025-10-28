@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ログイン - 日次売上報告書システム</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
     <style>
         * {
             margin: 0;
@@ -233,6 +237,47 @@
             }
         });
 
+        // 本番環境用キャッシュクリア関数
+        async function clearProductionCache() {
+            console.log('🧹 本番環境キャッシュクリア開始');
+            
+            try {
+                // Service Worker削除
+                if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    for (const registration of registrations) {
+                        await registration.unregister();
+                        console.log('🔧 Service Worker削除完了');
+                    }
+                }
+
+                // Cache API削除
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    await Promise.all(cacheNames.map(name => caches.delete(name)));
+                    console.log('🔧 Cache API削除完了');
+                }
+
+                // LocalStorage選択削除（セッション情報以外）
+                const keysToKeep = ['userSession'];
+                const keysToRemove = [];
+                
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && !keysToKeep.includes(key)) {
+                        keysToRemove.push(key);
+                    }
+                }
+                
+                keysToRemove.forEach(key => localStorage.removeItem(key));
+                console.log('🔧 LocalStorage削除完了:', keysToRemove);
+
+                console.log('✅ 本番環境キャッシュクリア完了');
+            } catch (error) {
+                console.error('❌ キャッシュクリアエラー:', error);
+            }
+        }
+
         // ログインフォーム送信
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -280,6 +325,11 @@
                     sessionStorage.setItem('userSession', JSON.stringify(userSession));
                     if (rememberMe) {
                         localStorage.setItem('userSession', JSON.stringify(userSession));
+                    }
+
+                    // 本番環境のみキャッシュクリア（xs506451.xsrv.jp）
+                    if (window.location.hostname === 'xs506451.xsrv.jp') {
+                        clearProductionCache();
                     }
 
                     showSuccessMessage('ログイン成功！画面を準備中...');
