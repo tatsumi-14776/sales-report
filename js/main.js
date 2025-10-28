@@ -17,11 +17,15 @@ let hasUsedUrlParams = false;
 const accountCategories = [
     {value: '', label: '勘定科目'},
     //{value: '消耗品費', label: '消耗品費'},
-    {value: '雑費', label: '雑費'},
-    {value: '通信費', label: '通信費'},
-    {value: '水道光熱費', label: '水道光熱費'},
-    {value: '修繕費', label: '修繕費'},
-    {value: '交通費', label: '交通費'},
+    {value: '備品', label: '備品'},
+    {value: '仕入', label: '仕入'},
+    {value: '通信交通費', label: '通信交通費'},
+    {value: '発送配達費', label: '発送配達費'},
+    {value: '支払手数料', label: '支払手数料'},
+    {value: '租税公課', label: '租税公課'},
+    {value: '諸会費', label: '諸会費'},
+    {value: '寄付金', label: '寄付金'},
+    {value: '返金', label: '返金'},
     {value: 'その他', label: 'その他'}
 ];
 

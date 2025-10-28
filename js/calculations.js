@@ -104,9 +104,12 @@ function updatePointPaymentCalculation() {
     });
     
     // ポイント・クーポン支払合計を表示
-    const pointPaymentTotalElement = document.getElementById('pointPaymentTotal');
+    const pointPaymentTotalElement = document.getElementById('pointTotal');
     if (pointPaymentTotalElement) {
         pointPaymentTotalElement.textContent = `¥${pointPaymentTotal.toLocaleString()}`;
+        console.log('✅ ポイント・クーポン合計を更新:', pointPaymentTotal);
+    } else {
+        console.error('❌ pointTotal 要素が見つかりません');
     }
 }
 

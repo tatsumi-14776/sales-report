@@ -3,6 +3,9 @@
  * データの保存、読み込み、バリデーション、API連携
  */
 
+// 現金残高検索の制御用変数
+let cashBalanceSearchController = null;
+
 /**
  * 該当日のデータ読込処理（並列処理・高速化版）
  */
@@ -98,6 +101,13 @@ function handleLoadData() {
     console.log('データ読込処理を開始');
     
     try {
+        // 実行中の現金残高検索をキャンセル
+        if (cashBalanceSearchController) {
+            console.log('🛑 実行中の現金残高検索をキャンセルします');
+            cashBalanceSearchController.abort();
+            cashBalanceSearchController = null;
+        }
+        
         // 最初に要素を取得
         const dateElement = document.getElementById('date');
         const storeNameElement = document.getElementById('storeName');
@@ -281,7 +291,24 @@ async function loadSampleData(date, storeName) {
             
         } else {
             console.log('指定されたデータが見つかりません:', result.message);
-            showError(result.message || '指定された日付・店舗のデータが見つかりません');
+            
+            // データが見つからない場合、指定日付から1週間遡って現金残高を検索
+            console.log('💰 データが見つからないため、現金残高の自動検索を開始');
+            try {
+                await loadPreviousCashBalance(date);
+                console.log('✅ 現金残高の自動検索が完了しました');
+                
+                // 成功時は情報メッセージとして表示
+                if (typeof showSuccess === 'function') {
+                    showSuccess(`${date}のデータは見つかりませんでしたが、過去データから前日現金残を自動設定しました。`);
+                } else {
+                    console.log(`${date}のデータは見つかりませんでしたが、過去データから前日現金残を自動設定しました。`);
+                }
+            } catch (cashError) {
+                console.error('現金残高の自動検索でエラー:', cashError);
+                showError(result.message || '指定された日付・店舗のデータが見つかりません');
+            }
+            
             showLoadingIndicator(false);
         }
         
@@ -1525,7 +1552,24 @@ async function loadSampleDataByStoreId(date, storeId, storeName) {
             
         } else {
             console.log('指定されたデータが見つかりません:', result.message);
-            showError(result.message || '指定された日付・店舗のデータが見つかりません');
+            
+            // データが見つからない場合、指定日付から1週間遡って現金残高を検索
+            console.log('💰 データが見つからないため、現金残高の自動検索を開始');
+            try {
+                await loadPreviousCashBalance(date);
+                console.log('✅ 現金残高の自動検索が完了しました');
+                
+                // 成功時は情報メッセージとして表示
+                if (typeof showSuccess === 'function') {
+                    showSuccess(`${date}のデータは見つかりませんでしたが、過去データから前日現金残を自動設定しました。`);
+                } else {
+                    console.log(`${date}のデータは見つかりませんでしたが、過去データから前日現金残を自動設定しました。`);
+                }
+            } catch (cashError) {
+                console.error('現金残高の自動検索でエラー:', cashError);
+                showError(result.message || '指定された日付・店舗のデータが見つかりません');
+            }
+            
             showLoadingIndicator(false);
         }
         
@@ -1770,11 +1814,22 @@ function getManualTaxInputs() {
 async function loadPreviousCashBalance(currentDate) {
     console.log('🔄 前日現金残の自動読み込みを開始:', currentDate);
     
+    // AbortControllerを作成して管理（関数レベルで定義）
+    const controller = new AbortController();
+    cashBalanceSearchController = controller;
+    
     try {
+        
         // URLパラメータをチェック
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('date') || urlParams.has('store') || urlParams.has('action')) {
             console.log('⏸️ URLパラメータが存在するため、前日現金残の自動読み込みをスキップ');
+            return;
+        }
+        
+        // キャンセルチェック
+        if (controller.signal.aborted) {
+            console.log('🛑 現金残高検索がキャンセルされました');
             return;
         }
         
@@ -1790,6 +1845,12 @@ async function loadPreviousCashBalance(currentDate) {
         const maxDaysBack = 7; // 最大1週間遡る
         
         for (let daysBack = 1; daysBack <= maxDaysBack; daysBack++) {
+            // キャンセルチェック
+            if (controller.signal.aborted) {
+                console.log('🛑 現金残高検索がキャンセルされました（ループ内）');
+                return;
+            }
+            
             const targetDate = new Date(currentDateObj);
             targetDate.setDate(currentDateObj.getDate() - daysBack);
             const targetDateStr = targetDate.toISOString().split('T')[0];
@@ -1797,12 +1858,13 @@ async function loadPreviousCashBalance(currentDate) {
             console.log(`📅 ${daysBack}日前のデータを確認中: ${targetDateStr}`);
             
             try {
-                // APIから過去のデータを取得
+                // APIから過去のデータを取得（AbortSignal付き）
                 const response = await fetch(`api.php?action=getReport&report_date=${encodeURIComponent(targetDateStr)}&store_id=${storeId}`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    signal: controller.signal  // キャンセル可能にする
                 });
                 
                 if (!response.ok) {
@@ -1896,6 +1958,11 @@ async function loadPreviousCashBalance(currentDate) {
                                 updateAllCalculations();
                             }
                             
+                            // コントローラーをクリーンアップ
+                            if (cashBalanceSearchController === controller) {
+                                cashBalanceSearchController = null;
+                            }
+                            
                             // 成功したので処理を終了
                             return;
                         }
@@ -1924,7 +1991,16 @@ async function loadPreviousCashBalance(currentDate) {
         console.log('💡 手動で前日現金残を入力してください');
         
     } catch (error) {
-        console.error('❌ 前日現金残の自動読み込みでエラー:', error);
+        if (error.name === 'AbortError') {
+            console.log('🛑 現金残高検索がキャンセルされました');
+        } else {
+            console.error('❌ 前日現金残の自動読み込みでエラー:', error);
+        }
+    } finally {
+        // コントローラーをクリーンアップ
+        if (cashBalanceSearchController === controller) {
+            cashBalanceSearchController = null;
+        }
     }
 }
 
