@@ -115,6 +115,14 @@ function handleLoadData() {
         // **データ読み込み前に全フォームをクリア**
         console.log('🧹 データ読み込み前のフォームクリア実行');
         
+        // 確定状態をリセット（新しいデータ読込時は必ず編集可能にする）
+        if (typeof setFormReadOnly === 'function') {
+            console.log('🔓 handleLoadData: データ読込前に確定状態をリセット - フォームを編集可能にします');
+            setFormReadOnly(false);
+        } else {
+            console.error('❌ handleLoadData: setFormReadOnly関数が見つかりません');
+        }
+        
         // 日付と店舗名を一時保存
         const currentDate = dateElement ? dateElement.value : '';
         const currentStoreName = storeNameElement ? storeNameElement.value : '';
@@ -281,6 +289,21 @@ async function loadSampleData(date, storeName) {
                 loadDataIntoForm(formData);
                 console.log('=== loadDataIntoForm 呼び出し後 ===');
                 
+                // 読み込んだデータの確定状態をチェック
+                console.log(`🔍 loadSampleData: データ確定状態チェック - isConfirmed=${formData.isConfirmed}`);
+                
+                if (formData.isConfirmed && typeof setFormReadOnly === 'function') {
+                    console.log('🔒 loadSampleData: 確定済みデータのため、フォームを読み取り専用に設定します');
+                    setFormReadOnly(true);
+                } else if (!formData.isConfirmed && typeof setFormReadOnly === 'function') {
+                    console.log('🔓 loadSampleData: 未確定データのため、フォームを編集可能状態に設定します');
+                    setFormReadOnly(false);
+                } else if (typeof setFormReadOnly !== 'function') {
+                    console.error('❌ loadSampleData: setFormReadOnly関数が見つかりません');
+                } else {
+                    console.log('ℹ️ loadSampleData: 確定状態の設定をスキップしました');
+                }
+                
                 // データ読み込み完了後にローディングを非表示
                 showLoadingIndicator(false);
             } else {
@@ -298,12 +321,8 @@ async function loadSampleData(date, storeName) {
                 await loadPreviousCashBalance(date);
                 console.log('✅ 現金残高の自動検索が完了しました');
                 
-                // 成功時は情報メッセージとして表示
-                if (typeof showSuccess === 'function') {
-                    showSuccess(`${date}のデータは見つかりませんでしたが、過去データから前日現金残を自動設定しました。`);
-                } else {
-                    console.log(`${date}のデータは見つかりませんでしたが、過去データから前日現金残を自動設定しました。`);
-                }
+                // コンソールログのみ（ユーザー向けアラートは非表示）
+                console.log(`${date}のデータは見つかりませんでしたが、過去データから前日現金残を自動設定しました。`);
             } catch (cashError) {
                 console.error('現金残高の自動検索でエラー:', cashError);
                 showError(result.message || '指定された日付・店舗のデータが見つかりません');
@@ -704,9 +723,14 @@ function convertDatabaseToFormData(dbData) {
             formData.savedPointPaymentConfig = [];
         }
         
+        // 確定状態の判定を追加
+        formData.isConfirmed = (dbData.status === 'confirmed' || dbData.status === 'submitted' || dbData.status === 'approved');
+        console.log(`📋 確定状態判定: status=${dbData.status} → isConfirmed=${formData.isConfirmed}`);
+        
         console.log('設定データも含めて変換完了:', {
             paymentMethodConfigCount: formData.paymentMethodConfig.length,
-            pointPaymentConfigCount: formData.pointPaymentConfig.length
+            pointPaymentConfigCount: formData.pointPaymentConfig.length,
+            isConfirmed: formData.isConfirmed
         });
         
         console.log('変換完了（全体）:', formData);
@@ -1115,32 +1139,34 @@ function resetAllFormFields() {
         const inputByElement = document.getElementById('inputBy');
         if (inputByElement) inputByElement.value = '';
         
-        // 売上データのリセット（動的に対応）
-        if (paymentMethodConfig && Array.isArray(paymentMethodConfig)) {
-            paymentMethodConfig.forEach(method => {
-                const element10 = document.getElementById(`${method.id}10`);
-                const element8 = document.getElementById(`${method.id}8`);
-                if (element10) element10.value = '';
-                if (element8) element8.value = '';
-            });
-        }
+        // 売上データのリセット（より広範囲なセレクタ）
+        console.log('🧹 売上フィールドのリセット開始');
+        const salesInputs = document.querySelectorAll('input[id$="10"], input[id$="8"]');
+        let salesCleared = 0;
+        salesInputs.forEach(input => {
+            // 売上関連のフィールドのみ（10%税率、8%税率で終わるID）
+            const id = input.id;
+            if (id && (id.includes('10') || id.includes('8')) && input.value !== '') {
+                console.log(`  🗑️ 売上・ポイントフィールドクリア: ${id} = "${input.value}" → ""`);
+                input.value = '';
+                salesCleared++;
+            }
+        });
+        console.log(`✅ 売上・ポイントフィールド ${salesCleared}件をクリアしました`);
         
-        // ポイント・クーポン支払のリセット
-        if (pointPaymentConfig && Array.isArray(pointPaymentConfig)) {
-            pointPaymentConfig.forEach(payment => {
-                const element10 = document.getElementById(`${payment.id}10`);
-                const element8 = document.getElementById(`${payment.id}8`);
-                if (element10) element10.value = '';
-                if (element8) element8.value = '';
-            });
-        }
-        
-        // 入金・雑収入のリセット
+        // 入金・雑収入のリセット（特定IDで確実にクリア）
+        console.log('🧹 入金・雑収入フィールドのリセット開始');
         const incomeFields = ['nyukin', 'miscIncome', 'foundMoney'];
+        let incomeCleared = 0;
         incomeFields.forEach(fieldId => {
             const element = document.getElementById(fieldId);
-            if (element) element.value = '';
+            if (element && element.value !== '') {
+                console.log(`  🗑️ 入金フィールドクリア: ${fieldId} = "${element.value}" → ""`);
+                element.value = '';
+                incomeCleared++;
+            }
         });
+        console.log(`✅ 入金・雑収入フィールド ${incomeCleared}件をクリアしました`);
         
         // 前日現金残のリセット（後で自動入力される）
         const previousCashElement = document.getElementById('previousCashBalance');
@@ -1149,15 +1175,20 @@ function resetAllFormFields() {
         // 経費データのリセット
         resetExpenseRecords();
         
-        // 現金管理データのリセット
-        if (denominations && Array.isArray(denominations)) {
-            denominations.forEach(denom => {
-                const registerInput = document.querySelector(`[data-type="register"][data-denom="${denom.key}"]`);
-                const safeInput = document.querySelector(`[data-type="safe"][data-denom="${denom.key}"]`);
-                if (registerInput) registerInput.value = '';
-                if (safeInput) safeInput.value = '';
-            });
-        }
+        // 現金管理データのリセット（data属性基準でクリア）
+        console.log('🧹 現金管理フィールドのリセット開始');
+        const cashInputs = document.querySelectorAll('[data-type="register"], [data-type="safe"]');
+        let cashCleared = 0;
+        cashInputs.forEach(input => {
+            if (input.value !== '') {
+                const denomKey = input.getAttribute('data-denom') || '';
+                const type = input.getAttribute('data-type') || '';
+                console.log(`  🗑️ 現金フィールドクリア: ${type}-${denomKey} = "${input.value}" → ""`);
+                input.value = '';
+                cashCleared++;
+            }
+        });
+        console.log(`✅ 現金管理フィールド ${cashCleared}件をクリアしました`);
         
         // 備考のリセット
         const remarksElement = document.getElementById('remarks');
@@ -1542,6 +1573,21 @@ async function loadSampleDataByStoreId(date, storeId, storeName) {
                 // データをフォームに適用
                 loadDataIntoForm(formData);
                 
+                // 読み込んだデータの確定状態をチェック
+                console.log(`🔍 loadSampleDataByStoreId: データ確定状態チェック - isConfirmed=${formData.isConfirmed}`);
+                
+                if (formData.isConfirmed && typeof setFormReadOnly === 'function') {
+                    console.log('🔒 loadSampleDataByStoreId: 確定済みデータのため、フォームを読み取り専用に設定します');
+                    setFormReadOnly(true);
+                } else if (!formData.isConfirmed && typeof setFormReadOnly === 'function') {
+                    console.log('🔓 loadSampleDataByStoreId: 未確定データのため、フォームを編集可能状態に設定します');
+                    setFormReadOnly(false);
+                } else if (typeof setFormReadOnly !== 'function') {
+                    console.error('❌ loadSampleDataByStoreId: setFormReadOnly関数が見つかりません');
+                } else {
+                    console.log('ℹ️ loadSampleDataByStoreId: 確定状態の設定をスキップしました');
+                }
+                
                 // データ読み込み完了後にローディングを非表示
                 showLoadingIndicator(false);
             } else {
@@ -1559,12 +1605,8 @@ async function loadSampleDataByStoreId(date, storeId, storeName) {
                 await loadPreviousCashBalance(date);
                 console.log('✅ 現金残高の自動検索が完了しました');
                 
-                // 成功時は情報メッセージとして表示
-                if (typeof showSuccess === 'function') {
-                    showSuccess(`${date}のデータは見つかりませんでしたが、過去データから前日現金残を自動設定しました。`);
-                } else {
-                    console.log(`${date}のデータは見つかりませんでしたが、過去データから前日現金残を自動設定しました。`);
-                }
+                // コンソールログのみ（ユーザー向けアラートは非表示）
+                console.log(`${date}のデータは見つかりませんでしたが、過去データから前日現金残を自動設定しました。`);
             } catch (cashError) {
                 console.error('現金残高の自動検索でエラー:', cashError);
                 showError(result.message || '指定された日付・店舗のデータが見つかりません');
@@ -1989,7 +2031,6 @@ async function loadPreviousCashBalance(currentDate) {
         
         console.log('❌ 過去1週間のデータに有効な現金残が見つかりませんでした');
         console.log('💡 手動で前日現金残を入力してください');
-        
     } catch (error) {
         if (error.name === 'AbortError') {
             console.log('🛑 現金残高検索がキャンセルされました');

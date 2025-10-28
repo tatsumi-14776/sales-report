@@ -886,9 +886,11 @@ function loadDataIntoForm(data) {
                 updateConfirmButtonState(data.status);
             }
             
-            // 確定済みの場合は全フォームを読み取り専用にする
-            if (data.status === 'approved') {
-                console.log('確定済みのため、フォームを読み取り専用に設定');
+            // 確定状態はisConfirmedフラグに基づいて判定（dataManager.jsで制御）
+            console.log('🔍 loadDataIntoForm: 確定状態判定 - data.isConfirmed:', data.isConfirmed, ', data.status:', data.status);
+            
+            if (data.isConfirmed) {
+                console.log('🔒 loadDataIntoForm: 確定済みデータのため、フォームを読み取り専用に設定');
                 if (typeof setFormReadOnly === 'function') {
                     setFormReadOnly(true);
                 }
@@ -899,10 +901,8 @@ function loadDataIntoForm(data) {
                     updateSubmitButtonForConfirmed();
                 }
             } else {
-                // 確定済みでない場合は編集可能
-                if (typeof setFormReadOnly === 'function') {
-                    setFormReadOnly(false);
-                }
+                console.log('🔓 loadDataIntoForm: 未確定データのため、確定状態をクリア');
+                // 未確定の場合は確定状態をクリア（既に設定されている可能性があるため）
                 if (typeof hideConfirmedMessage === 'function') {
                     hideConfirmedMessage();
                 }
@@ -1009,11 +1009,15 @@ function loadDataIntoForm(data) {
  * 送信ボタンを確定済み状態に更新（一般ユーザー用）
  */
 function updateSubmitButtonForConfirmed() {
+    console.log(`🔘 updateSubmitButtonForConfirmed() 開始`);
+    
     const submitButton = document.querySelector('.submit-button');
     if (!submitButton) {
-        console.warn('送信ボタンが見つかりません');
+        console.error('❌ 送信ボタンが見つかりません (.submit-button)');
         return;
     }
+    
+    console.log(`📋 送信ボタンを確定済み状態に変更中...`);
     
     // 確定済み表示に変更
     submitButton.innerHTML = `
@@ -1025,18 +1029,22 @@ function updateSubmitButtonForConfirmed() {
     submitButton.className = 'submit-button confirmed';
     submitButton.disabled = true;
     
-    console.log('✅ 送信ボタンを確定済み状態に変更しました');
+    console.log('✅ 送信ボタンを確定済み状態に変更しました (disabled=true, class=confirmed)');
 }
 
 /**
  * 送信ボタンを通常状態に更新（一般ユーザー用）
  */
 function updateSubmitButtonForNormal() {
+    console.log(`🔘 updateSubmitButtonForNormal() 開始`);
+    
     const submitButton = document.querySelector('.submit-button');
     if (!submitButton) {
-        console.warn('送信ボタンが見つかりません');
+        console.error('❌ 送信ボタンが見つかりません (.submit-button)');
         return;
     }
+    
+    console.log(`📋 送信ボタンを通常状態に変更中...`);
     
     // 通常の送信ボタンに戻す
     submitButton.innerHTML = `
@@ -1048,13 +1056,15 @@ function updateSubmitButtonForNormal() {
     submitButton.className = 'submit-button';
     submitButton.disabled = false;
     
-    console.log('✅ 送信ボタンを通常状態に戻しました');
+    console.log('✅ 送信ボタンを通常状態に戻しました (disabled=false, class=submit-button)');
 }
 
 /*
  * 確定済みメッセージを表示
  */
 function showConfirmedMessage() {
+    console.log(`🔒 showConfirmedMessage() 開始`);
+    
     // 既存のメッセージがあれば削除
     hideConfirmedMessage();
     
@@ -1084,6 +1094,9 @@ function showConfirmedMessage() {
     const headerElement = document.querySelector('.header');
     if (headerElement && headerElement.parentNode) {
         headerElement.parentNode.insertBefore(messageDiv, headerElement.nextSibling);
+        console.log(`✅ 確定済みメッセージを表示しました (ID: confirmedMessage)`);
+    } else {
+        console.error(`❌ ヘッダー要素が見つからず、確定済みメッセージを挿入できませんでした`);
     }
 }
 
@@ -1091,9 +1104,14 @@ function showConfirmedMessage() {
  * 確定済みメッセージを非表示
  */
 function hideConfirmedMessage() {
+    console.log(`🙈 hideConfirmedMessage() 開始`);
+    
     const existingMessage = document.getElementById('confirmedMessage');
     if (existingMessage) {
         existingMessage.remove();
+        console.log(`✅ 確定済みメッセージを削除しました`);
+    } else {
+        console.log(`ℹ️ 削除対象の確定済みメッセージが見つかりませんでした`);
     }
 }
 
@@ -1164,7 +1182,42 @@ function setFormReadOnly(readOnly) {
             button.style.cursor = '';
         });
         
-        console.log(`フォームを${readOnly ? '読み取り専用' : '編集可能'}に設定しました`);
+        // 確定済みメッセージと送信ボタンの状態も制御
+        console.log(`🔧 setFormReadOnly: readOnly=${readOnly} - メッセージと送信ボタンの制御を開始`);
+        
+        if (readOnly) {
+            // 確定済みの場合：メッセージ表示、送信ボタンを確定済み状態に
+            console.log(`🔒 確定状態設定: メッセージ表示と送信ボタン無効化`);
+            if (typeof showConfirmedMessage === 'function') {
+                console.log(`📢 showConfirmedMessage() 実行`);
+                showConfirmedMessage();
+            } else {
+                console.error(`❌ showConfirmedMessage 関数が見つかりません`);
+            }
+            if (typeof updateSubmitButtonForConfirmed === 'function') {
+                console.log(`🔘 updateSubmitButtonForConfirmed() 実行`);
+                updateSubmitButtonForConfirmed();
+            } else {
+                console.error(`❌ updateSubmitButtonForConfirmed 関数が見つかりません`);
+            }
+        } else {
+            // 編集可能の場合：メッセージ非表示、送信ボタンを通常状態に
+            console.log(`🔓 編集可能状態設定: メッセージ非表示と送信ボタン有効化`);
+            if (typeof hideConfirmedMessage === 'function') {
+                console.log(`🙈 hideConfirmedMessage() 実行`);
+                hideConfirmedMessage();
+            } else {
+                console.error(`❌ hideConfirmedMessage 関数が見つかりません`);
+            }
+            if (typeof updateSubmitButtonForNormal === 'function') {
+                console.log(`🔘 updateSubmitButtonForNormal() 実行`);
+                updateSubmitButtonForNormal();
+            } else {
+                console.error(`❌ updateSubmitButtonForNormal 関数が見つかりません`);
+            }
+        }
+        
+        console.log(`✅ フォームを${readOnly ? '読み取り専用' : '編集可能'}に設定しました`);
         
     } catch (error) {
         console.error('フォーム読み取り専用設定でエラー:', error);
